@@ -116,10 +116,10 @@ export const fetchRetentionCohort = ({ preset, market, from, to, signal } = {}) 
     "Failed to load retention cohort",
   );
 
-export const fetchMarketBreakdown = ({ preset, from, to, signal } = {}) =>
+export const fetchMarketBreakdown = ({ preset, country, from, to, signal } = {}) =>
   fetchAnalytics(
     "market-breakdown",
-    { preset, from, to },
+    { preset, country, from, to },
     signal,
     "Failed to load market breakdown",
   );

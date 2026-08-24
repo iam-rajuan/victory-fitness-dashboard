@@ -27,6 +27,7 @@ const Applications = lazy(() => import("../pages/Applications/Applications"));
 const SupportInbox = lazy(() => import("../pages/SupportInbox/SupportInbox"));
 const Homepage = lazy(() => import("../pages/Homepage/Homepage"));
 const AuditLogs = lazy(() => import("../pages/AuditLogs/AuditLogs"));
+const BetaAnalytics = lazy(() => import("../pages/BetaAnalytics/BetaAnalytics"));
 const TrialExperience = lazy(() => import("../pages/TrialExperience/TrialExperience"));
 
 function RouteFallback() {
@@ -138,8 +139,16 @@ const router = createBrowserRouter([
         element: withSuspense(Homepage),
       },
       {
+        path: "/beta-analytics",
+        element: withSuspense(BetaAnalytics),
+      },
+      {
         path: "/trial-analytics",
         element: withSuspense(TrialExperience),
+      },
+      {
+        path: "/gold-trial",
+        element: <Navigate to="/trial-analytics" replace />,
       },
       {
         path: "/audit-logs",

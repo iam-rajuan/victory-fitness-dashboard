@@ -34,6 +34,14 @@ export const getGoldTrialOutcomes = async ({ signal } = {}) => {
   }
 };
 
+export const getPhaseOneBetaSummary = async ({ signal } = {}) => {
+  try {
+    return await adminApiRequest("/admin/trials/phase-one-beta", { signal });
+  } catch (error) {
+    throw new Error(wrapTrialError(error, "Failed to load Phase 1 beta analytics"));
+  }
+};
+
 export const getGoldTrialDashboard = async ({ preset = "this_week", market = "all", from, to, signal } = {}) => {
   const [funnel, userStats, cohorts, dropouts, config, outcomes] = await Promise.all([
     fetchTrialFunnel({ preset, market, from, to, signal }).catch((error) => ({ error: error.message, steps: [] })),

@@ -73,6 +73,10 @@ const getSubscriptionExpiryLabel = (user) => {
   return estimatedExpiry ? formatDisplayDateTime(estimatedExpiry) : "N/A";
 };
 
+const isPhaseOneBetaUser = (user) =>
+  String(user?.subscription_purchase_source || user?.subscription?.purchase_source || "").trim().toLowerCase() === "beta_trial"
+  || Boolean(user?.is_beta_tester);
+
 const getUserDetailCards = (user) => {
   const subscriptionAccess = Array.isArray(user.subscription_access)
     ? user.subscription_access
@@ -80,7 +84,7 @@ const getUserDetailCards = (user) => {
       ? user.subscription.access
       : [];
 
-  return [
+  const cards = [
     { label: "Email", value: user.email || "N/A" },
     { label: "Phone No", value: user.contactNumber || user.phone_number || "N/A" },
     { label: "Joined Date", value: formatDisplayDate(user.createdAt) },
@@ -100,6 +104,22 @@ const getUserDetailCards = (user) => {
     { label: "Subscription Expires", value: getSubscriptionExpiryLabel(user) },
     { label: "Feature Access", value: subscriptionAccess.length > 0 ? subscriptionAccess.map(formatEnumLabel).join(", ") : "N/A", fullWidth: true },
   ];
+
+  if (isPhaseOneBetaUser(user)) {
+    cards.push(
+      { label: "Phase 1 Beta Tester", value: "Yes" },
+      { label: "Beta Access Tier", value: "Gold" },
+      { label: "Beta Duration", value: "21 Days" },
+      { label: "Beta Price", value: "€0" },
+      { label: "Beta Payment Required", value: "No" },
+      { label: "Beta Status", value: formatEnumLabel(user.trial_status || user.subscription_status || user.status) },
+      { label: "Beta Start Date", value: formatDisplayDateTime(user.trial_start_at) },
+      { label: "Beta End Date", value: formatDisplayDateTime(user.trial_end_at) },
+      { label: "Beta Days Remaining", value: String(user.trial_days_remaining ?? 0) },
+    );
+  }
+
+  return cards;
 };
 
 const getUserDetailSections = (user) => {
@@ -142,6 +162,26 @@ const getUserDetailSections = (user) => {
         ].includes(card.label),
       ),
     },
+    ...(isPhaseOneBetaUser(user)
+      ? [{
+        key: "beta",
+        eyebrow: "Phase 1 Beta",
+        title: "21-day Gold beta entitlement",
+        cards: cards.filter((card) =>
+          [
+            "Phase 1 Beta Tester",
+            "Beta Access Tier",
+            "Beta Duration",
+            "Beta Price",
+            "Beta Payment Required",
+            "Beta Status",
+            "Beta Start Date",
+            "Beta End Date",
+            "Beta Days Remaining",
+          ].includes(card.label),
+        ),
+      }]
+      : []),
   ];
 };
 
@@ -443,7 +483,7 @@ function UserDetails() {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-slate-900">Trial cohorts</h2>
-              <p className="text-sm text-slate-500">Conversion and day-by-day engagement by signup month and source.</p>
+              <p className="text-sm text-slate-500">5-day Gold commercial trial conversion and day-by-day engagement by signup month and source. Phase 1 beta users are excluded.</p>
             </div>
           </div>
           <div className="overflow-x-auto">
@@ -455,7 +495,7 @@ function UserDetails() {
         </section>
 
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
-          <div className="mb-4"><h2 className="text-lg font-bold text-slate-900">Dropout list</h2><p className="text-sm text-slate-600">Consented trial users who reached day 5 without converting.</p></div>
+          <div className="mb-4"><h2 className="text-lg font-bold text-slate-900">Dropout list</h2><p className="text-sm text-slate-600">Consented 5-day Gold trial users who reached day 5 without converting. Phase 1 beta users are excluded.</p></div>
           <div className="space-y-3">{trialDropouts.length ? trialDropouts.slice(0, 8).map((dropout) => <div key={dropout.id} className="flex items-center justify-between gap-3 rounded-xl bg-white p-3"><div><div className="font-semibold text-slate-900">{dropout.fullName}</div><div className="text-xs text-slate-500">{dropout.email} · {dropout.signupSource}</div></div><div className="text-right text-xs text-slate-500"><div>{dropout.coachMessages} coach messages</div><div>{dropout.nutritionPlanCreated ? "Nutrition plan created" : "No nutrition plan"}</div></div></div>) : <div className="py-6 text-center text-slate-500">No consented dropouts found.</div>}</div>
         </section>
       </div>
@@ -541,10 +581,13 @@ function UserDetails() {
           avatarSrc={selectedUser.profileImage || "/userimg.png"}
           avatarAlt={selectedUser.fullName}
           title={isViewLoading ? "Loading user..." : selectedUser.fullName}
-          description="Review the account profile, subscription details, and membership access in one place."
+          description={isPhaseOneBetaUser(selectedUser)
+            ? "Review the Phase 1 beta tester profile, 21-day Gold entitlement, and membership access in one place."
+            : "Review the account profile, subscription details, and membership access in one place."}
           badges={[
             { value: formatEnumLabel(selectedUser.role) },
             { value: subscriptionTierLabel },
+            ...(isPhaseOneBetaUser(selectedUser) ? [{ value: "Phase 1 Beta Tester", className: "rounded-full bg-amber-100 px-3 py-1.5 text-sm font-semibold text-amber-800" }] : []),
             { value: joinedLabel, label: "Joined" },
             { value: formatEnumLabel(headerStatus), className: `rounded-full px-3 py-1.5 text-sm font-medium ${getStatusBadgeClassName(headerStatus)}` },
           ]}

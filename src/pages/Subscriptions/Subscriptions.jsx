@@ -19,9 +19,6 @@ const formatEuroPrice = (price) => {
   return `EUR ${price}`;
 };
 
-const visibleSubscriptionPlans = (plans) =>
-  plans.filter((plan) => String(plan.tier || '').toUpperCase() !== 'VICTORY INNER CIRCLE');
-
 const FEATURE_ACCESS_OPTIONS = [
   { label: 'Home', value: 'home' },
   { label: 'Workout Library', value: 'workout' },
@@ -244,7 +241,7 @@ const Subscriptions = () => {
       </div>
 
       <div className="flex flex-wrap justify-center items-stretch gap-6 w-full mx-auto px-4">
-        {visibleSubscriptionPlans(plans).map((plan) => {
+        {plans.map((plan) => {
           const pricing = getPlanPricingDetails(plan, isYearly);
 
           return (

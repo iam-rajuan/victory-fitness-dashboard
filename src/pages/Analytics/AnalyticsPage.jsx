@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Select } from "antd";
 import { FaDumbbell, FaTrophy, FaUserPlus, FaUsers } from "react-icons/fa";
 import {
   MdCardMembership,
@@ -95,6 +96,145 @@ const money = (v, currency = "EUR") =>
       }).format(v)
     : "—";
 
+const COUNTRY_OPTIONS = [
+  { value: "Afghanistan", label: "Afghanistan" },
+  { value: "Albania", label: "Albania" },
+  { value: "Algeria", label: "Algeria" },
+  { value: "Andorra", label: "Andorra" },
+  { value: "Angola", label: "Angola" },
+  { value: "Argentina", label: "Argentina" },
+  { value: "Armenia", label: "Armenia" },
+  { value: "Australia", label: "Australia" },
+  { value: "Austria", label: "Austria" },
+  { value: "Azerbaijan", label: "Azerbaijan" },
+  { value: "Bahamas", label: "Bahamas" },
+  { value: "Bahrain", label: "Bahrain" },
+  { value: "Bangladesh", label: "Bangladesh" },
+  { value: "Barbados", label: "Barbados" },
+  { value: "Belgium", label: "Belgium" },
+  { value: "Belize", label: "Belize" },
+  { value: "Benin", label: "Benin" },
+  { value: "Bhutan", label: "Bhutan" },
+  { value: "Bolivia", label: "Bolivia" },
+  { value: "Bosnia and Herzegovina", label: "Bosnia and Herzegovina" },
+  { value: "Botswana", label: "Botswana" },
+  { value: "Brazil", label: "Brazil" },
+  { value: "Brunei", label: "Brunei" },
+  { value: "Bulgaria", label: "Bulgaria" },
+  { value: "Burkina Faso", label: "Burkina Faso" },
+  { value: "Burundi", label: "Burundi" },
+  { value: "Cambodia", label: "Cambodia" },
+  { value: "Cameroon", label: "Cameroon" },
+  { value: "Canada", label: "Canada" },
+  { value: "Cape Verde", label: "Cape Verde" },
+  { value: "Chile", label: "Chile" },
+  { value: "China", label: "China" },
+  { value: "Colombia", label: "Colombia" },
+  { value: "Costa Rica", label: "Costa Rica" },
+  { value: "Croatia", label: "Croatia" },
+  { value: "Cuba", label: "Cuba" },
+  { value: "Cyprus", label: "Cyprus" },
+  { value: "Czech Republic", label: "Czech Republic" },
+  { value: "Denmark", label: "Denmark" },
+  { value: "Djibouti", label: "Djibouti" },
+  { value: "Dominica", label: "Dominica" },
+  { value: "Dominican Republic", label: "Dominican Republic" },
+  { value: "Ecuador", label: "Ecuador" },
+  { value: "Egypt", label: "Egypt" },
+  { value: "El Salvador", label: "El Salvador" },
+  { value: "Estonia", label: "Estonia" },
+  { value: "Ethiopia", label: "Ethiopia" },
+  { value: "Fiji", label: "Fiji" },
+  { value: "Finland", label: "Finland" },
+  { value: "France", label: "France" },
+  { value: "Georgia", label: "Georgia" },
+  { value: "Greece", label: "Greece" },
+  { value: "Guatemala", label: "Guatemala" },
+  { value: "Honduras", label: "Honduras" },
+  { value: "Hungary", label: "Hungary" },
+  { value: "Iceland", label: "Iceland" },
+  { value: "Indonesia", label: "Indonesia" },
+  { value: "Iran", label: "Iran" },
+  { value: "Iraq", label: "Iraq" },
+  { value: "Ireland", label: "Ireland" },
+  { value: "Israel", label: "Israel" },
+  { value: "Italy", label: "Italy" },
+  { value: "Jamaica", label: "Jamaica" },
+  { value: "Japan", label: "Japan" },
+  { value: "Jordan", label: "Jordan" },
+  { value: "Kazakhstan", label: "Kazakhstan" },
+  { value: "Kenya", label: "Kenya" },
+  { value: "Kuwait", label: "Kuwait" },
+  { value: "Latvia", label: "Latvia" },
+  { value: "Lebanon", label: "Lebanon" },
+  { value: "Libya", label: "Libya" },
+  { value: "Liechtenstein", label: "Liechtenstein" },
+  { value: "Lithuania", label: "Lithuania" },
+  { value: "Luxembourg", label: "Luxembourg" },
+  { value: "Macedonia", label: "Macedonia" },
+  { value: "Madagascar", label: "Madagascar" },
+  { value: "Malaysia", label: "Malaysia" },
+  { value: "Maldives", label: "Maldives" },
+  { value: "Malta", label: "Malta" },
+  { value: "Mexico", label: "Mexico" },
+  { value: "Moldova", label: "Moldova" },
+  { value: "Monaco", label: "Monaco" },
+  { value: "Mongolia", label: "Mongolia" },
+  { value: "Montenegro", label: "Montenegro" },
+  { value: "Morocco", label: "Morocco" },
+  { value: "Nepal", label: "Nepal" },
+  { value: "Netherlands", label: "Netherlands" },
+  { value: "New Zealand", label: "New Zealand" },
+  { value: "Nicaragua", label: "Nicaragua" },
+  { value: "Nigeria", label: "Nigeria" },
+  { value: "Norway", label: "Norway" },
+  { value: "Oman", label: "Oman" },
+  { value: "Pakistan", label: "Pakistan" },
+  { value: "Panama", label: "Panama" },
+  { value: "Paraguay", label: "Paraguay" },
+  { value: "Peru", label: "Peru" },
+  { value: "Philippines", label: "Philippines" },
+  { value: "Poland", label: "Poland" },
+  { value: "Portugal", label: "Portugal" },
+  { value: "Qatar", label: "Qatar" },
+  { value: "Romania", label: "Romania" },
+  { value: "Russia", label: "Russia" },
+  { value: "Rwanda", label: "Rwanda" },
+  { value: "Saudi Arabia", label: "Saudi Arabia" },
+  { value: "Senegal", label: "Senegal" },
+  { value: "Serbia", label: "Serbia" },
+  { value: "Singapore", label: "Singapore" },
+  { value: "Slovakia", label: "Slovakia" },
+  { value: "Slovenia", label: "Slovenia" },
+  { value: "Somalia", label: "Somalia" },
+  { value: "South Africa", label: "South Africa" },
+  { value: "South Korea", label: "South Korea" },
+  { value: "Spain", label: "Spain" },
+  { value: "Sri Lanka", label: "Sri Lanka" },
+  { value: "Sudan", label: "Sudan" },
+  { value: "Sweden", label: "Sweden" },
+  { value: "Switzerland", label: "Switzerland" },
+  { value: "Syria", label: "Syria" },
+  { value: "Taiwan", label: "Taiwan" },
+  { value: "Tajikistan", label: "Tajikistan" },
+  { value: "Tanzania", label: "Tanzania" },
+  { value: "Thailand", label: "Thailand" },
+  { value: "Tunisia", label: "Tunisia" },
+  { value: "Turkey", label: "Turkey" },
+  { value: "Uganda", label: "Uganda" },
+  { value: "Ukraine", label: "Ukraine" },
+  { value: "United Arab Emirates", label: "United Arab Emirates" },
+  { value: "United Kingdom", label: "United Kingdom" },
+  { value: "United States", label: "United States" },
+  { value: "Uruguay", label: "Uruguay" },
+  { value: "Uzbekistan", label: "Uzbekistan" },
+  { value: "Venezuela", label: "Venezuela" },
+  { value: "Vietnam", label: "Vietnam" },
+  { value: "Yemen", label: "Yemen" },
+  { value: "Zambia", label: "Zambia" },
+  { value: "Zimbabwe", label: "Zimbabwe" }
+];
+
 export default function AnalyticsPage() {
   const [revenueGranularity, setRevenueGranularity] = useState("daily");
   const userStats = useAnalyticsQuery(fetchUserStats);
@@ -112,7 +252,39 @@ export default function AnalyticsPage() {
   const whatsapp = useAnalyticsQuery(fetchWhatsappTracker);
 
   const cohort = useAnalyticsQuery(fetchRetentionCohort);
-  const marketBreakdown = useAnalyticsQuery(fetchMarketBreakdown);
+  
+  const filter = useAnalyticsFilter();
+  const [selectedCountry, setSelectedCountry] = useState(null);
+  const [marketBreakdown, setMarketBreakdown] = useState({ data: null, loading: true, error: null });
+
+  useEffect(() => {
+    let cancelled = false;
+    const ac = new AbortController();
+    setMarketBreakdown((prev) => ({ ...prev, loading: true, error: null }));
+    
+    fetchMarketBreakdown({
+      preset: filter.preset,
+      from: filter.from,
+      to: filter.to,
+      country: selectedCountry || undefined,
+      signal: ac.signal,
+    })
+      .then((res) => {
+        if (!cancelled) {
+          setMarketBreakdown({ data: res, loading: false, error: null });
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setMarketBreakdown({ data: null, loading: false, error: err.message || "Failed to load" });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, [filter.preset, filter.from, filter.to, selectedCountry]);
 
   return (
     <div className="space-y-6" id="intelligence-dashboard">
@@ -660,6 +832,18 @@ export default function AnalyticsPage() {
       <SectionCard
         title="Market Breakdown"
         subtitle="30-second decision tool for marketing budget"
+        action={
+          <Select
+            placeholder="Compare another country"
+            value={selectedCountry}
+            onChange={setSelectedCountry}
+            options={COUNTRY_OPTIONS.filter(c => c.value !== "Ghana" && c.value !== "Germany" && c.value !== "India")}
+            allowClear
+            showSearch
+            style={{ width: 220 }}
+            optionFilterProp="label"
+          />
+        }
       >
         <MarketPanel
           markets={marketBreakdown.data?.markets || []}
