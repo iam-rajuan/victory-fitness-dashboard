@@ -118,10 +118,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       <div className="relative flex flex-col justify-center items-center gap-2 px-4 sm:px-6 pt-6 sm:pt-8 pb-4 sm:pb-6">
         <div className="relative"></div>
         <div className="text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-brand-gradient bg-clip-text text-transparent">
-            Victory Fitness
-          </h2>
-          <p className="text-[10px] sm:text-xs text-surface-500 font-medium mt-1">
+          <img src="/logo_light.png?v=4" alt="Victory Fitness" className="h-9 sm:h-11 w-auto object-contain mx-auto" />
+          <p className="text-[10px] sm:text-xs text-surface-500 font-bold uppercase tracking-wider mt-2">
             Admin Dashboard
           </p>
         </div>

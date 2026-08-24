@@ -71,7 +71,7 @@ function ResetPassword() {
         <div className="flex  justify-center items-center">
           <div className="w-full lg:w-1/2 bg-white p-5 md:px-18 md:py-28 shadow-[0px_10px_20px_rgba(0,0,0,0.2)] rounded-2xl">
             <div className="flex justify-center items-center mb-10">
-              <img src="/logo.png" alt="" />
+              <img src="/logo.png?v=3" alt="" />
             </div>
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="w-full">
