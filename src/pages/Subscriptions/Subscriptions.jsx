@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Modal, Form, Input, Select, Switch, Button, message, Popconfirm, InputNumber, DatePicker } from 'antd';
 import { FiEdit, FiTrash2, FiPlus, FiCheck } from 'react-icons/fi';
 import { FaMedal, FaRegCircle } from 'react-icons/fa';
@@ -44,6 +44,19 @@ const Subscriptions = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
   const [form] = Form.useForm();
+
+  const sortedPlans = useMemo(() => {
+    const getPlanOrderWeight = (tier) => {
+      const t = String(tier || '').toUpperCase();
+      if (t === 'GOLD') return 1;
+      if (t === 'SILVER') return 2;
+      if (t.includes('BETA') || t.includes('TRIAL')) return 3;
+      if (t === 'PLATINUM') return 4;
+      if (t === 'INNER_CIRCLE') return 5;
+      return 10;
+    };
+    return [...plans].sort((a, b) => getPlanOrderWeight(a.tier) - getPlanOrderWeight(b.tier));
+  }, [plans]);
 
   useEffect(() => {
     let isMounted = true;
@@ -240,14 +253,14 @@ const Subscriptions = () => {
         </div>
       </div>
 
-      <div className="flex flex-wrap justify-center items-stretch gap-6 w-full mx-auto px-4">
-        {plans.map((plan) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 w-full max-w-[1650px] mx-auto px-4">
+        {sortedPlans.map((plan) => {
           const pricing = getPlanPricingDetails(plan, isYearly);
 
           return (
             <div
               key={plan.id}
-              className={`group relative flex flex-col w-full md:w-[320px] lg:w-[280px] xl:w-[300px] p-8 rounded-2xl transition-all duration-300 ${
+              className={`group relative flex flex-col w-full p-6 rounded-2xl transition-all duration-300 ${
                 plan.isMostPopular
                   ? 'bg-[#0b1322] border-2 border-[#00e5ff] shadow-[0_0_25px_rgba(0,229,255,0.15)] shadow-[#00e5ff]/20'
                   : 'bg-[#0f172a] border border-[#1e293b]'
@@ -358,7 +371,7 @@ const Subscriptions = () => {
               </div>
 
               <button
-                className={`w-full py-4 rounded-xl text-sm font-bold tracking-wider transition-all ${
+                className={`w-full py-3 rounded-xl text-sm font-bold tracking-wider transition-all ${
                   plan.isMostPopular
                     ? 'bg-[#00e5ff] hover:bg-[#33ebfc] text-[#0f172a] shadow-lg shadow-[#00e5ff]/20'
                     : 'bg-white hover:bg-slate-100 text-[#0f172a]'
