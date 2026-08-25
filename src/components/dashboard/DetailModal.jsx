@@ -49,6 +49,9 @@ export default function DetailModal({
                 src={avatarSrc || "/userimg.png"}
                 alt={avatarAlt}
                 className="h-20 w-20 rounded-full border-4 border-slate-100 object-cover shadow-md"
+                onError={(event) => {
+                  event.currentTarget.src = "/userimg.png";
+                }}
               />
             </div>
             <div className="min-w-0 flex-1">

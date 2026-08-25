@@ -139,6 +139,9 @@ function AllSubscribers() {
             src={record.profileImage || "/userimg.png"}
             className="w-10 h-10 object-cover rounded-full"
             alt="User Avatar"
+            onError={(event) => {
+              event.currentTarget.src = "/userimg.png";
+            }}
           />
           <span className="leading-none">{value}</span>
         </div>

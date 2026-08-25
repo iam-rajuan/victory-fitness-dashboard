@@ -397,6 +397,9 @@ function UserDetails() {
             src={record.profileImage || "/userimg.png"}
             className="h-10 w-10 rounded-full object-cover"
             alt="User Avatar"
+            onError={(event) => {
+              event.currentTarget.src = "/userimg.png";
+            }}
           />
           <span className="leading-none">{value}</span>
         </div>
