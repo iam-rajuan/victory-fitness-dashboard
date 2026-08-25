@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { FaCheckCircle, FaFire, FaUserPlus, FaUsers } from "react-icons/fa";
 import { fetchDailyWins } from "../../../services/analytics.service";
+import { useAnalyticsFilter } from "../../context/AnalyticsFilterContext";
 
 dayjs.extend(relativeTime);
 
@@ -26,22 +27,30 @@ const TONE_CLASS = {
  * Falls back to empty state if backend returns no events.
  */
 export default function WinsFeed() {
+  const filter = useAnalyticsFilter();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     let timer = null;
 
     const load = async () => {
+      if (!cancelled) {
+        setError("");
+      }
       try {
-        const data = await fetchDailyWins();
+        const data = await fetchDailyWins(filter);
         if (cancelled) return;
         setEvents(Array.isArray(data?.events) ? data.events : []);
         setLastUpdated(data?.lastUpdated || new Date().toISOString());
-      } catch {
-        if (!cancelled) setEvents([]);
+      } catch (requestError) {
+        if (!cancelled) {
+          setEvents([]);
+          setError(requestError instanceof Error ? requestError.message : "Failed to load daily wins");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -53,7 +62,7 @@ export default function WinsFeed() {
       cancelled = true;
       if (timer) clearInterval(timer);
     };
-  }, []);
+  }, [filter]);
 
   return (
     <div className="flex h-full min-h-48 flex-col">
@@ -68,6 +77,10 @@ export default function WinsFeed() {
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="h-10 animate-pulse rounded-lg bg-surface-100" />
           ))}
+        </div>
+      ) : error ? (
+        <div className="flex flex-1 items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 text-center text-sm font-medium text-red-700">
+          {error}
         </div>
       ) : events.length === 0 ? (
         <div className="flex flex-1 items-center justify-center text-center text-xs text-surface-500">

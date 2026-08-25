@@ -322,6 +322,10 @@ export default function TrialExperience() {
     return () => controller.abort();
   };
 
+  const refreshDashboard = () => {
+    load();
+  };
+
   useEffect(() => load(), [filter.preset, filter.market, filter.from, filter.to]);
 
   const saveConfig = async (draft) => {
@@ -411,7 +415,7 @@ export default function TrialExperience() {
           title="Live Trial Funnel"
           eyebrow="dashboard analytics"
           action={
-            <button type="button" onClick={load} className="inline-flex items-center gap-2 rounded-md border border-[#0D2B45]/10 bg-[#F7F3EE] px-3 py-2 text-xs font-bold text-[#0D2B45] hover:bg-white">
+            <button type="button" onClick={refreshDashboard} className="inline-flex items-center gap-2 rounded-md border border-[#0D2B45]/10 bg-[#F7F3EE] px-3 py-2 text-xs font-bold text-[#0D2B45] hover:bg-white">
               <FiRefreshCw className={cx("h-4 w-4", loading && "animate-spin")} />
               Refresh
             </button>
@@ -525,7 +529,7 @@ export default function TrialExperience() {
           {[
             [FiMessageCircle, "App integration", "Onboarding must call POST /me/trial/gold/start when the user is undecided."],
             [FiPlayCircle, "Trial videos", "Configure Day 2 and Day 5 video URLs in Campaign Settings."],
-            [FiMail, "Email/push credentials", "Production SMTP and push provider keys must be valid before scheduled jobs run."],
+            [FiMail, "Email/push credentials", "Production Resend and push provider keys must be valid before scheduled jobs run."],
             [FiUsers, "Decision screen", "App should render GET /me/trial/decision on Day 5."],
             [FiAlertTriangle, "Cron schedule", "Run /jobs/trial-campaign daily with CRON_SECRET."],
             [FiShield, "Payment verification", "Payment callback must call the subscription update flow after explicit user choice."],

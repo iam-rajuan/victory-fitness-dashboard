@@ -87,6 +87,18 @@ function SectionCard({ title, subtitle, children, action }) {
   );
 }
 
+function SectionError({ error }) {
+  if (!error) {
+    return null;
+  }
+
+  return (
+    <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+      {error}
+    </div>
+  );
+}
+
 const money = (v, currency = "EUR") =>
   typeof v === "number"
     ? new Intl.NumberFormat(undefined, {
@@ -327,6 +339,7 @@ export default function AnalyticsPage() {
           }
           action={<span id="trial-funnel" />}
         >
+          <SectionError error={funnel.error} />
           <FunnelChart steps={funnel.data?.steps || []} />
         </SectionCard>
 
@@ -334,6 +347,7 @@ export default function AnalyticsPage() {
           title="Viral Coefficient"
           subtitle={viral.data?.sublabel || "Rolling 30 days"}
         >
+          <SectionError error={viral.error} />
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="flex-1">
               <p
@@ -370,6 +384,7 @@ export default function AnalyticsPage() {
           title="WhatsApp Share Tracker"
           subtitle="Organic growth heartbeat"
         >
+          <SectionError error={whatsapp.error} />
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-surface-500">
@@ -417,6 +432,7 @@ export default function AnalyticsPage() {
 
       {/* =================== 18.2 User Statistics =================== */}
       <SectionCard title="User Statistics" subtitle="Acquisition, retention, and top performers">
+        <SectionError error={userStats.error} />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <StatCard
             label="Total registered"
@@ -514,6 +530,7 @@ export default function AnalyticsPage() {
 
       {/* =================== 18.3 Workout Statistics =================== */}
       <SectionCard title="Workout Statistics" subtitle="Engagement & completion quality">
+        <SectionError error={workoutStats.error} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <StatCard
             label="Completed"
@@ -556,6 +573,7 @@ export default function AnalyticsPage() {
 
       {/* =================== 18.4 Challenge Statistics =================== */}
       <SectionCard title="Challenge Statistics" subtitle="Viral mechanics & A/B results">
+        <SectionError error={challengeStats.error} />
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
           <StatCard
             label="Invites sent"
@@ -602,6 +620,7 @@ export default function AnalyticsPage() {
 
       {/* =================== 18.5 Nutrition =================== */}
       <SectionCard title="Nutrition Statistics" subtitle="AI plans and adherence">
+        <SectionError error={nutritionStats.error} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <StatCard
             label="AI meal plans generated"
@@ -665,6 +684,7 @@ export default function AnalyticsPage() {
           </div>
         }
       >
+        <SectionError error={revenueStats.error} />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatCard
             label="MRR (EUR)"
@@ -751,6 +771,7 @@ export default function AnalyticsPage() {
         title="Accountability Adoption"
         subtitle="New active accountability pairs"
       >
+        <SectionError error={accountability.error} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <StatCard
             label="New pairs"
@@ -767,6 +788,7 @@ export default function AnalyticsPage() {
         title="Habit Engine Adoption"
         subtitle="Gold-tier personalisation metrics"
       >
+        <SectionError error={habit.error} />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <StatCard
             label="Identity statement"
@@ -822,6 +844,7 @@ export default function AnalyticsPage() {
         title="Retention Cohort Table"
         subtitle="Day-7 retention > 45% for 4 weeks = scale marketing"
       >
+        <SectionError error={cohort.error} />
         <CohortHeatmap
           cohorts={cohort.data?.cohorts || []}
           loading={cohort.loading}
@@ -845,6 +868,7 @@ export default function AnalyticsPage() {
           />
         }
       >
+        <SectionError error={marketBreakdown.error} />
         <MarketPanel
           markets={marketBreakdown.data?.markets || []}
           loading={marketBreakdown.loading}

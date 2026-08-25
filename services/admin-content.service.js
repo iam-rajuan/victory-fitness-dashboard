@@ -1,6 +1,9 @@
 import { adminApiRequest } from "./auth.service";
 
 const wrapContentError = (error, fallbackMessage) => {
+  if (error?.name === "AbortError") {
+    throw error;
+  }
   if (error instanceof Error) {
     return error.message;
   }

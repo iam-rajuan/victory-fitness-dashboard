@@ -199,6 +199,8 @@ function UserDetails() {
   const [summary, setSummary] = useState(DEFAULT_SUMMARY);
   const [trialCohorts, setTrialCohorts] = useState([]);
   const [trialDropouts, setTrialDropouts] = useState([]);
+  const [trialCohortError, setTrialCohortError] = useState("");
+  const [trialDropoutError, setTrialDropoutError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isViewLoading, setIsViewLoading] = useState(false);
@@ -215,21 +217,38 @@ function UserDetails() {
       setError("");
 
       try {
-        const [data, cohortData, dropoutData] = await Promise.all([
+        const [dataResult, cohortResult, dropoutResult] = await Promise.allSettled([
           getUserManagementOverview({ page: currentPage, limit: pageSize, query: searchQuery, signal: controller.signal }),
-          getTrialCohorts({ signal: controller.signal }).catch(() => ({ cohorts: [] })),
-          getTrialDropouts({ signal: controller.signal }).catch(() => ({ users: [] })),
+          getTrialCohorts({ signal: controller.signal }),
+          getTrialDropouts({ signal: controller.signal }),
         ]);
 
         if (!isMounted) {
           return;
         }
 
+        if (dataResult.status !== "fulfilled") {
+          throw dataResult.reason;
+        }
+
+        const data = dataResult.value;
         setSummary(data.summary || DEFAULT_SUMMARY);
         setUsersData(data.table?.users || []);
         setTotalUsers(data.table?.total || 0);
-        setTrialCohorts(cohortData.cohorts || []);
-        setTrialDropouts(dropoutData.users || []);
+        if (cohortResult.status === "fulfilled") {
+          setTrialCohorts(cohortResult.value?.cohorts || []);
+          setTrialCohortError("");
+        } else {
+          setTrialCohorts([]);
+          setTrialCohortError(cohortResult.reason instanceof Error ? cohortResult.reason.message : "Failed to load trial cohorts");
+        }
+        if (dropoutResult.status === "fulfilled") {
+          setTrialDropouts(dropoutResult.value?.users || []);
+          setTrialDropoutError("");
+        } else {
+          setTrialDropouts([]);
+          setTrialDropoutError(dropoutResult.reason instanceof Error ? dropoutResult.reason.message : "Failed to load trial dropouts");
+        }
       } catch (requestError) {
         if (!isMounted) {
           return;
@@ -240,6 +259,10 @@ function UserDetails() {
         setSummary(DEFAULT_SUMMARY);
         setUsersData([]);
         setTotalUsers(0);
+        setTrialCohorts([]);
+        setTrialDropouts([]);
+        setTrialCohortError("");
+        setTrialDropoutError("");
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -405,6 +428,7 @@ function UserDetails() {
   ];
 
   const detailSections = selectedUser ? getUserDetailSections(selectedUser) : [];
+  const hasSearch = Boolean(searchQuery.trim());
   const subscriptionTierLabel = selectedUser
     ? formatEnumLabel(
         selectedUser.subscription_tier ||
@@ -462,11 +486,11 @@ function UserDetails() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="text-sm font-medium text-slate-500">Total Users</div>
-          <div className="mt-2 text-3xl font-bold text-slate-900">{totalUsers}</div>
+          <div className="mt-2 text-3xl font-bold text-slate-900">{summary.totalUsers}</div>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="text-sm font-medium text-slate-500">Shown on page</div>
-          <div className="mt-2 text-3xl font-bold text-slate-900">{usersData.length}</div>
+          <div className="text-sm font-medium text-slate-500">{hasSearch ? "Matching users" : "Shown on page"}</div>
+          <div className="mt-2 text-3xl font-bold text-slate-900">{hasSearch ? totalUsers : usersData.length}</div>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="text-sm font-medium text-slate-500">Search</div>
@@ -487,16 +511,28 @@ function UserDetails() {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase text-slate-500"><tr><th className="py-2">Cohort</th><th>Source</th><th>Users</th><th>Converted</th><th>Rate</th></tr></thead>
-              <tbody>{trialCohorts.length ? trialCohorts.map((cohort) => <tr key={`${cohort.cohort}-${cohort.signupSource}`} className="border-t border-slate-100"><td className="py-2 font-medium">{cohort.cohort}</td><td>{cohort.signupSource}</td><td>{cohort.totalUsers}</td><td>{cohort.convertedUsers}</td><td>{cohort.conversionRate}%</td></tr>) : <tr><td colSpan="5" className="py-6 text-center text-slate-400">No trial cohort data yet.</td></tr>}</tbody>
-            </table>
+            {trialCohortError ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {trialCohortError}
+              </div>
+            ) : (
+              <table className="w-full text-left text-sm">
+                <thead className="text-xs uppercase text-slate-500"><tr><th className="py-2">Cohort</th><th>Source</th><th>Users</th><th>Converted</th><th>Rate</th></tr></thead>
+                <tbody>{trialCohorts.length ? trialCohorts.map((cohort) => <tr key={`${cohort.cohort}-${cohort.signupSource}`} className="border-t border-slate-100"><td className="py-2 font-medium">{cohort.cohort}</td><td>{cohort.signupSource}</td><td>{cohort.totalUsers}</td><td>{cohort.convertedUsers}</td><td>{cohort.conversionRate}%</td></tr>) : <tr><td colSpan="5" className="py-6 text-center text-slate-400">No trial cohort data yet.</td></tr>}</tbody>
+              </table>
+            )}
           </div>
         </section>
 
         <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
           <div className="mb-4"><h2 className="text-lg font-bold text-slate-900">Dropout list</h2><p className="text-sm text-slate-600">Consented 5-day Gold trial users who reached day 5 without converting. Phase 1 beta users are excluded.</p></div>
-          <div className="space-y-3">{trialDropouts.length ? trialDropouts.slice(0, 8).map((dropout) => <div key={dropout.id} className="flex items-center justify-between gap-3 rounded-xl bg-white p-3"><div><div className="font-semibold text-slate-900">{dropout.fullName}</div><div className="text-xs text-slate-500">{dropout.email} · {dropout.signupSource}</div></div><div className="text-right text-xs text-slate-500"><div>{dropout.coachMessages} coach messages</div><div>{dropout.nutritionPlanCreated ? "Nutrition plan created" : "No nutrition plan"}</div></div></div>) : <div className="py-6 text-center text-slate-500">No consented dropouts found.</div>}</div>
+          {trialDropoutError ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+              {trialDropoutError}
+            </div>
+          ) : (
+            <div className="space-y-3">{trialDropouts.length ? trialDropouts.slice(0, 8).map((dropout) => <div key={dropout.id} className="flex items-center justify-between gap-3 rounded-xl bg-white p-3"><div><div className="font-semibold text-slate-900">{dropout.fullName}</div><div className="text-xs text-slate-500">{dropout.email} · {dropout.signupSource}</div></div><div className="text-right text-xs text-slate-500"><div>{dropout.coachMessages} coach messages</div><div>{dropout.nutritionPlanCreated ? "Nutrition plan created" : "No nutrition plan"}</div></div></div>) : <div className="py-6 text-center text-slate-500">No consented dropouts found.</div>}</div>
+          )}
         </section>
       </div>
 

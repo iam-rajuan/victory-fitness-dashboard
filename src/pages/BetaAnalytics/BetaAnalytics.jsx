@@ -363,6 +363,11 @@ export default function BetaAnalytics() {
     }
   };
 
+  const refreshAnalytics = async () => {
+    const controller = new AbortController();
+    await loadAnalytics(controller.signal);
+  };
+
   useEffect(() => {
     const controller = new AbortController();
     loadAnalytics(controller.signal);
@@ -575,7 +580,7 @@ export default function BetaAnalytics() {
           action={
             <button
               type="button"
-              onClick={() => loadAnalytics()}
+              onClick={() => void refreshAnalytics()}
               className="inline-flex items-center gap-2 rounded-md border border-[#0D2B45]/10 bg-[#F7F3EE] px-3 py-2 text-xs font-bold text-[#0D2B45] hover:bg-white"
             >
               <FiRefreshCw className={cx("h-4 w-4", isLoading && "animate-spin")} />
@@ -868,10 +873,12 @@ export default function BetaAnalytics() {
 
       {selectedUser ? (
         <DetailModal
+          open={Boolean(selectedUser)}
+          onCancel={() => setSelectedUser(null)}
+          avatarAlt={selectedUser.fullName}
           title={selectedUser.fullName}
-          subtitle="Phase 1 beta tester activity and access summary."
+          description="Phase 1 beta tester activity and access summary."
           sections={buildDetailSections(selectedUser)}
-          onClose={() => setSelectedUser(null)}
         />
       ) : null}
     </div>

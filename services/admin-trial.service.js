@@ -26,14 +26,6 @@ export const updateGoldTrialConfig = async (payload) => {
   }
 };
 
-export const getGoldTrialOutcomes = async ({ signal } = {}) => {
-  try {
-    return await adminApiRequest("/admin/trials/outcomes", { signal });
-  } catch (error) {
-    throw new Error(wrapTrialError(error, "Failed to load Gold trial outcomes"));
-  }
-};
-
 export const getPhaseOneBetaSummary = async ({ signal } = {}) => {
   try {
     return await adminApiRequest("/admin/trials/phase-one-beta", { signal });
@@ -42,14 +34,41 @@ export const getPhaseOneBetaSummary = async ({ signal } = {}) => {
   }
 };
 
+export const getGoldTrialOutcomes = async ({
+  preset,
+  market,
+  from,
+  to,
+  signal,
+} = {}) => {
+  const searchParams = new URLSearchParams();
+  [
+    ["preset", preset],
+    ["market", market],
+    ["from", from],
+    ["to", to],
+  ].forEach(([key, value]) => {
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      searchParams.set(key, String(value).trim());
+    }
+  });
+
+  const query = searchParams.toString();
+  try {
+    return await adminApiRequest(`/admin/trials/outcomes${query ? `?${query}` : ""}`, { signal });
+  } catch (error) {
+    throw new Error(wrapTrialError(error, "Failed to load Gold trial outcomes"));
+  }
+};
+
 export const getGoldTrialDashboard = async ({ preset = "this_week", market = "all", from, to, signal } = {}) => {
   const [funnel, userStats, cohorts, dropouts, config, outcomes] = await Promise.all([
     fetchTrialFunnel({ preset, market, from, to, signal }).catch((error) => ({ error: error.message, steps: [] })),
     fetchUserStats({ preset, market, from, to, signal }).catch((error) => ({ error: error.message })),
-    getTrialCohorts({ signal }).catch((error) => ({ error: error.message, cohorts: [] })),
-    getTrialDropouts({ signal, limit: 100 }).catch((error) => ({ error: error.message, users: [] })),
+    getTrialCohorts({ preset, market, from, to, signal }).catch((error) => ({ error: error.message, cohorts: [] })),
+    getTrialDropouts({ preset, market, from, to, signal, limit: 100 }).catch((error) => ({ error: error.message, users: [] })),
     getGoldTrialConfig({ signal }).catch((error) => ({ error: error.message, messages: [] })),
-    getGoldTrialOutcomes({ signal }).catch((error) => ({ error: error.message })),
+    getGoldTrialOutcomes({ preset, market, from, to, signal }).catch((error) => ({ error: error.message })),
   ]);
 
   return {

@@ -105,8 +105,13 @@ export const fetchWhatsappTracker = ({ preset, market, from, to, signal } = {}) 
     "Failed to load WhatsApp tracker",
   );
 
-export const fetchDailyWins = ({ signal } = {}) =>
-  fetchAnalytics("daily-wins", {}, signal, "Failed to load daily wins");
+export const fetchDailyWins = ({ preset, market, from, to, signal } = {}) =>
+  fetchAnalytics(
+    "daily-wins",
+    { preset, market, from, to },
+    signal,
+    "Failed to load daily wins",
+  );
 
 export const fetchRetentionCohort = ({ preset, market, from, to, signal } = {}) =>
   fetchAnalytics(
