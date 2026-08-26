@@ -74,6 +74,14 @@ export const getResetToken = () => {
   return token || "";
 };
 
+export const clearResetFlow = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+  localStorage.removeItem("resetToken");
+  localStorage.removeItem("resetEmail");
+};
+
 // Retrieve user info (decoded token) from localStorage
 export const getUserInfo = () => {
   const authToken = getFromLocalStorage("accessToken");

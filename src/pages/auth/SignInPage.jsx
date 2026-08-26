@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { IoEyeOffOutline, IoEyeOutline } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
 import { clearUserInfo, ensureAdminSession, loginAdmin } from "../../../services/auth.service";
-
 function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
@@ -17,18 +16,15 @@ function SignInPage() {
   
   useEffect(() => {
     let isMounted = true;
-
     ensureAdminSession()
       .then((allowed) => {
         if (!isMounted) {
           return;
         }
-
         if (allowed) {
           navigate("/", { replace: true });
           return;
         }
-
         setIsCheckingSession(false);
       })
       .catch(() => {
@@ -37,45 +33,22 @@ function SignInPage() {
         }
         setIsCheckingSession(false);
       });
-
-    // Clear any plaintext password left over from an older version
+    // Clear any plaintext password and saved email details on mount
     localStorage.removeItem('rememberedPassword');
-
-    const savedEmail = localStorage.getItem('rememberedEmail');
-    const rememberMe = localStorage.getItem('rememberMe') === 'true';
-
-    if (rememberMe && savedEmail) {
-      setFormData((prev) => ({ ...prev, email: savedEmail }));
-      setIsChecked(true);
-    }
-
+    localStorage.removeItem('rememberedEmail');
+    localStorage.removeItem('rememberMe');
     return () => {
       isMounted = false;
     };
   }, [navigate]);
-
   const handleCheckboxChange = (event) => {
     const checked = event.target.checked;
     setIsChecked(checked);
-
-    if (checked) {
-      localStorage.setItem('rememberedEmail', formData.email);
-      localStorage.setItem('rememberMe', 'true');
-    } else {
-      localStorage.removeItem('rememberedEmail');
-      localStorage.removeItem('rememberMe');
-    }
   };
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-
-    if (isChecked && name === 'email') {
-      localStorage.setItem('rememberedEmail', value);
-    }
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -94,42 +67,57 @@ function SignInPage() {
       setIsLoading(false);
     }
   };
-
   return (
-    <div className="bg-white min-h-screen flex items-center justify-center p-5">
-      <div className="container mx-auto">
-        <div className="flex  justify-center items-center">
-          <div className="w-full lg:w-1/2 bg-white p-5 md:px-18 md:py-28 shadow-[0px_10px_30px_rgba(0,0,0,0.1)] rounded-2xl">
-            {isCheckingSession ? (
-              <div className="py-12 text-center text-lg font-semibold text-blue-600">
-                Checking admin session...
-              </div>
-            ) : (
+    <div className="bg-[#f8fafc] min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Subtle background glow effect */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[350px] bg-gradient-to-b from-[#a855f7]/5 via-transparent to-transparent blur-3xl pointer-events-none" />
+      <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-[#a855f7]/5 blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-[#06b6d4]/5 blur-3xl pointer-events-none" />
+      <div className="w-full max-w-md z-10">
+        <div className="flex flex-col items-center mb-8">
+          <img 
+            src="/logo.png?v=3" 
+            alt="Victory Fitness" 
+            className="h-12 w-auto object-contain mb-3" 
+          />
+          <h2 className="text-2xl font-black tracking-tight text-slate-800 uppercase">
+            Admin Portal
+          </h2>
+          <p className="mt-1.5 text-xs text-slate-400 font-semibold uppercase tracking-wider">
+            Victory Fitness Dashboard Control
+          </p>
+        </div>
+        <div className="bg-white border border-slate-100 p-8 rounded-2xl shadow-xl shadow-slate-200/40">
+          {isCheckingSession ? (
+            <div className="py-12 text-center text-sm font-semibold text-purple-600">
+              Verifying admin session credentials...
+            </div>
+          ) : (
             <form className="space-y-5" onSubmit={handleSubmit}>
-              <div className="w-full">
-                <label className="text-xl text-blue-600 mb-2 font-bold">
-                  Email
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                  Email Address
                 </label>
                 <input
                   type="email"
                   name="email"
-                  placeholder="enter your gmail"
-                  className="w-full px-5 py-3 border-2 border-blue-600 rounded-md outline-none mt-5 placeholder:text-xl"
+                  placeholder="Enter your email"
+                  className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-405 outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/10 focus:border-purple-500 transition-all text-sm"
                   value={formData.email}
                   onChange={handleInputChange}
                   required
                 />
               </div>
-              <div className="w-full">
-                <label className="text-xl text-blue-600 mb-2 font-bold">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">
                   Password
                 </label>
-                <div className="w-full relative">
+                <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
-                    placeholder="**********"
-                    className="w-full border-2 border-blue-600 rounded-md outline-none px-5 py-3 mt-5 placeholder:text-xl"
+                    placeholder="••••••••••••"
+                    className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-410 outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/10 focus:border-purple-500 transition-all text-sm"
                     value={formData.password}
                     onChange={handleInputChange}
                     required
@@ -137,7 +125,7 @@ function SignInPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 bottom-4 flex items-center text-blue-600"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
                   >
                     {showPassword ? (
                       <IoEyeOffOutline className="w-5 h-5" />
@@ -147,9 +135,8 @@ function SignInPage() {
                   </button>
                 </div>
               </div>
-
-              <div className="flex justify-between items-center text-sm my-5">
-                <label className="flex items-center gap-[10px] cursor-pointer">
+              <div className="flex justify-between items-center text-xs pt-1">
+                <label className="flex items-center gap-2 cursor-pointer select-none group">
                   <input
                     type="checkbox"
                     className="hidden"
@@ -157,8 +144,8 @@ function SignInPage() {
                   />
                   {isChecked ? (
                     <svg
-                      width="21"
-                      height="21"
+                      width="18"
+                      height="18"
                       viewBox="0 0 21 21"
                       fill="none"
                       xmlns="http://www.w3.org/2000/svg"
@@ -170,9 +157,9 @@ function SignInPage() {
                           y="6.10352e-05"
                           width="21"
                           height="21"
-                          rx="4"
-                          className="fill-blue-600"
-                          stroke="#962ebf"
+                          rx="5"
+                          className="fill-purple-600"
+                          stroke="#a855f7"
                         ></rect>
                         <path
                           id="Vector"
@@ -183,8 +170,8 @@ function SignInPage() {
                     </svg>
                   ) : (
                     <svg
-                      width="21"
-                      height="21"
+                      width="18"
+                      height="18"
                       viewBox="0 0 21 21"
                       fill="none"
                       xmlns="http://www.w3.org/2000/svg"
@@ -196,43 +183,40 @@ function SignInPage() {
                           y="6.10352e-05"
                           width="21"
                           height="21"
-                          rx="4"
+                          rx="5"
                           className="fill-transparent"
-                          stroke="#962ebf"
+                          stroke="#cbd5e1"
                         ></rect>
                       </g>
                     </svg>
                   )}
-
-                  <span className="text-xl text-[#424242]">
-                    Remember Password
+                  <span className="text-slate-500 group-hover:text-slate-800 transition-colors font-medium">
+                    Remember email
                   </span>
                 </label>
-                <Link to="/forget-password" className="text-[#111827] text-xl">
+                <Link to="/forget-password" className="text-purple-600 hover:text-purple-500 transition-colors font-semibold">
                   Forgot Password?
                 </Link>
               </div>
-              <div className="flex justify-center items-center">
+              <div className="pt-2">
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-1/3 bg-blue-600 text-white font-bold py-3 rounded-lg shadow-lg cursor-pointer mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-purple-500/10 hover:shadow-purple-500/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
-                  {isLoading ? "Logging In..." : "Log In"}
+                  {isLoading ? "Signing In..." : "Sign In"}
                 </button>
               </div>
               {error && (
-                <div className="text-red-500 text-center mt-2">
+                <div className="text-red-650 text-center text-xs bg-red-55 border border-red-100 py-2.5 rounded-lg font-medium">
                   {error}
                 </div>
               )}
             </form>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
-
 export default SignInPage;
