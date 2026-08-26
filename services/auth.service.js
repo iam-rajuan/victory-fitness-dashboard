@@ -6,6 +6,13 @@ const API_URL_STORAGE_KEY = "victoryAdminApiUrl";
 let sessionBootstrapPromise = null;
 let serverSessionVerified = false;
 
+const hasStoredAdminSession = () => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  return Boolean(localStorage.getItem("sessionToken"));
+};
+
 // Store user info in localStorage
 export const storeUserInfo = (userData) => {
   if (typeof window !== "undefined") {
@@ -169,6 +176,11 @@ export const logoutAdmin = async () => {
 
 export const refreshAdminSession = async () => {
   const sessionToken = getSessionToken();
+  if (!sessionToken) {
+    serverSessionVerified = false;
+    return false;
+  }
+
   const response = await fetch(`${API_URL}/auth/refresh`, {
     method: "POST",
     headers: {
@@ -194,6 +206,11 @@ export const refreshAdminSession = async () => {
 export const ensureAdminSession = async () => {
   if (serverSessionVerified && hasAdminAccess()) {
     return true;
+  }
+
+  if (!hasStoredAdminSession()) {
+    serverSessionVerified = false;
+    return false;
   }
 
   if (!sessionBootstrapPromise) {
