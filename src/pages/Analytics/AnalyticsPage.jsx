@@ -616,6 +616,53 @@ export default function AnalyticsPage() {
             </p>
           </div>
         )}
+
+        {!!challengeStats.data?.topChallenges?.length && (
+          <div className="mt-4 rounded-xl border border-surface-200 bg-surface-50 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-surface-500">
+                  Top challenges
+                </p>
+                <p className="mt-1 text-xs text-surface-600">
+                  Ranked by participant count for the selected filters.
+                </p>
+              </div>
+              <span className="rounded-full bg-brand-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-700">
+                Top {challengeStats.data.topChallenges.length}
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {challengeStats.data.topChallenges.map((challenge, index) => (
+                <div
+                  key={challenge.challengeId || `${challenge.title}-${index}`}
+                  className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-surface-200 bg-white px-3 py-3"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-xs font-black text-white">
+                    #{index + 1}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-surface-900">
+                      {challenge.title}
+                    </p>
+                    <p className="text-xs text-surface-500">
+                      {challenge.category || "Challenge"} · {challenge.participants} participants
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold tabular-nums text-surface-900">
+                      {challenge.completionRate?.toFixed(1) ?? "—"}%
+                    </p>
+                    <p className="text-[10px] uppercase tracking-wider text-surface-400">
+                      completed
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </SectionCard>
 
       {/* =================== 18.5 Nutrition =================== */}
