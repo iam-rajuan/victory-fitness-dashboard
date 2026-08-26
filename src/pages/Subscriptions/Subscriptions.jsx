@@ -1,50 +1,157 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Modal, Form, Input, Select, Switch, Button, message, Popconfirm, InputNumber, DatePicker } from 'antd';
-import { FiEdit, FiTrash2, FiPlus, FiCheck } from 'react-icons/fi';
+import { Modal, Form, Input, Select, Switch, Button, message, Popconfirm, InputNumber, DatePicker, Checkbox, Spin } from 'antd';
+import { FiEdit, FiTrash2, FiPlus, FiCheck, FiX, FiCreditCard, FiSliders, FiList, FiLayers } from 'react-icons/fi';
 import { FaMedal, FaRegCircle } from 'react-icons/fa';
 import { IoDiamond } from 'react-icons/io5';
 import dayjs from 'dayjs';
 import {
   createAdminSubscriptionPlan,
   deleteAdminSubscriptionPlan,
+  listAdminSubscriptionFeatures,
   listAdminSubscriptionPlans,
   updateAdminSubscriptionPlan,
 } from '../../../services/admin-content.service';
-
 const formatEuroPrice = (price) => {
   if (price == null) {
     return null;
   }
-
   return `EUR ${price}`;
 };
-
-const FEATURE_ACCESS_OPTIONS = [
-  { label: 'Home', value: 'home' },
-  { label: 'Workout Library', value: 'workout' },
-  { label: 'Challenges', value: 'challenge' },
-  { label: 'Community', value: 'community' },
-  { label: 'Meal Plan', value: 'mealPlan' },
-  { label: 'Nutrition Tracker', value: 'nutrition_tracker' },
-  { label: 'AI Meal Analysis', value: 'meal_analysis' },
-  { label: 'Profile', value: 'profile' },
-  { label: 'Workout Plan AI', value: 'workoutplan' },
-  { label: 'Longevity OS', value: 'longevity' },
-  { label: 'Application', value: 'application' },
-  { label: 'Coach Victor', value: 'coach_victor' },
-  { label: 'Longevity Plan AI', value: 'longevity_plan' },
-];
-
 const normalizeFeatureAccess = (items) =>
   Array.from(new Set((Array.isArray(items) ? items : []).map((item) => String(item).trim()).filter(Boolean)));
-
+const FALLBACK_FEATURE_CATALOG = [
+  {
+    key: 'home',
+    label: 'Home Dashboard',
+    description: 'Main home feed, highlights, and entry overview cards.',
+    category: 'Core Access',
+    defaultTiers: ['SILVER', 'GOLD', 'PLATINUM', 'INNER_CIRCLE'],
+    routeHints: ['/'],
+  },
+  {
+    key: 'workout',
+    label: 'Workout Library',
+    description: 'Workout browsing, workout detail screens, and published training videos.',
+    category: 'Core Access',
+    defaultTiers: ['SILVER', 'GOLD', 'PLATINUM', 'INNER_CIRCLE'],
+    routeHints: ['/workout', '/workout-library'],
+  },
+  {
+    key: 'challenge',
+    label: 'Challenges',
+    description: 'Challenge catalog, joining challenges, progress tracking, and day completion.',
+    category: 'Core Access',
+    defaultTiers: ['SILVER', 'GOLD', 'PLATINUM', 'INNER_CIRCLE'],
+    routeHints: ['/challenge', '/challenges'],
+  },
+  {
+    key: 'community',
+    label: 'Community Feed',
+    description: 'Community posts, challenge chat, reactions, comments, and accountability feed.',
+    category: 'Core Access',
+    defaultTiers: ['SILVER', 'GOLD', 'PLATINUM', 'INNER_CIRCLE'],
+    routeHints: ['/community', '/challenge', '/challenges'],
+  },
+  {
+    key: 'profile',
+    label: 'Profile',
+    description: 'Profile screen, rank, settings, and subscription summary access.',
+    category: 'Core Access',
+    defaultTiers: ['SILVER', 'GOLD', 'PLATINUM', 'INNER_CIRCLE'],
+    routeHints: ['/profile'],
+  },
+  {
+    key: 'mealPlan',
+    label: 'Meal Plan',
+    description: 'Nutrition plan generation, meal plan dashboard, and guided nutrition onboarding flows.',
+    category: 'Nutrition',
+    defaultTiers: ['GOLD', 'PLATINUM', 'INNER_CIRCLE'],
+    routeHints: ['/mealPlan'],
+  },
+  {
+    key: 'nutrition_tracker',
+    label: 'Nutrition Tracker',
+    description: 'Meal logging, daily nutrition tracking, and tracker-specific insights.',
+    category: 'Nutrition',
+    defaultTiers: ['PLATINUM', 'INNER_CIRCLE'],
+    routeHints: ['/mealPlan'],
+  },
+  {
+    key: 'meal_analysis',
+    label: 'AI Meal Analysis',
+    description: 'AI meal image and document analysis with saved history.',
+    category: 'Nutrition',
+    defaultTiers: ['PLATINUM', 'INNER_CIRCLE'],
+    routeHints: ['/mealPlan'],
+  },
+  {
+    key: 'workoutplan',
+    label: 'Workout Plan AI',
+    description: 'Personalized multi-day workout plan generation and adaptive progress.',
+    category: 'Advanced Coaching',
+    defaultTiers: ['PLATINUM', 'INNER_CIRCLE'],
+    routeHints: ['/workoutplan'],
+  },
+  {
+    key: 'longevity',
+    label: 'Longevity OS',
+    description: 'Longevity dashboard, wearable data, habits, recovery, and health insights.',
+    category: 'Advanced Coaching',
+    defaultTiers: ['PLATINUM', 'INNER_CIRCLE'],
+    routeHints: ['/profile/longevity-os'],
+  },
+  {
+    key: 'application',
+    label: 'Coaching Application',
+    description: 'Application form access for premium/direct coaching programmes.',
+    category: 'Premium Coaching',
+    defaultTiers: ['INNER_CIRCLE'],
+    routeHints: ['/profile/application'],
+  },
+  {
+    key: 'coach_victor',
+    label: 'Coach Victor',
+    description: 'AI Coach Victor chat, conversation history, and direct coaching entry points.',
+    category: 'Premium Coaching',
+    defaultTiers: ['INNER_CIRCLE'],
+    routeHints: ['/chat'],
+  },
+  {
+    key: 'longevity_plan',
+    label: 'Longevity Plan AI',
+    description: 'AI-generated weekly longevity plans and recommendation plans.',
+    category: 'Premium Coaching',
+    defaultTiers: ['INNER_CIRCLE'],
+    routeHints: ['/profile/longevity-os'],
+  },
+];
 const Subscriptions = () => {
   const [plans, setPlans] = useState([]);
+  const [featureCatalog, setFeatureCatalog] = useState(FALLBACK_FEATURE_CATALOG);
   const [isYearly, setIsYearly] = useState(true);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingPlan, setEditingPlan] = useState(null);
+  const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [form] = Form.useForm();
-
+  const featureLabelMap = useMemo(
+    () =>
+      featureCatalog.reduce((accumulator, item) => {
+        accumulator[item.key] = item.label;
+        return accumulator;
+      }, {}),
+    [featureCatalog],
+  );
+  const groupedFeatureCatalog = useMemo(() => {
+    const groups = featureCatalog.reduce((accumulator, item) => {
+      const category = item.category || 'Other';
+      if (!accumulator[category]) {
+        accumulator[category] = [];
+      }
+      accumulator[category].push(item);
+      return accumulator;
+    }, {});
+    return Object.entries(groups);
+  }, [featureCatalog]);
   const sortedPlans = useMemo(() => {
     const getPlanOrderWeight = (tier) => {
       const t = String(tier || '').toUpperCase();
@@ -57,27 +164,34 @@ const Subscriptions = () => {
     };
     return [...plans].sort((a, b) => getPlanOrderWeight(a.tier) - getPlanOrderWeight(b.tier));
   }, [plans]);
-
   useEffect(() => {
     let isMounted = true;
-
     const loadPlans = async () => {
       try {
-        const response = await listAdminSubscriptionPlans();
+        const [plansResponse, featuresResponse] = await Promise.all([
+          listAdminSubscriptionPlans(),
+          listAdminSubscriptionFeatures(),
+        ]);
         if (isMounted) {
-          setPlans(Array.isArray(response?.items) ? response.items : []);
+          setPlans(Array.isArray(plansResponse?.items) ? plansResponse.items : []);
+          const catalogItems = Array.isArray(featuresResponse?.items) && featuresResponse.items.length > 0
+            ? featuresResponse.items
+            : FALLBACK_FEATURE_CATALOG;
+          setFeatureCatalog(catalogItems);
+          setLoadingCatalog(false);
         }
       } catch (error) {
+        if (isMounted) {
+          setLoadingCatalog(false);
+        }
         message.error(error.message || 'Failed to load subscription plans');
       }
     };
-
     loadPlans();
     return () => {
       isMounted = false;
     };
   }, []);
-
   const isDiscountActive = (plan) => {
     if (!plan?.discountPercentage) {
       return false;
@@ -93,7 +207,6 @@ const Subscriptions = () => {
     }
     return true;
   };
-
   const getDiscountedPrice = (price, discountPercentage, active) => {
     if (price == null) {
       return null;
@@ -103,7 +216,6 @@ const Subscriptions = () => {
     }
     return Math.max(Math.round(price * (100 - discountPercentage) / 100), 0);
   };
-
   const getPlanPricingDetails = (plan, yearly) => {
     const originalPrice = yearly ? plan.priceYearly : plan.priceMonthly;
     const discountActive = isDiscountActive(plan);
@@ -115,7 +227,6 @@ const Subscriptions = () => {
       discountedPrice != null &&
       discountedPrice !== originalPrice
     );
-
     return {
       discountActive,
       originalPrice,
@@ -124,7 +235,6 @@ const Subscriptions = () => {
       cycleLabel: yearly ? 'year' : 'month',
     };
   };
-
   const handleAdd = () => {
     setEditingPlan(null);
     form.resetFields();
@@ -139,7 +249,6 @@ const Subscriptions = () => {
     });
     setIsModalVisible(true);
   };
-
   const handleEdit = (plan) => {
     setEditingPlan(plan);
     form.setFieldsValue({
@@ -149,7 +258,6 @@ const Subscriptions = () => {
     });
     setIsModalVisible(true);
   };
-
   const handleDelete = async (id) => {
     try {
       await deleteAdminSubscriptionPlan(id);
@@ -159,7 +267,6 @@ const Subscriptions = () => {
       message.error(error.message || 'Failed to delete plan');
     }
   };
-
   const handleSubmit = async (values) => {
     try {
       const discountPercentage =
@@ -197,7 +304,6 @@ const Subscriptions = () => {
       message.error(error.message || 'Failed to save plan');
     }
   };
-
   const getIcon = (type) => {
     switch (type) {
       case 'silver_medal':
@@ -212,7 +318,6 @@ const Subscriptions = () => {
         return <FaMedal size={24} className="text-slate-400" />;
     }
   };
-
   return (
     <div className="flex flex-col space-y-6 pt-2 pb-10 min-h-screen text-slate-100 font-sans tracking-wide">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
@@ -231,7 +336,6 @@ const Subscriptions = () => {
         </div>
         */}
       </div>
-
       <div className="flex flex-col items-center justify-center text-center mt-6 mb-12">
         <h2 className="text-3xl md:text-5xl font-black text-slate-800 uppercase tracking-tight mb-4">
           CHANGE YOUR <span className="text-[#00e5ff]">STRUCTURE</span>
@@ -239,7 +343,6 @@ const Subscriptions = () => {
         <p className="text-slate-500 text-sm md:text-base font-medium max-w-2xl mx-auto mb-10">
           No more guesswork. Only results. Choose the plan that fits your goal.
         </p>
-
         <div className="flex items-center justify-center gap-4 text-sm font-semibold text-slate-400">
           <span className={!isYearly ? 'text-slate-800' : ''}>MONTHLY</span>
           <div
@@ -252,11 +355,9 @@ const Subscriptions = () => {
           <span className="bg-[#00e5ff] text-[#0f172a] text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ml-2">Save up to 33%</span>
         </div>
       </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 w-full max-w-[1650px] mx-auto px-4">
         {sortedPlans.map((plan) => {
           const pricing = getPlanPricingDetails(plan, isYearly);
-
           return (
             <div
               key={plan.id}
@@ -271,7 +372,6 @@ const Subscriptions = () => {
                   Most Popular
                 </div>
               ) : null}
-
               <div className="absolute top-4 right-4 flex gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity z-20">
                 <button
                   onClick={() => handleEdit(plan)}
@@ -295,7 +395,6 @@ const Subscriptions = () => {
                   </button>
                 </Popconfirm>
               </div>
-
               <div className="mb-6 relative">
                 {getIcon(plan.iconType, plan.isMostPopular)}
                 {(plan.iconType === 'silver_medal' || plan.iconType === 'gold_medal') ? (
@@ -304,10 +403,8 @@ const Subscriptions = () => {
                   </span>
                 ) : null}
               </div>
-
               <h3 className="text-xl font-bold text-white mb-3 tracking-wide">{plan.tier}</h3>
               <p className="text-slate-400 text-sm leading-relaxed mb-6 min-h-[40px] opacity-80">{plan.description}</p>
-
               <div className="mb-6">
                 {plan.isApplicationOnly ? (
                   <div>
@@ -345,7 +442,6 @@ const Subscriptions = () => {
                   <p className="text-[10px] text-[#00e5ff] font-bold uppercase tracking-wider mt-2">Best Value</p>
                 ) : null}
               </div>
-
               <div className="flex-1 flex flex-col gap-4 mb-8">
                 {plan.features.map((feature, idx) => (
                   <div key={idx} className="flex items-start gap-3">
@@ -356,11 +452,10 @@ const Subscriptions = () => {
                   </div>
                 ))}
               </div>
-
               <div className="mb-6 flex flex-wrap gap-2">
                 {normalizeFeatureAccess(plan.featureAccess).slice(0, 4).map((feature) => (
                   <span key={feature} className="rounded-full bg-slate-800 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-cyan-200">
-                    {feature}
+                    {featureLabelMap[feature] || feature}
                   </span>
                 ))}
                 {normalizeFeatureAccess(plan.featureAccess).length > 4 ? (
@@ -369,7 +464,6 @@ const Subscriptions = () => {
                   </span>
                 ) : null}
               </div>
-
               <button
                 className={`w-full py-3 rounded-xl text-sm font-bold tracking-wider transition-all ${
                   plan.isMostPopular
@@ -383,145 +477,345 @@ const Subscriptions = () => {
           );
         })}
       </div>
-
       <div className="mt-16 pt-8 border-t border-slate-200/60 max-w-7xl mx-auto w-full text-center">
         <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400">
           Secure encryption. Cancel anytime. Payment simulation.
         </p>
       </div>
-
       <Modal
-        title={<span className="text-slate-800 font-bold">{editingPlan ? 'Edit Subscription Plan' : 'Add Subscription Plan'}</span>}
+        title={
+          <div className="flex items-center gap-3 py-1">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <FiCreditCard size={18} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">
+                {editingPlan ? 'Edit Subscription Plan' : 'Add Subscription Plan'}
+              </h3>
+              <p className="text-xs text-slate-500 font-normal mt-0.5">
+                Configure features, modules, and pricing tiers for the mobile app
+              </p>
+            </div>
+          </div>
+        }
         open={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
+        closeIcon={
+          <div className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
+            <FiX size={18} className="text-slate-500" />
+          </div>
+        }
         footer={null}
         destroyOnClose
         className="workout-modal"
-        width={600}
+        width={720}
+        styles={{
+          header: {
+            borderBottom: '1px solid #f1f5f9',
+            paddingInline: 32,
+            paddingBlock: 20,
+            background: '#ffffff',
+          },
+          content: {
+            background: '#ffffff',
+            borderRadius: '24px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.08)',
+            padding: 0,
+          },
+          body: {
+            paddingInline: 32,
+            paddingTop: 24,
+            paddingBottom: 32,
+            background: '#ffffff',
+          },
+        }}
       >
         <Form
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
-          className="mt-6"
+          requiredMark={false}
+          className="mt-2 space-y-6"
         >
-          <div className="grid grid-cols-2 gap-4">
+          {/* General Information Card */}
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/30 p-6 space-y-4">
+            <div className="mb-2 flex items-center gap-2">
+              <div className="flex h-5 w-5 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+                <FiSliders size={12} />
+              </div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Plan General Settings</h4>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Form.Item
+                name="tier"
+                label={
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                    Tier Name <span className="text-red-500 font-bold">*</span>
+                  </span>
+                }
+                rules={[{ required: true, message: 'Please input the tier name!' }]}
+              >
+                <Input 
+                  placeholder="e.g. VICTORY BRONZE" 
+                  className="rounded-xl border-slate-200 bg-white text-slate-800 shadow-sm placeholder:text-slate-400 hover:border-blue-300 py-2.5" 
+                />
+              </Form.Item>
+              <Form.Item
+                name="iconType"
+                label={
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                    Display Icon <span className="text-red-500 font-bold">*</span>
+                  </span>
+                }
+                rules={[{ required: true, message: 'Please select an icon!' }]}
+              >
+                <Select 
+                  placeholder="Select icon" 
+                  size="large"
+                  className="w-full [&>.ant-select-selector]:!rounded-xl [&>.ant-select-selector]:!border-slate-200 [&>.ant-select-selector]:!shadow-sm hover:[&>.ant-select-selector]:!border-blue-300"
+                >
+                  <Select.Option value="silver_medal">Silver Medal</Select.Option>
+                  <Select.Option value="gold_medal">Gold Medal</Select.Option>
+                  <Select.Option value="diamond">Diamond</Select.Option>
+                  <Select.Option value="circle">Pink Circle</Select.Option>
+                </Select>
+              </Form.Item>
+            </div>
             <Form.Item
-              name="tier"
-              label={<span className="font-medium text-slate-700">Tier Name</span>}
-              rules={[{ required: true, message: 'Please input the tier name!' }]}
-              className="col-span-2 md:col-span-1"
+              name="description"
+              label={
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                  Catchphrase Description <span className="text-red-500 font-bold">*</span>
+                </span>
+              }
+              rules={[{ required: true, message: 'Please input description!' }]}
             >
-              <Input placeholder="e.g. VICTORY BRONZE" className="py-2" />
-            </Form.Item>
-
-            <Form.Item
-              name="iconType"
-              label={<span className="font-medium text-slate-700">Icon</span>}
-              rules={[{ required: true, message: 'Please select an icon!' }]}
-              className="col-span-2 md:col-span-1"
-            >
-              <Select placeholder="Select icon" size="large">
-                <Select.Option value="silver_medal">Silver Medal</Select.Option>
-                <Select.Option value="gold_medal">Gold Medal</Select.Option>
-                <Select.Option value="diamond">Diamond</Select.Option>
-                <Select.Option value="circle">Pink Circle</Select.Option>
-              </Select>
+              <Input.TextArea 
+                placeholder="A short catchphrase for this plan..." 
+                rows={2} 
+                className="rounded-xl border-slate-200 bg-white text-slate-800 shadow-sm placeholder:text-slate-400 hover:border-blue-300"
+              />
             </Form.Item>
           </div>
-
-          <Form.Item
-            name="description"
-            label={<span className="font-medium text-slate-700">Description</span>}
-            rules={[{ required: true, message: 'Please input description!' }]}
-          >
-            <Input.TextArea placeholder="A short catchphrase for this plan..." rows={2} />
-          </Form.Item>
-
-          <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 mt-2">
-            <Form.Item
-              name="isApplicationOnly"
-              valuePropName="checked"
-              className="col-span-2 mb-2"
-            >
-              <Switch checkedChildren="Application Only" unCheckedChildren="Has Pricing" />
-            </Form.Item>
-
+          {/* Pricing Settings Card */}
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/30 p-6 space-y-4">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-5 w-5 items-center justify-center rounded-md bg-emerald-50 text-emerald-600">
+                  <FiCreditCard size={12} />
+                </div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Pricing Settings</h4>
+              </div>
+              <Form.Item
+                name="isApplicationOnly"
+                valuePropName="checked"
+                className="mb-0"
+              >
+                <Switch checkedChildren="Application Only" unCheckedChildren="Has Pricing" className="bg-slate-300" />
+              </Form.Item>
+            </div>
             <Form.Item
               noStyle
               shouldUpdate={(prevValues, currentValues) => prevValues.isApplicationOnly !== currentValues.isApplicationOnly}
             >
               {({ getFieldValue }) =>
                 !getFieldValue('isApplicationOnly') ? (
-                  <>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 border-t border-slate-100 pt-4">
                     <Form.Item
                       name="priceMonthly"
-                      label={<span className="font-medium text-slate-700">Monthly Price (EUR)</span>}
+                      label={<span className="text-xs font-bold uppercase tracking-wider text-slate-500">Monthly Price (EUR) *</span>}
                       rules={[{ required: true, message: 'Monthly price is required!' }]}
-                      className="mb-0 col-span-2 md:col-span-1"
                     >
-                      <InputNumber min={0} className="w-full" size="large" />
+                      <InputNumber 
+                        min={0} 
+                        className="w-full rounded-xl border-slate-200 shadow-sm [&>.ant-input-number-input]:!py-1.5 hover:border-blue-300" 
+                        size="large" 
+                      />
                     </Form.Item>
                     <Form.Item
                       name="priceYearly"
-                      label={<span className="font-medium text-slate-700">Yearly Price (EUR)</span>}
+                      label={<span className="text-xs font-bold uppercase tracking-wider text-slate-500">Yearly Price (EUR) *</span>}
                       rules={[{ required: true, message: 'Yearly price is required!' }]}
-                      className="mb-0 col-span-2 md:col-span-1"
                     >
-                      <InputNumber min={0} className="w-full" size="large" />
+                      <InputNumber 
+                        min={0} 
+                        className="w-full rounded-xl border-slate-200 shadow-sm [&>.ant-input-number-input]:!py-1.5 hover:border-blue-300" 
+                        size="large" 
+                      />
                     </Form.Item>
                     <Form.Item
                       name="discountPercentage"
-                      label={<span className="font-medium text-slate-700">Discount Percentage</span>}
-                      className="mb-0 col-span-2 md:col-span-1"
+                      label={<span className="text-xs font-bold uppercase tracking-wider text-slate-500">Discount Percentage</span>}
                     >
-                      <InputNumber min={0} max={100} className="w-full" size="large" placeholder="e.g. 10" />
+                      <InputNumber 
+                        min={0} 
+                        max={100} 
+                        className="w-full rounded-xl border-slate-200 shadow-sm [&>.ant-input-number-input]:!py-1.5 hover:border-blue-300" 
+                        size="large" 
+                        placeholder="e.g. 10" 
+                      />
                     </Form.Item>
                     <Form.Item
                       name="discountStartDate"
-                      label={<span className="font-medium text-slate-700">Discount Start Date</span>}
-                      className="mb-0 col-span-2 md:col-span-1"
+                      label={<span className="text-xs font-bold uppercase tracking-wider text-slate-500">Discount Start Date</span>}
                     >
-                      <DatePicker showTime className="w-full" size="large" />
+                      <DatePicker 
+                        showTime 
+                        className="w-full rounded-xl border-slate-200 shadow-sm hover:border-blue-300 py-1.5" 
+                        size="large" 
+                      />
                     </Form.Item>
                     <Form.Item
                       name="discountEndDate"
-                      label={<span className="font-medium text-slate-700">Discount End Date</span>}
-                      className="mb-0 col-span-2"
+                      label={<span className="text-xs font-bold uppercase tracking-wider text-slate-500">Discount End Date</span>}
+                      className="col-span-1 md:col-span-2"
                     >
-                      <DatePicker showTime className="w-full" size="large" />
+                      <DatePicker 
+                        showTime 
+                        className="w-full rounded-xl border-slate-200 shadow-sm hover:border-blue-300 py-1.5" 
+                        size="large" 
+                      />
                     </Form.Item>
-                  </>
-                ) : null
+                  </div>
+                ) : (
+                  <div className="border-t border-slate-100 pt-4 text-center py-2 text-xs text-slate-400 font-semibold">
+                    🔒 Application mode enabled. Users will see "Apply Now" button instead of direct checkout.
+                  </div>
+                )
               }
             </Form.Item>
           </div>
+          {/* Plan Settings & Access Card */}
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/30 p-6 space-y-4">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-5 w-5 items-center justify-center rounded-md bg-purple-50 text-purple-600">
+                  <FiSliders size={12} />
+                </div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Settings & Feature Access</h4>
+              </div>
+              <Form.Item
+                name="isMostPopular"
+                valuePropName="checked"
+                className="mb-0"
+              >
+                <Switch checkedChildren="Featured Plan" unCheckedChildren="Standard Plan" className="bg-slate-300" />
+              </Form.Item>
+            </div>
+            <Form.Item
+              name="featureAccess"
+              label={
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                  Unlocks Real App Features <span className="text-red-500 font-bold">*</span>
+                </span>
+              }
+              rules={[
+                {
+                  validator: (_, value) =>
+                    Array.isArray(value) && value.length > 0
+                      ? Promise.resolve()
+                      : Promise.reject(new Error('Select at least one real feature for this plan.')),
+                },
+              ]}
+            >
+              <Form.Item
+                noStyle
+                shouldUpdate={(prevValues, currentValues) => prevValues.featureAccess !== currentValues.featureAccess}
+              >
+                {({ getFieldValue }) => {
+                  const selectedFeatures = getFieldValue('featureAccess') || [];
+                  return (
+                    <Checkbox.Group className="w-full">
+                      <div className="space-y-4">
+                        <div className="rounded-xl border border-amber-150 bg-amber-50/60 px-4 py-3 text-xs text-amber-800 leading-relaxed flex items-start gap-2.5">
+                          <FiAlertCircle size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                          <span>
+                            <strong>Warning:</strong> These toggles control real entitlements in the mobile app and backend. Users on this plan will only unlock the features selected here.
+                          </span>
+                        </div>
+                        {loadingCatalog ? (
+                          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-5 text-slate-500">
+                            <Spin size="small" />
+                            <span>Loading real feature catalog…</span>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 gap-4">
+                            {groupedFeatureCatalog.map(([category, items]) => {
+                              // Dynamic category icon chooser
+                              const getCategoryIcon = (cat) => {
+                                if (cat === 'Core Access') return <FiLayers size={12} />;
+                                if (cat === 'Nutrition') return <FiActivity size={12} />;
+                                if (cat === 'Advanced Coaching') return <FiCompass size={12} />;
+                                if (cat === 'Premium Coaching') return <FiAward size={12} />;
+                                return <FiGrid size={12} />;
+                              };
 
-          <Form.Item
-            name="isMostPopular"
-            valuePropName="checked"
-            className="mb-6"
-          >
-            <Switch checkedChildren="Mark as Most Popular" unCheckedChildren="Standard Plan" />
-          </Form.Item>
+                              return (
+                                <div key={category} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                  <div className="mb-3 flex items-center gap-2">
+                                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-cyan-50 text-cyan-700">
+                                      {getCategoryIcon(category)}
+                                    </div>
+                                    <h5 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">{category}</h5>
+                                  </div>
+                                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                    {items.map((item) => {
+                                      const isSelected = selectedFeatures.includes(item.key);
+                                      return (
+                                        <Checkbox 
+                                          key={item.key} 
+                                          value={item.key} 
+                                          className="!m-0 w-full [&>.ant-checkbox]:mt-1.5 [&>.ant-checkbox+span]:w-full [&>.ant-checkbox+span]:pl-3 flex items-start"
+                                        >
+                                          <div className={`rounded-xl border p-4 transition-all w-full text-left ${
+                                            isSelected 
+                                              ? 'border-blue-200 bg-blue-50/20 shadow-sm' 
+                                              : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50'
+                                          }`}>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                              <span className="text-sm font-bold text-slate-800">{item.label}</span>
+                                              <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-500">
+                                                {item.key}
+                                              </span>
+                                            </div>
+                                            <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{item.description}</p>
+                                            
+                                            {Array.isArray(item.routeHints) && item.routeHints.length > 0 ? (
+                                              <p className="mt-2.5 text-[10px] font-bold text-cyan-600 tracking-wide uppercase">
+                                                Route Hints: {item.routeHints.join(', ')}
+                                              </p>
+                                            ) : null}
 
-          <Form.Item
-            name="featureAccess"
-            label={<span className="font-medium text-slate-700">Included App Access</span>}
-            rules={[{ required: true, message: 'Select at least one app module for this plan.' }]}
-            className="mb-6"
-          >
-            <Select
-              mode="multiple"
-              allowClear
-              size="large"
-              placeholder="Choose the app modules this subscription unlocks"
-              options={FEATURE_ACCESS_OPTIONS}
-            />
-          </Form.Item>
-
-          <div className="mb-2">
-            <span className="font-medium text-slate-700 block mb-2">Features List</span>
+                                            {Array.isArray(item.defaultTiers) && item.defaultTiers.length > 0 ? (
+                                              <p className="mt-1 text-[10px] font-semibold text-slate-400">
+                                                Default: {item.defaultTiers.join(', ')}
+                                              </p>
+                                            ) : null}
+                                          </div>
+                                        </Checkbox>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </Checkbox.Group>
+                  );
+                }}
+              </Form.Item>
+            </Form.Item>
+          </div>
+          {/* Features Checklist List */}
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/30 p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <div className="flex h-5 w-5 items-center justify-center rounded-md bg-cyan-50 text-cyan-600">
+                <FiList size={12} />
+              </div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-semibold">Features Checklist List</h4>
+            </div>
             <Form.List name="features">
               {(fields, { add, remove }) => (
                 <div className="space-y-3">
@@ -532,7 +826,10 @@ const Subscriptions = () => {
                         rules={[{ required: true, message: 'Feature cannot be empty!' }]}
                         className="mb-0 flex-1"
                       >
-                        <Input placeholder={`Feature ${index + 1}`} className="py-2" />
+                        <Input 
+                          placeholder={`Feature ${index + 1}`} 
+                          className="rounded-xl border-slate-200 bg-white text-slate-800 shadow-sm placeholder:text-slate-400 hover:border-blue-300 py-2.5" 
+                        />
                       </Form.Item>
                       {fields.length > 1 ? (
                         <Button
@@ -540,7 +837,7 @@ const Subscriptions = () => {
                           danger
                           icon={<FiTrash2 />}
                           onClick={() => remove(field.name)}
-                          className="flex-shrink-0"
+                          className="flex-shrink-0 text-red-500 hover:text-red-600"
                         />
                       ) : null}
                     </div>
@@ -550,21 +847,29 @@ const Subscriptions = () => {
                     onClick={() => add()}
                     block
                     icon={<FiPlus />}
-                    className="mt-2 h-10 border-slate-300 text-slate-600 hover:text-blue-600 hover:border-blue-400"
+                    className="mt-2 h-10 rounded-xl border-slate-300 text-slate-600 hover:text-blue-600 hover:border-blue-400 font-semibold text-xs"
                   >
-                    Add Feature
+                    Add Feature Item
                   </Button>
                 </div>
               )}
             </Form.List>
           </div>
-
           <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-100">
-            <Button size="large" onClick={() => setIsModalVisible(false)} className="hover:bg-slate-50">
+            <Button 
+              size="large" 
+              onClick={() => setIsModalVisible(false)} 
+              className="rounded-xl border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-800 font-semibold text-sm h-10 px-5"
+            >
               Cancel
             </Button>
-            <Button size="large" type="primary" htmlType="submit" className="bg-blue-600 hover:bg-blue-500 font-semibold px-6">
-              {editingPlan ? 'Update Plan' : 'Save Plan'}
+            <Button 
+              size="large" 
+              type="primary" 
+              htmlType="submit" 
+              className="bg-blue-600 hover:bg-blue-500 shadow-sm hover:shadow-md rounded-xl font-semibold text-sm h-10 px-6"
+            >
+              {editingPlan ? 'Save Changes' : 'Create Plan'}
             </Button>
           </div>
         </Form>
@@ -572,5 +877,4 @@ const Subscriptions = () => {
     </div>
   );
 };
-
 export default Subscriptions;

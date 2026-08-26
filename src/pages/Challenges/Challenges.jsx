@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Modal, Form, Input, InputNumber, Select, Upload, message, Popconfirm, Button, Spin } from 'antd';
-import { FiEdit, FiTrash2, FiPlus, FiImage } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiPlus, FiImage, FiClock } from 'react-icons/fi';
 import { FaComments, FaFire, FaUsers, FaTrophy } from 'react-icons/fa';
 import { adminApiRequest } from '../../../services/auth.service';
 import { toBase64Payload } from "../../utils/imageUpload";
-
 const challengeStatusFilters = ['ALL', 'ACTIVE', 'UPCOMING', 'DRAFT', 'ARCHIVED'];
 const challengeGoalTypeOptions = ['Strength', 'Cardio', 'Mindfulness', 'Nutrition', 'Family'];
 const challengeInputClassName =
@@ -18,9 +17,7 @@ const PLAN_GENERATION_DEFAULTS = {
   difficulty: 'INTERMEDIATE',
   status: 'ACTIVE',
 };
-
 const createId = (prefix) => `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
-
 const createEmptyExercise = () => ({
   id: createId('exercise'),
   name: '',
@@ -33,7 +30,6 @@ const createEmptyExercise = () => ({
   workout_video_source: 'VIMEO',
   workout_thumbnail: '',
 });
-
 const createEmptySection = () => ({
   id: createId('section'),
   title: '',
@@ -41,7 +37,6 @@ const createEmptySection = () => ({
   estimated_minutes: 15,
   exercises: [createEmptyExercise(), createEmptyExercise()],
 });
-
 const createEmptyDay = (dayNumber) => ({
   day_number: dayNumber,
   title: `Day ${dayNumber}`,
@@ -49,19 +44,16 @@ const createEmptyDay = (dayNumber) => ({
   notes: '',
   sections: [createEmptySection(), createEmptySection()],
 });
-
 const normalizeWorkoutMatchValue = (value) =>
   String(value || '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
-
 const findMatchingWorkoutForExercise = (exerciseName, workouts = []) => {
   const normalizedExercise = normalizeWorkoutMatchValue(exerciseName);
   if (!normalizedExercise) {
     return null;
   }
-
   return workouts.find((workout) => {
     const normalizedTitle = normalizeWorkoutMatchValue(workout?.title);
     const normalizedTag = normalizeWorkoutMatchValue(workout?.tag);
@@ -73,7 +65,6 @@ const findMatchingWorkoutForExercise = (exerciseName, workouts = []) => {
     );
   }) || null;
 };
-
 const autoAttachWorkoutMatches = (days = [], workouts = []) =>
   days.map((day) => ({
     ...day,
@@ -99,7 +90,6 @@ const autoAttachWorkoutMatches = (days = [], workouts = []) =>
       }),
     })),
   }));
-
 const normalizePlanDays = (days = []) =>
   days.map((day, dayIndex) => ({
     day_number: Number(day?.day_number || dayIndex + 1),
@@ -129,7 +119,6 @@ const normalizePlanDays = (days = []) =>
         }))
       : [createEmptySection()],
   }));
-
 const sanitizePlanDaysForSubmit = (days = []) =>
   normalizePlanDays(days)
     .map((day, dayIndex) => {
@@ -149,16 +138,13 @@ const sanitizePlanDaysForSubmit = (days = []) =>
               workout_video_source: String(exercise.workout_video_source || 'VIMEO').trim().toUpperCase() || 'VIMEO',
               workout_thumbnail: String(exercise.workout_thumbnail || '').trim(),
             }));
-
           const hasSectionContent =
             String(section?.title || '').trim() ||
             String(section?.description || '').trim() ||
             exercises.length > 0;
-
           if (!hasSectionContent) {
             return null;
           }
-
           return {
             id: section.id || createId(`section-${dayIndex + 1}-${sectionIndex + 1}`),
             title: String(section.title || '').trim() || `Section ${sectionIndex + 1}`,
@@ -168,17 +154,14 @@ const sanitizePlanDaysForSubmit = (days = []) =>
           };
         })
         .filter(Boolean);
-
       const hasDayContent =
         String(day?.title || '').trim() ||
         String(day?.focus || '').trim() ||
         String(day?.notes || '').trim() ||
         sections.length > 0;
-
       if (!hasDayContent) {
         return null;
       }
-
       return {
         day_number: dayIndex + 1,
         title: String(day.title || '').trim() || `Day ${dayIndex + 1}`,
@@ -188,7 +171,6 @@ const sanitizePlanDaysForSubmit = (days = []) =>
       };
     })
     .filter(Boolean);
-
 const categoryThemeByName = {
   Strength: { noun: 'Reset', focus: 'strength, movement quality, and consistency' },
   Cardio: { noun: 'Builder', focus: 'endurance, pacing, and cardio consistency' },
@@ -196,19 +178,16 @@ const categoryThemeByName = {
   Nutrition: { noun: 'Nutrition Reset', focus: 'meal consistency, energy, and nutrition habits' },
   Family: { noun: 'Family Fitness Plan', focus: 'shared movement, accountability, and family-friendly activity' },
 };
-
 const suggestChallengeTitle = ({ durationDays, category }) => {
   const safeDuration = Math.max(Number(durationDays || PLAN_GENERATION_DEFAULTS.durationDays), 1);
   const theme = categoryThemeByName[category] || categoryThemeByName.Strength;
   return `${safeDuration}-Day ${category} ${theme.noun}`;
 };
-
 const suggestChallengeDescription = ({ durationDays, category, difficulty }) => {
   const safeDuration = Math.max(Number(durationDays || PLAN_GENERATION_DEFAULTS.durationDays), 1);
   const theme = categoryThemeByName[category] || categoryThemeByName.Strength;
   return `A ${safeDuration}-day ${difficulty.toLowerCase()} ${category.toLowerCase()} challenge designed to improve ${theme.focus} with realistic day-by-day actions.`;
 };
-
 const Challenges = () => {
   const [challenges, setChallenges] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -234,7 +213,6 @@ const Challenges = () => {
   const lastSuggestedTitleRef = useRef('');
   const lastSuggestedDescriptionRef = useRef('');
   const [form] = Form.useForm();
-
   const loadChallenges = async () => {
     setLoading(true);
     setError('');
@@ -247,7 +225,6 @@ const Challenges = () => {
       setLoading(false);
     }
   };
-
   const loadWorkoutLibrary = async () => {
     setWorkoutLibraryLoading(true);
     try {
@@ -261,11 +238,9 @@ const Challenges = () => {
       setWorkoutLibraryLoading(false);
     }
   };
-
   useEffect(() => {
     loadChallenges();
   }, []);
-
   const handleAdd = () => {
     setEditingChallenge(null);
     form.resetFields();
@@ -289,7 +264,6 @@ const Challenges = () => {
     void loadWorkoutLibrary();
     setIsModalVisible(true);
   };
-
   const handleEdit = (challenge) => {
     setEditingChallenge(challenge);
     const editValues = {
@@ -320,7 +294,6 @@ const Challenges = () => {
     void loadWorkoutLibrary();
     setIsModalVisible(true);
   };
-
   const handleThumbnailChange = async ({ fileList }) => {
     setThumbnailFileList(fileList.slice(-1));
     const file = fileList[fileList.length - 1]?.originFileObj;
@@ -328,7 +301,6 @@ const Challenges = () => {
       setSelectedThumbnail(null);
       return;
     }
-
     try {
       const payload = await toBase64Payload(file, "challenge-thumbnail.jpg");
       setSelectedThumbnail(payload);
@@ -338,18 +310,15 @@ const Challenges = () => {
       message.error('Failed to read thumbnail image');
     }
   };
-
   const handleThumbnailRemove = () => {
     setSelectedThumbnail(null);
     setThumbnailFileList([]);
     setThumbnailPreview('');
     setThumbnailCleared(true);
   };
-
   const updatePlanDay = (dayIndex, updater) => {
     setPlanDays((current) => current.map((day, index) => (index === dayIndex ? updater(day) : day)));
   };
-
   const addPlanDay = () => {
     setPlanDays((current) => {
       const nextDays = [...current, createEmptyDay(current.length + 1)];
@@ -358,7 +327,6 @@ const Challenges = () => {
       return nextDays;
     });
   };
-
   const removePlanDay = (dayIndex) => {
     setPlanDays((current) =>
       current
@@ -375,25 +343,21 @@ const Challenges = () => {
       return current > dayIndex ? current - 1 : current;
     });
   };
-
   const openDayEditor = (dayIndex) => {
     setActiveDayIndex(dayIndex);
   };
-
   const addSection = (dayIndex) => {
     updatePlanDay(dayIndex, (day) => ({
       ...day,
       sections: [...day.sections, createEmptySection()],
     }));
   };
-
   const removeSection = (dayIndex, sectionIndex) => {
     updatePlanDay(dayIndex, (day) => ({
       ...day,
       sections: day.sections.filter((_, index) => index !== sectionIndex),
     }));
   };
-
   const updateSection = (dayIndex, sectionIndex, field, value) => {
     updatePlanDay(dayIndex, (day) => ({
       ...day,
@@ -404,7 +368,6 @@ const Challenges = () => {
       )),
     }));
   };
-
   const addExercise = (dayIndex, sectionIndex) => {
     updatePlanDay(dayIndex, (day) => ({
       ...day,
@@ -415,7 +378,6 @@ const Challenges = () => {
       )),
     }));
   };
-
   const removeExercise = (dayIndex, sectionIndex, exerciseIndex) => {
     updatePlanDay(dayIndex, (day) => ({
       ...day,
@@ -426,7 +388,6 @@ const Challenges = () => {
       )),
     }));
   };
-
   const updateExercise = (dayIndex, sectionIndex, exerciseIndex, field, value) => {
     updatePlanDay(dayIndex, (day) => ({
       ...day,
@@ -462,7 +423,6 @@ const Challenges = () => {
       )),
     }));
   };
-
   const updateExerciseVideoMeta = (dayIndex, sectionIndex, exerciseIndex, nextFields) => {
     updatePlanDay(dayIndex, (day) => ({
       ...day,
@@ -478,7 +438,6 @@ const Challenges = () => {
       )),
     }));
   };
-
   const linkExerciseWorkout = (dayIndex, sectionIndex, exerciseIndex, workoutId) => {
     const selectedWorkout = workoutLibrary.find((workout) => workout.id === workoutId);
     updatePlanDay(dayIndex, (day) => ({
@@ -517,7 +476,6 @@ const Challenges = () => {
       )),
     }));
   };
-
   const loadThirtyDayPreset = async () => {
     const values = form.getFieldsValue();
     const requestedDuration = Math.max(Number(values.durationDays || PLAN_GENERATION_DEFAULTS.durationDays), 1);
@@ -539,7 +497,6 @@ const Challenges = () => {
       difficulty: selectedDifficulty,
       durationDays: requestedDuration,
     };
-
     setPlanGenerating(true);
     try {
       const response = await adminApiRequest('/admin/challenges/generate-plan', {
@@ -563,7 +520,6 @@ const Challenges = () => {
       setPlanGenerating(false);
     }
   };
-
   const handleDelete = async (id) => {
     setDeletingId(id);
     try {
@@ -576,7 +532,6 @@ const Challenges = () => {
       setDeletingId('');
     }
   };
-
   const openModeration = async (challenge) => {
     setModerationChallenge(challenge);
     setModerationMessages([]);
@@ -590,7 +545,6 @@ const Challenges = () => {
       setModerationLoading(false);
     }
   };
-
   const handleModerationDelete = async (messageId) => {
     if (!moderationChallenge) {
       return;
@@ -619,7 +573,6 @@ const Challenges = () => {
       setModerationDeletingId('');
     }
   };
-
   const handleSubmit = async (values) => {
     setSaving(true);
     try {
@@ -661,15 +614,12 @@ const Challenges = () => {
       setSaving(false);
     }
   };
-
   const activeDay = activeDayIndex !== null ? planDays[activeDayIndex] : null;
   const workoutSelectOptions = workoutLibrary.map((workout) => ({
     label: `${workout.title} · Vimeo ${workout.vimeoId}`,
     value: workout.id,
   }));
-
   const filteredChallenges = challenges.filter((challenge) => statusFilter === 'ALL' || challenge.status === statusFilter);
-
   const statusToneMap = {
     ACTIVE: {
       card: 'border-l-cyan-400 shadow-cyan-500/10',
@@ -688,7 +638,6 @@ const Challenges = () => {
       badge: 'text-slate-300 bg-slate-400/10 ring-1 ring-slate-400/20',
     },
   };
-
   return (
     <div className="flex flex-col space-y-6 pt-2 h-full text-slate-100">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -723,7 +672,6 @@ const Challenges = () => {
           </button>
         </div>
       </div>
-
       {loading ? (
         <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white py-16">
           <Spin size="large" />
@@ -746,7 +694,6 @@ const Challenges = () => {
                   <FaFire className="text-2xl drop-shadow-md" />
                 </div>
               </div>
-
               <div className="min-w-0 flex-1 pr-6">
                 <h3 className="mb-1 truncate text-sm font-semibold text-slate-100" title={challenge.title}>{challenge.title}</h3>
                 <p className="text-xs text-slate-400 truncate mb-2 mt-0.5">{challenge.category} · {challenge.durationDays} days</p>
@@ -762,7 +709,6 @@ const Challenges = () => {
                   <span className="font-semibold text-amber-300">+{challenge.points}</span>
                 </div>
               </div>
-
               <div className="absolute right-3 top-3 flex flex-col gap-2 opacity-100 transition-opacity sm:opacity-50 group-hover:opacity-100">
                 <button title="Moderate Chat" onClick={() => openModeration(challenge)} className="text-slate-400 hover:text-cyan-400 transition-colors">
                   <FaComments size={15} />
@@ -791,7 +737,6 @@ const Challenges = () => {
           ) : null}
         </div>
       )}
-
       <Modal
         title={<span className="text-slate-900">{editingChallenge ? 'Edit Challenge' : 'Add New Challenge'}</span>}
         open={isModalVisible}
@@ -830,7 +775,6 @@ const Challenges = () => {
           >
             <Input placeholder="e.g. Summer Strength Reset" className={`${challengeInputClassName} py-2`} />
           </Form.Item>
-
           <Form.Item
             name="description"
             label={<span className="font-medium text-slate-700">What To Do</span>}
@@ -842,7 +786,6 @@ const Challenges = () => {
               className={challengeInputClassName}
             />
           </Form.Item>
-
           <Form.Item
             name="whyItMatters"
             label={<span className="font-medium text-slate-700">Why It Matters</span>}
@@ -853,13 +796,11 @@ const Challenges = () => {
               className={challengeInputClassName}
             />
           </Form.Item>
-
           <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-5 shadow-sm">
             <div className="mb-4">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-600">Challenge Metadata</p>
               <h4 className="mt-1 text-sm font-semibold text-slate-900">Goal type, duration, points, and status</h4>
             </div>
-
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Form.Item
                 name="category"
@@ -874,7 +815,6 @@ const Challenges = () => {
                   ))}
                 </Select>
               </Form.Item>
-
               <Form.Item
                 name="durationDays"
                 label={<span className="font-medium text-slate-700">Duration Days</span>}
@@ -882,7 +822,6 @@ const Challenges = () => {
               >
                 <InputNumber min={1} max={365} placeholder="e.g. 7" className="w-full" />
               </Form.Item>
-
               <Form.Item
                 name="points"
                 label={<span className="font-medium text-slate-700">Points</span>}
@@ -891,7 +830,6 @@ const Challenges = () => {
                 <InputNumber min={0} max={100000} placeholder="e.g. 500" className="w-full" />
               </Form.Item>
             </div>
-
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <Form.Item
                 name="status"
@@ -905,7 +843,6 @@ const Challenges = () => {
                   <Select.Option value="ARCHIVED">ARCHIVED</Select.Option>
                 </Select>
               </Form.Item>
-
               <Form.Item label={<span className="font-medium text-slate-700">Thumbnail</span>}>
                 <div className="flex flex-col gap-2">
                   <Upload
@@ -947,7 +884,6 @@ const Challenges = () => {
               </Form.Item>
             </div>
           </div>
-
           <div className="mt-8 flex justify-end gap-3 border-t border-slate-200/80 pt-6">
             <Button size="large" onClick={() => setIsModalVisible(false)} className="border-slate-200 bg-white text-slate-700 shadow-sm hover:border-slate-300 hover:bg-slate-50">
               Cancel
@@ -958,201 +894,295 @@ const Challenges = () => {
           </div>
         </Form>
       </Modal>
-
       <Modal
-        title={<span className="text-slate-900">{activeDay ? `Edit Day ${activeDay.day_number}` : 'Edit Day'}</span>}
+        title={
+          <div className="flex items-center gap-3 py-1">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
+              <FiClock size={18} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">
+                {activeDay ? `Edit Day ${activeDay.day_number}` : 'Edit Day'}
+              </h3>
+              <p className="text-xs text-slate-500 font-normal mt-0.5">
+                Manage day title, coaching notes, sections, and video links
+              </p>
+            </div>
+          </div>
+        }
         open={activeDayIndex !== null && Boolean(activeDay)}
         onCancel={() => setActiveDayIndex(null)}
+        closeIcon={
+          <div className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
+            <FiX size={18} className="text-slate-500" />
+          </div>
+        }
         footer={null}
         width={980}
         destroyOnHidden
         styles={{
           header: {
-            borderBottom: '1px solid rgba(226, 232, 240, 0.9)',
-            background: 'rgba(255, 255, 255, 0.98)',
+            borderBottom: '1px solid #f1f5f9',
+            paddingInline: 32,
+            paddingBlock: 20,
+            background: '#ffffff',
           },
           content: {
-            background: 'linear-gradient(180deg, #f8fafc 0%, #eef4ff 100%)',
+            background: '#ffffff',
+            borderRadius: '24px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.08)',
+            padding: 0,
           },
           body: {
-            background: 'transparent',
+            paddingInline: 32,
+            paddingTop: 24,
+            paddingBottom: 32,
+            background: '#ffffff',
           },
         }}
       >
         {activeDay ? (
           <div className="mt-3 max-h-[75vh] overflow-y-auto pr-1">
-            <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="mb-5 flex items-center justify-between border-b border-slate-100 pb-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-cyan-600">Day {activeDay.day_number}</p>
-                <p className="text-xs text-slate-500">Update the title, sections, exercises, and linked Vimeo workouts for this day.</p>
+                <span className="inline-flex rounded-full bg-cyan-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-600">
+                  DAY {activeDay.day_number} SETTINGS
+                </span>
+                <p className="mt-1 text-xs text-slate-400">Configure sections, workout notes, and library attachments for this training block.</p>
               </div>
-              <Button danger type="text" onClick={() => removePlanDay(activeDayIndex)}>
+              <Button 
+                danger 
+                type="default" 
+                onClick={() => removePlanDay(activeDayIndex)}
+                className="rounded-xl border-red-100 hover:border-red-200 bg-red-50/50 hover:bg-red-50 font-semibold text-xs h-8 text-red-600"
+              >
                 Remove Day
               </Button>
             </div>
-
-            <div className="rounded-3xl border border-slate-200/80 bg-white/90 p-5 shadow-sm">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <Input
-                value={activeDay.title}
-                onChange={(event) => updatePlanDay(activeDayIndex, (currentDay) => ({ ...currentDay, title: event.target.value }))}
-                placeholder="Day title"
-                className={challengeInputClassName}
-              />
-              <Input
-                value={activeDay.focus}
-                onChange={(event) => updatePlanDay(activeDayIndex, (currentDay) => ({ ...currentDay, focus: event.target.value }))}
-                placeholder="Focus"
-                className={challengeInputClassName}
-              />
-            </div>
-
-            <Input.TextArea
-              className={`mt-3 ${challengeInputClassName}`}
-              rows={3}
-              value={activeDay.notes}
-              onChange={(event) => updatePlanDay(activeDayIndex, (currentDay) => ({ ...currentDay, notes: event.target.value }))}
-              placeholder="Coaching notes for the day"
-            />
-
-            <div className="mt-4 space-y-3">
-              {activeDay.sections.map((section, sectionIndex) => (
-                <div key={section.id} className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-blue-50 p-4 shadow-sm">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <h4 className="text-sm font-semibold text-slate-800">Section {sectionIndex + 1}</h4>
-                    <Button danger type="text" onClick={() => removeSection(activeDayIndex, sectionIndex)}>
-                      Remove Section
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_140px]">
+            <div className="space-y-6">
+              {/* Day General Settings Card */}
+              <div className="rounded-2xl border border-slate-100 bg-slate-50/20 p-5 shadow-sm">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Day Title</span>
                     <Input
-                      value={section.title}
-                      onChange={(event) => updateSection(activeDayIndex, sectionIndex, 'title', event.target.value)}
-                      placeholder="Section title"
-                      className={challengeInputClassName}
-                    />
-                    <InputNumber
-                      min={0}
-                      max={240}
-                      className="w-full"
-                      value={section.estimated_minutes}
-                      onChange={(value) => updateSection(activeDayIndex, sectionIndex, 'estimated_minutes', value)}
-                      placeholder="Minutes"
+                      value={activeDay.title}
+                      onChange={(event) => updatePlanDay(activeDayIndex, (currentDay) => ({ ...currentDay, title: event.target.value }))}
+                      placeholder="e.g. Lower Body Focus"
+                      className={`${challengeInputClassName} py-2`}
                     />
                   </div>
-
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Day Focus (Subtitle)</span>
+                    <Input
+                      value={activeDay.focus}
+                      onChange={(event) => updatePlanDay(activeDayIndex, (currentDay) => ({ ...currentDay, focus: event.target.value }))}
+                      placeholder="e.g. Quad dominance & core activation"
+                      className={`${challengeInputClassName} py-2`}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1.5 mt-4">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Coaching Notes (Instructions)</span>
                   <Input.TextArea
-                    className={`mt-3 ${challengeInputClassName}`}
-                    rows={2}
-                    value={section.description}
-                    onChange={(event) => updateSection(activeDayIndex, sectionIndex, 'description', event.target.value)}
-                    placeholder="Section description"
+                    rows={3}
+                    value={activeDay.notes}
+                    onChange={(event) => updatePlanDay(activeDayIndex, (currentDay) => ({ ...currentDay, notes: event.target.value }))}
+                    placeholder="Provide detailed instructions or tips for the client..."
+                    className={`${challengeInputClassName} !rounded-xl !border-slate-200`}
                   />
-
-                  <div className="mt-3 space-y-3">
-                    {section.exercises.map((exercise, exerciseIndex) => (
-                      <div key={exercise.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                        <div className="mb-2 flex items-center justify-between gap-3">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Exercise {exerciseIndex + 1}</p>
-                          <Button danger type="text" onClick={() => removeExercise(activeDayIndex, sectionIndex, exerciseIndex)}>
-                            Remove
-                          </Button>
-                        </div>
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                          <Input
-                            value={exercise.name}
-                            onChange={(event) => updateExercise(activeDayIndex, sectionIndex, exerciseIndex, 'name', event.target.value)}
-                            placeholder="Exercise name"
-                            className={challengeInputClassName}
-                          />
-                          <Input
-                            value={exercise.details}
-                            onChange={(event) => updateExercise(activeDayIndex, sectionIndex, exerciseIndex, 'details', event.target.value)}
-                            placeholder="Sets / reps / time"
-                            className={challengeInputClassName}
-                          />
-                        </div>
-                        <Input.TextArea
-                          className={`mt-3 ${challengeInputClassName}`}
-                          rows={2}
-                          value={exercise.notes}
-                          onChange={(event) => updateExercise(activeDayIndex, sectionIndex, exerciseIndex, 'notes', event.target.value)}
-                          placeholder="Exercise notes"
+                </div>
+              </div>
+              {/* Day Sections List */}
+              <div className="mt-4 space-y-4">
+                {activeDay.sections.map((section, sectionIndex) => (
+                  <div key={section.id} className="rounded-2xl border border-slate-100 bg-slate-50/40 p-5 shadow-sm">
+                    <div className="mb-4 flex items-center justify-between border-b border-slate-200/50 pb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-md bg-blue-50 text-[10px] font-bold text-blue-600">
+                          {sectionIndex + 1}
+                        </span>
+                        <h4 className="text-sm font-semibold text-slate-800">Section {sectionIndex + 1}</h4>
+                      </div>
+                      <Button 
+                        danger 
+                        type="text" 
+                        onClick={() => removeSection(activeDayIndex, sectionIndex)}
+                        className="font-semibold text-xs text-red-500 hover:text-red-600"
+                      >
+                        Remove Section
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_160px]">
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Section Title</span>
+                        <Input
+                          value={section.title}
+                          onChange={(event) => updateSection(activeDayIndex, sectionIndex, 'title', event.target.value)}
+                          placeholder="e.g. Dynamic Warm-up"
+                          className={`${challengeInputClassName} py-2`}
                         />
-                        <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                          <div className="mb-2">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">Instruction Video</p>
-                            <p className="mt-1 text-xs text-slate-500">Add a manual Vimeo demo for this exercise, or attach any workout from the library to preserve its full video source.</p>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Est. Time (Mins)</span>
+                        <InputNumber
+                          min={0}
+                          max={240}
+                          value={section.estimated_minutes}
+                          onChange={(value) => updateSection(activeDayIndex, sectionIndex, 'estimated_minutes', value)}
+                          placeholder="e.g. 15"
+                          className="w-full rounded-xl border-slate-200 shadow-sm [&>.ant-input-number-input]:!py-1.5 hover:border-blue-300"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1.5 mt-4">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Section Description</span>
+                      <Input.TextArea
+                        rows={2}
+                        value={section.description}
+                        onChange={(event) => updateSection(activeDayIndex, sectionIndex, 'description', event.target.value)}
+                        placeholder="e.g. Complete these movements back-to-back to elevate heart rate and prepare joints."
+                        className={`${challengeInputClassName} !rounded-xl !border-slate-200`}
+                      />
+                    </div>
+                    <div className="mt-5 space-y-4">
+                      {section.exercises.map((exercise, exerciseIndex) => (
+                        <div key={exercise.id} className="rounded-xl border border-slate-150 bg-white p-4 shadow-sm">
+                          <div className="mb-3 flex items-center justify-between border-b border-slate-100 pb-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                              EXERCISE {exerciseIndex + 1}
+                            </span>
+                            <Button 
+                              danger 
+                              type="text" 
+                              onClick={() => removeExercise(activeDayIndex, sectionIndex, exerciseIndex)}
+                              className="font-semibold text-xs text-red-500 hover:text-red-600 h-6 px-0"
+                            >
+                              Remove Exercise
+                            </Button>
                           </div>
-                          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                            <Input
-                              value={exercise.workout_title}
-                              onChange={(event) => updateExerciseVideoMeta(activeDayIndex, sectionIndex, exerciseIndex, {
-                                workout_id: '',
-                                workout_title: event.target.value,
-                                workout_video_url: '',
-                                workout_video_source: 'VIMEO',
-                              })}
-                              placeholder="Video label, e.g. Squat form demo"
-                              className={challengeInputClassName}
-                            />
-                            <Input
-                              value={exercise.workout_vimeo_id}
-                              onChange={(event) => updateExerciseVideoMeta(activeDayIndex, sectionIndex, exerciseIndex, {
-                                workout_id: '',
-                                workout_vimeo_id: event.target.value.trim(),
-                                workout_video_url: '',
-                                workout_video_source: 'VIMEO',
-                              })}
-                              placeholder="Manual Vimeo Video ID"
-                              className={challengeInputClassName}
-                            />
-                          </div>
-                          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
-                          <Select
-                            showSearch
-                            allowClear
-                            placeholder={workoutLibraryLoading ? 'Loading workout library...' : 'Attach a workout from library'}
-                            loading={workoutLibraryLoading}
-                            value={exercise.workout_id || undefined}
-                            options={workoutSelectOptions}
-                            optionFilterProp="label"
-                            onChange={(value) => linkExerciseWorkout(activeDayIndex, sectionIndex, exerciseIndex, value || '')}
-                          />
-                          {exercise.workout_vimeo_id || exercise.workout_video_url ? (
-                            <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-700 shadow-sm">
-                              Linked: {exercise.workout_video_source || 'VIMEO'} {exercise.workout_vimeo_id || exercise.workout_title || 'video'}
+                          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div className="flex flex-col gap-1.5">
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Exercise Name</span>
+                              <Input
+                                value={exercise.name}
+                                onChange={(event) => updateExercise(activeDayIndex, sectionIndex, exerciseIndex, 'name', event.target.value)}
+                                placeholder="e.g. Goblet Squat"
+                                className={`${challengeInputClassName} py-2`}
+                              />
                             </div>
-                          ) : null}
-                        </div>
-                        </div>
+                            <div className="flex flex-col gap-1.5">
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Reps & Timing Details</span>
+                              <Input
+                                value={exercise.details}
+                                onChange={(event) => updateExercise(activeDayIndex, sectionIndex, exerciseIndex, 'details', event.target.value)}
+                                placeholder="e.g. 3 sets x 12 reps (tempo 2-0-2-0)"
+                                className={`${challengeInputClassName} py-2`}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-1.5 mt-3">
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Coaching Notes (Optional)</span>
+                            <Input.TextArea
+                              rows={2}
+                              value={exercise.notes}
+                              onChange={(event) => updateExercise(activeDayIndex, sectionIndex, exerciseIndex, 'notes', event.target.value)}
+                              placeholder="e.g. Keep chest tall, drive knees outwards, control the descent."
+                              className={`${challengeInputClassName} !rounded-xl !border-slate-200`}
+                            />
+                          </div>
+                          <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+                            <div className="mb-3">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600">Instruction Video Source</p>
+                              <p className="mt-0.5 text-[11px] text-slate-500">Provide a direct Vimeo Video ID, or bind a full video workout from your system library.</p>
+                            </div>
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                              <div className="flex flex-col gap-1.5">
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Video Display Label</span>
+                                <Input
+                                  value={exercise.workout_title}
+                                  onChange={(event) => updateExerciseVideoMeta(activeDayIndex, sectionIndex, exerciseIndex, {
+                                    workout_id: '',
+                                    workout_title: event.target.value,
+                                    workout_video_url: '',
+                                    workout_video_source: 'VIMEO',
+                                  })}
+                                  placeholder="e.g. Squat Demo Video"
+                                  className={`${challengeInputClassName} py-2`}
+                                />
+                              </div>
+                              <div className="flex flex-col gap-1.5">
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Vimeo Video ID</span>
+                                <Input
+                                  value={exercise.workout_vimeo_id}
+                                  onChange={(event) => updateExerciseVideoMeta(activeDayIndex, sectionIndex, exerciseIndex, {
+                                    workout_id: '',
+                                    workout_vimeo_id: event.target.value.trim(),
+                                    workout_video_url: '',
+                                    workout_video_source: 'VIMEO',
+                                  })}
+                                  placeholder="e.g. 84729104"
+                                  className={`${challengeInputClassName} py-2`}
+                                />
+                              </div>
+                            </div>
+                            <div className="mt-4 flex flex-col gap-1.5">
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Bind Library Workout</span>
+                              <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto]">
+                                <Select
+                                  showSearch
+                                  allowClear
+                                  placeholder={workoutLibraryLoading ? 'Loading workout library...' : 'Select workout to attach...'}
+                                  loading={workoutLibraryLoading}
+                                  value={exercise.workout_id || undefined}
+                                  options={workoutSelectOptions}
+                                  optionFilterProp="label"
+                                  onChange={(value) => linkExerciseWorkout(activeDayIndex, sectionIndex, exerciseIndex, value || '')}
+                                  className="w-full [&>.ant-select-selector]:!rounded-xl [&>.ant-select-selector]:!border-slate-200 hover:[&>.ant-select-selector]:!border-blue-300"
+                                />
+                                {exercise.workout_vimeo_id || exercise.workout_video_url ? (
+                                  <div className="inline-flex items-center rounded-lg border border-sky-100 bg-sky-50 px-3 py-1.5 text-xs text-sky-700 font-semibold shadow-sm">
+                                    Linked: {exercise.workout_video_source || 'VIMEO'} ({exercise.workout_vimeo_id || 'ID Bound'})
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
                       </div>
                     ))}
                   </div>
-
-                  <div className="mt-3 flex justify-end">
-                    <Button onClick={() => addExercise(activeDayIndex, sectionIndex)} type="dashed">
-                      Add Exercise
-                    </Button>
+                  <div className="mt-4 flex justify-end">
+                      <Button 
+                        onClick={() => addExercise(activeDayIndex, sectionIndex)} 
+                        type="dashed"
+                        className="rounded-xl hover:border-blue-500 hover:text-blue-600 font-semibold text-xs"
+                      >
+                        Add Exercise Card
+                      </Button>
                   </div>
                 </div>
               ))}
             </div>
-
-            <div className="mt-4 flex justify-between gap-3">
-                <Button onClick={() => addSection(activeDayIndex)} type="dashed">
-                  Add Section
+              <div className="mt-6 flex justify-between gap-3 border-t border-slate-100 pt-5">
+                <Button 
+                  onClick={() => addSection(activeDayIndex)} 
+                  type="dashed"
+                  className="rounded-xl border-slate-200 hover:border-blue-500 hover:text-blue-600 font-semibold"
+                >
+                  Add Section Block
                 </Button>
-              <Button type="primary" onClick={() => setActiveDayIndex(null)} className="bg-blue-600 hover:bg-blue-500 shadow-md">
-                Done
-              </Button>
-            </div>
+                <Button 
+                  type="primary" 
+                  onClick={() => setActiveDayIndex(null)} 
+                  className="bg-blue-600 hover:bg-blue-500 shadow-md rounded-xl font-semibold px-6"
+                >
+                  Done
+                </Button>
+              </div>
             </div>
           </div>
         ) : null}
       </Modal>
-
       <Modal
         title={<span className="text-slate-800">Challenge Chat Moderation</span>}
         open={Boolean(moderationChallenge)}
@@ -1166,7 +1196,6 @@ const Challenges = () => {
             <h3 className="text-base font-semibold text-slate-800">{moderationChallenge?.title}</h3>
             <p className="text-sm text-slate-500">{moderationChallenge?.category} · {moderationChallenge?.durationDays} days</p>
           </div>
-
           {moderationLoading ? (
             <div className="flex items-center justify-center py-16">
               <Spin size="large" />
@@ -1221,5 +1250,4 @@ const Challenges = () => {
     </div>
   );
 };
-
 export default Challenges;
