@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
+import { useTheme } from "../../context/ThemeContext";
 import { fetchRevenue, fetchUserStats } from "../../../services/analytics.service";
 
 const SCOPE_CONFIG = {
@@ -132,6 +133,7 @@ export default function DashboardPage() {
   const [market, setMarket] = useState("All");
   const [completedActions, setCompletedActions] = useState({});
   const { openDrawer, showToast } = useAdminDrawer();
+  const { isDark } = useTheme();
   const navigate = useNavigate();
 
   const currentScopeData = SCOPE_CONFIG[scope];
@@ -157,17 +159,31 @@ export default function DashboardPage() {
           <div className="text-[10px] font-medium tracking-[0.18em] text-[#B5651D] mb-2 uppercase font-dmsans">
             VICTORY FITNESS · LIVE EXECUTIVE VIEW
           </div>
-          <h1 className="text-3xl sm:text-4xl font-semibold text-[#F7F3EE] tracking-tight font-clash leading-tight mb-2">
+          <h1
+            className={`text-3xl sm:text-4xl font-semibold tracking-tight font-clash leading-tight mb-2 transition-colors ${
+              isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
+            }`}
+          >
             {currentScopeData.headline}
           </h1>
-          <p className="max-w-2xl text-sm sm:text-[14.5px] text-[#F7F3EE]/60 font-inter leading-relaxed">
+          <p
+            className={`max-w-2xl text-sm sm:text-[14.5px] font-inter leading-relaxed transition-colors ${
+              isDark ? "text-[#F7F3EE]/60" : "text-[#0D2B45]/70"
+            }`}
+          >
             {currentScopeData.subhead}
           </p>
         </div>
 
         {/* Scope and Market Filter Pills */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex border border-[#F7F3EE]/15 rounded-xl p-1 bg-[#0A0A0A]">
+          <div
+            className={`flex border rounded-xl p-1 transition-all ${
+              isDark
+                ? "border-[#F7F3EE]/15 bg-[#0A0A0A]"
+                : "border-[rgba(13,43,69,0.12)] bg-white shadow-xs"
+            }`}
+          >
             {["today", "week", "month", "year"].map((s) => (
               <button
                 key={s}
@@ -175,8 +191,10 @@ export default function DashboardPage() {
                 onClick={() => setScope(s)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
                   scope === s
-                    ? "bg-[#C9943A] text-[#0D0D0D]"
-                    : "text-[#F7F3EE]/60 hover:text-[#F7F3EE]"
+                    ? "bg-[#C9943A] text-[#0D0D0D] shadow-xs"
+                    : isDark
+                    ? "text-[#F7F3EE]/60 hover:text-[#F7F3EE]"
+                    : "text-[#0D2B45]/60 hover:text-[#0D2B45]"
                 }`}
               >
                 {s}
@@ -184,7 +202,13 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          <div className="flex border border-[#F7F3EE]/15 rounded-xl p-1 bg-[#0A0A0A]">
+          <div
+            className={`flex border rounded-xl p-1 transition-all ${
+              isDark
+                ? "border-[#F7F3EE]/15 bg-[#0A0A0A]"
+                : "border-[rgba(13,43,69,0.12)] bg-white shadow-xs"
+            }`}
+          >
             {["All", "Germany", "Ghana", "India", "Rest of world"].map((m) => (
               <button
                 key={m}
@@ -192,8 +216,12 @@ export default function DashboardPage() {
                 onClick={() => setMarket(m)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   market === m
-                    ? "bg-[#F7F3EE]/20 text-[#F7F3EE]"
-                    : "text-[#F7F3EE]/50 hover:text-[#F7F3EE]"
+                    ? isDark
+                      ? "bg-[#F7F3EE]/20 text-[#F7F3EE]"
+                      : "bg-[rgba(13,43,69,0.1)] text-[#0D2B45]"
+                    : isDark
+                    ? "text-[#F7F3EE]/50 hover:text-[#F7F3EE]"
+                    : "text-[#0D2B45]/50 hover:text-[#0D2B45]"
                 }`}
               >
                 {m}
@@ -208,27 +236,59 @@ export default function DashboardPage() {
         {currentScopeData.pulse.map((p) => {
           const isUp = p.dir === "up";
           const isDown = p.dir === "down";
+          const pulseBorderColor = isDown
+            ? "#B5651D"
+            : p.dir === "flat"
+            ? isDark
+              ? "rgba(247,243,238,0.25)"
+              : "rgba(13,43,69,0.2)"
+            : "#1A7A4A";
           return (
             <div
               key={p.k}
-              className="bg-[#0D2B45] rounded-2xl p-4 sm:p-5 border-l-3 border-[#C9943A] flex flex-col justify-between"
+              style={{ borderLeftWidth: 4, borderLeftColor: pulseBorderColor, borderLeftStyle: "solid" }}
+              className={`rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-all ${
+                isDark
+                  ? "bg-[#0D2B45] border border-[#F7F3EE]/10 text-[#F7F3EE]"
+                  : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)] text-[#0D2B45]"
+              }`}
             >
               <div className="flex items-baseline justify-between gap-2 mb-2">
-                <span className="text-[9.5px] font-semibold tracking-[0.14em] text-[#F7F3EE]/50 uppercase font-dmsans">
+                <span
+                  className={`text-[9.5px] font-semibold tracking-[0.14em] uppercase font-dmsans ${
+                    isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
+                  }`}
+                >
                   {p.k}
                 </span>
                 <span
                   className={`text-xs font-mono font-bold ${
-                    isUp ? "text-[#5FC48E]" : isDown ? "text-[#D98A3E]" : "text-[#F7F3EE]/50"
+                    isUp
+                      ? isDark
+                        ? "text-[#5FC48E]"
+                        : "text-[#1A7A4A]"
+                      : isDown
+                      ? "text-[#D98A3E]"
+                      : isDark
+                      ? "text-[#F7F3EE]/50"
+                      : "text-[#0D2B45]/50"
                   }`}
                 >
                   {p.delta}
                 </span>
               </div>
-              <div className="text-2xl sm:text-3xl font-bold font-mono text-[#F7F3EE] tracking-tight">
+              <div
+                className={`text-2xl sm:text-3xl font-bold font-mono tracking-tight ${
+                  isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
+                }`}
+              >
                 {p.v}
               </div>
-              <div className="mt-2 text-[11.5px] text-[#F7F3EE]/55 font-inter leading-tight">
+              <div
+                className={`mt-2 text-[11.5px] font-inter leading-tight ${
+                  isDark ? "text-[#F7F3EE]/55" : "text-[#0D2B45]/60"
+                }`}
+              >
                 {p.note}
               </div>
             </div>
@@ -241,13 +301,27 @@ export default function DashboardPage() {
         {/* Left Stage */}
         <div className="flex-1 min-w-0 w-full space-y-5">
           {/* Action Queue */}
-          <div className="bg-[#0D2B45] rounded-2xl p-5 sm:p-6 border-l-4 border-[#B5651D]">
-            <div className="flex items-baseline justify-between gap-3 mb-4 pb-3 border-b border-[#F7F3EE]/10">
+          <div
+            className={`rounded-2xl p-5 sm:p-6 transition-all ${
+              isDark
+                ? "bg-[#0D2B45] border border-[#F7F3EE]/10"
+                : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_20px_rgba(13,43,69,0.04)]"
+            }`}
+          >
+            <div
+              className={`flex items-baseline justify-between gap-3 mb-4 pb-3 border-b transition-colors ${
+                isDark ? "border-[#F7F3EE]/10" : "border-[rgba(13,43,69,0.08)]"
+              }`}
+            >
               <div>
                 <div className="text-[10px] font-semibold tracking-[0.17em] text-[#B5651D] uppercase mb-1">
                   QUEUE · PRIORITY ORDER
                 </div>
-                <h2 className="text-xl sm:text-2xl font-semibold text-[#F7F3EE] font-clash">
+                <h2
+                  className={`text-xl sm:text-2xl font-semibold font-clash ${
+                    isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
+                  }`}
+                >
                   Do these in order
                 </h2>
               </div>
@@ -259,13 +333,27 @@ export default function DashboardPage() {
             <div className="space-y-4">
               {actions.map((a) => {
                 const isDone = completedActions[a.id];
+                const actionBorderColor = isDone
+                  ? "#1A7A4A"
+                  : a.tagTone === "gold"
+                  ? "#C9943A"
+                  : a.tagTone === "copper"
+                  ? "#B5651D"
+                  : isDark
+                  ? "rgba(247,243,238,0.4)"
+                  : "rgba(13,43,69,0.3)";
                 return (
                   <div
                     key={a.id}
+                    style={{ borderLeftWidth: 4, borderLeftColor: actionBorderColor, borderLeftStyle: "solid" }}
                     className={`p-4 sm:p-4.5 rounded-xl border transition-all ${
                       isDone
-                        ? "bg-[#0A0A0A]/40 border-[#F7F3EE]/5 opacity-60"
-                        : "bg-[#0A0A0A]/80 border-[#F7F3EE]/10 hover:border-[#C9943A]/40"
+                        ? isDark
+                          ? "bg-[#0A0A0A]/40 border-[#F7F3EE]/5 opacity-60"
+                          : "bg-[#F7F3EE]/50 border-[rgba(13,43,69,0.06)] opacity-60"
+                        : isDark
+                        ? "bg-[#0A0A0A]/80 border-[#F7F3EE]/10 hover:border-[#C9943A]/40"
+                        : "bg-[#FAF7F2] border-[rgba(13,43,69,0.08)] hover:border-[#C9943A]/40 shadow-xs"
                     }`}
                   >
                     <div className="flex items-start gap-3.5">
@@ -291,25 +379,31 @@ export default function DashboardPage() {
                                 ? "bg-[#C9943A] text-[#0D0D0D]"
                                 : a.tagTone === "copper"
                                 ? "bg-[#B5651D] text-[#F7F3EE]"
-                                : "bg-[#F7F3EE]/15 text-[#F7F3EE]/70"
+                                : isDark ? "bg-[#F7F3EE]/15 text-[#F7F3EE]/70" : "bg-[rgba(13,43,69,0.08)] text-[#0D2B45]/75"
                             }`}
                           >
                             {a.tag}
                           </span>
-                          <span className="text-[11px] font-mono text-[#F7F3EE]/45">
+                          <span className={`text-[11px] font-mono ${isDark ? "text-[#F7F3EE]/45" : "text-[#0D2B45]/55"}`}>
                             {a.when}
                           </span>
                         </div>
 
                         <div
-                          className={`text-sm sm:text-[15px] font-semibold font-dmsans text-[#F7F3EE] leading-snug ${
-                            isDone ? "line-through text-[#F7F3EE]/50" : ""
+                          className={`text-sm sm:text-[15px] font-semibold font-dmsans leading-snug ${
+                            isDark
+                              ? isDone ? "line-through text-[#F7F3EE]/50" : "text-[#F7F3EE]"
+                              : isDone ? "line-through text-[#0D2B45]/50" : "text-[#0D2B45]"
                           }`}
                         >
                           {a.t}
                         </div>
 
-                        <p className="mt-1 text-xs sm:text-[13.5px] text-[#F7F3EE]/65 font-inter leading-relaxed">
+                        <p
+                          className={`mt-1 text-xs sm:text-[13.5px] font-inter leading-relaxed ${
+                            isDark ? "text-[#F7F3EE]/65" : "text-[#0D2B45]/70"
+                          }`}
+                        >
                           {a.why}
                         </p>
 
@@ -325,17 +419,21 @@ export default function DashboardPage() {
                           <button
                             type="button"
                             onClick={() => toggleDone(a.id, a.t)}
-                            className="h-8 px-3 rounded-lg border border-[#F7F3EE]/20 hover:border-[#F7F3EE]/40 text-[#F7F3EE]/70 hover:text-[#F7F3EE] text-xs font-semibold cursor-pointer"
+                            className={`h-8 px-3 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
+                              isDark
+                                ? "border-[#F7F3EE]/20 hover:border-[#F7F3EE]/40 text-[#F7F3EE]/70 hover:text-[#F7F3EE]"
+                                : "border-[rgba(13,43,69,0.18)] hover:border-[rgba(13,43,69,0.35)] text-[#0D2B45]/75 hover:text-[#0D2B45] bg-white shadow-xs"
+                            }`}
                           >
                             {isDone ? "Undo" : "Done"}
                           </button>
                           <span className="text-xs font-mono font-bold text-[#5FC48E]">
                             {a.impact}
                           </span>
-                          <span className="text-xs text-[#F7F3EE]/40 font-inter">
+                          <span className={`text-xs font-inter ${isDark ? "text-[#F7F3EE]/40" : "text-[#0D2B45]/55"}`}>
                             {a.effort}
                           </span>
-                          <span className="text-[11px] font-mono text-[#F7F3EE]/35 ml-auto">
+                          <span className={`text-[11px] font-mono ml-auto ${isDark ? "text-[#F7F3EE]/35" : "text-[#0D2B45]/45"}`}>
                             opens {a.target}
                           </span>
                         </div>
@@ -349,17 +447,36 @@ export default function DashboardPage() {
 
           {/* Conditional: The Week Ahead (Scope: Today or Week) */}
           {(scope === "today" || scope === "week") && (
-            <div className="bg-[#0D2B45] rounded-2xl p-5 sm:p-6 border-l-4 border-[#B5651D]">
-              <div className="flex items-baseline justify-between gap-3 mb-4 pb-2 border-b border-[#F7F3EE]/10">
+            <div
+              style={{ borderLeftWidth: 4, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
+              className={`rounded-2xl p-5 sm:p-6 transition-all ${
+                isDark
+                  ? "bg-[#0D2B45] border border-[#F7F3EE]/10"
+                  : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)]"
+              }`}
+            >
+              <div
+                className={`flex items-baseline justify-between gap-3 mb-4 pb-2 border-b transition-colors ${
+                  isDark ? "border-[#F7F3EE]/10" : "border-[rgba(13,43,69,0.08)]"
+                }`}
+              >
                 <div>
                   <div className="text-[10px] font-semibold tracking-[0.16em] text-[#C9943A] uppercase mb-1">
                     THE WEEK AHEAD
                   </div>
-                  <h3 className="text-xl font-semibold text-[#F7F3EE] font-clash">
+                  <h3
+                    className={`text-xl font-semibold font-clash ${
+                      isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
+                    }`}
+                  >
                     Seven days, planned
                   </h3>
                 </div>
-                <span className="text-xs font-mono text-[#F7F3EE]/50">
+                <span
+                  className={`text-xs font-mono ${
+                    isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
+                  }`}
+                >
                   auto-scheduled from active data
                 </span>
               </div>
@@ -371,21 +488,21 @@ export default function DashboardPage() {
                     className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#0A0A0A]/40 transition-colors"
                   >
                     <div className="w-16 shrink-0">
-                      <div className="text-xs font-bold text-[#F7F3EE]">{w.d}</div>
-                      <div className="text-[10px] font-mono text-[#F7F3EE]/40">{w.date}</div>
+                      <div className={`text-xs font-bold ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>{w.d}</div>
+                      <div className={`text-[10px] font-mono ${isDark ? "text-[#F7F3EE]/40" : "text-[#0D2B45]/45"}`}>{w.date}</div>
                     </div>
                     <div
                       className={`w-1.5 h-7 rounded-full shrink-0 ${
-                        w.active ? "bg-[#C9943A]" : "bg-[#F7F3EE]/20"
+                        w.active ? "bg-[#C9943A]" : isDark ? "bg-[#F7F3EE]/20" : "bg-[rgba(13,43,69,0.15)]"
                       }`}
                     />
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs sm:text-sm font-semibold text-[#F7F3EE] truncate">
+                      <div className={`text-xs sm:text-sm font-semibold truncate ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
                         {w.t}
                       </div>
-                      <div className="text-[11px] text-[#F7F3EE]/50 truncate">{w.note}</div>
+                      <div className={`text-[11px] truncate ${isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/60"}`}>{w.note}</div>
                     </div>
-                    <span className="text-xs font-mono text-[#F7F3EE]/45 shrink-0">{w.owner}</span>
+                    <span className={`text-xs font-mono shrink-0 ${isDark ? "text-[#F7F3EE]/45" : "text-[#0D2B45]/50"}`}>{w.owner}</span>
                   </div>
                 ))}
               </div>
@@ -394,22 +511,45 @@ export default function DashboardPage() {
 
           {/* Conditional: YoY Table (Scope: Month or Year) */}
           {(scope === "month" || scope === "year") && (
-            <div className="bg-[#0D2B45] rounded-2xl p-5 sm:p-6 border-l-4 border-[#B5651D]">
-              <div className="flex items-baseline justify-between gap-3 mb-4 pb-2 border-b border-[#F7F3EE]/10">
+            <div
+              style={{ borderLeftWidth: 4, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
+              className={`rounded-2xl p-5 sm:p-6 transition-all ${
+                isDark
+                  ? "bg-[#0D2B45] border border-[#F7F3EE]/10"
+                  : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)]"
+              }`}
+            >
+              <div
+                className={`flex items-baseline justify-between gap-3 mb-4 pb-2 border-b transition-colors ${
+                  isDark ? "border-[#F7F3EE]/10" : "border-[rgba(13,43,69,0.08)]"
+                }`}
+              >
                 <div>
                   <div className="text-[10px] font-semibold tracking-[0.16em] text-[#C9943A] uppercase mb-1">
                     COMPANY HEALTH · AGAINST LAST YEAR
                   </div>
-                  <h3 className="text-xl font-semibold text-[#F7F3EE] font-clash">
+                  <h3
+                    className={`text-xl font-semibold font-clash ${
+                      isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
+                    }`}
+                  >
                     Where you were, where you are
                   </h3>
                 </div>
-                <span className="text-xs font-mono text-[#F7F3EE]/50">Sep 2025 → Sep 2026</span>
+                <span
+                  className={`text-xs font-mono ${
+                    isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
+                  }`}
+                >
+                  Sep 2025 → Sep 2026
+                </span>
               </div>
 
               <div className="overflow-x-auto">
                 <div className="min-w-[480px]">
-                  <div className="flex text-[10px] font-semibold tracking-wider text-[#F7F3EE]/50 pb-2 border-b border-[#F7F3EE]/10 uppercase">
+                  <div className={`flex text-[10px] font-semibold tracking-wider pb-2 border-b uppercase ${
+                    isDark ? "text-[#F7F3EE]/50 border-[#F7F3EE]/10" : "text-[#0D2B45]/55 border-[rgba(13,43,69,0.08)]"
+                  }`}>
                     <span className="flex-2">Measure</span>
                     <span className="flex-1 text-right">Now</span>
                     <span className="flex-1 text-right">Last Year</span>
@@ -418,13 +558,15 @@ export default function DashboardPage() {
                   {YEAR_ROWS.map((y) => (
                     <div
                       key={y.k}
-                      className="flex items-center text-xs sm:text-sm py-2.5 border-b border-[#F7F3EE]/5"
+                      className={`flex items-center text-xs sm:text-sm py-2.5 border-b ${
+                        isDark ? "border-[#F7F3EE]/5" : "border-[rgba(13,43,69,0.06)]"
+                      }`}
                     >
-                      <span className="flex-2 font-semibold text-[#F7F3EE]">{y.k}</span>
-                      <span className="flex-1 text-right font-mono font-bold text-[#F7F3EE]">
+                      <span className={`flex-2 font-semibold ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>{y.k}</span>
+                      <span className={`flex-1 text-right font-mono font-bold ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
                         {y.now}
                       </span>
-                      <span className="flex-1 text-right font-mono text-[#F7F3EE]/50">
+                      <span className={`flex-1 text-right font-mono ${isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"}`}>
                         {y.then}
                       </span>
                       <span className={`flex-1 text-right font-mono font-bold ${y.deltaStyle}`}>
@@ -435,7 +577,10 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="mt-4 p-3.5 rounded-xl bg-[#B5651D]/15 border-l-3 border-[#B5651D] text-xs text-[#F7F3EE]/85 leading-relaxed font-inter">
+              <div
+                style={{ borderLeftWidth: 3, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
+                className={`mt-4 p-3.5 rounded-xl border border-[#B5651D]/30 text-xs leading-relaxed font-inter ${isDark ? "bg-[#B5651D]/15 text-[#F7F3EE]/85" : "bg-[#B5651D]/10 text-[#0D2B45]"}`}
+              >
                 Every measure improved except cost per acquisition, which rose 23% while revenue grew 312% — you bought growth, and it was worth it. Watch it if the gap narrows.
               </div>
             </div>
@@ -445,29 +590,38 @@ export default function DashboardPage() {
         {/* Right Rail */}
         <div className="w-full xl:w-[360px] shrink-0 space-y-5">
           {/* Where The Money Is */}
-          <div className="bg-[#0D2B45] rounded-2xl p-5 border-l-4 border-[#B5651D]">
+          <div
+            style={{ borderLeftWidth: 4, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
+            className={`rounded-2xl p-5 transition-all ${
+              isDark
+                ? "bg-[#0D2B45] border border-[#F7F3EE]/10 text-[#F7F3EE]"
+                : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)] text-[#0D2B45]"
+            }`}
+          >
             <div className="text-[10px] font-semibold tracking-[0.16em] text-[#C9943A] uppercase mb-3">
               WHERE THE MONEY IS
             </div>
             <div className="space-y-4">
               {MARKETS.map((m) => (
-                <div key={m.n} className="pt-2 first:pt-0 border-t border-[#F7F3EE]/10 first:border-0">
+                <div key={m.n} className={`pt-2 first:pt-0 border-t first:border-0 ${
+                  isDark ? "border-[#F7F3EE]/10" : "border-[rgba(13,43,69,0.08)]"
+                }`}>
                   <div className="flex items-baseline justify-between mb-1.5">
-                    <span className="font-semibold text-sm text-[#F7F3EE]">{m.n}</span>
+                    <span className={`font-semibold text-sm ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>{m.n}</span>
                     <span className="font-mono font-bold text-sm text-[#C9943A]">{m.rev}</span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-[#F7F3EE]/10 overflow-hidden mb-2">
+                  <div className={`h-1.5 rounded-full overflow-hidden mb-2 ${isDark ? "bg-[#F7F3EE]/10" : "bg-[rgba(13,43,69,0.08)]"}`}>
                     <div
                       className="h-full rounded-full"
                       style={{ width: `${m.pct}%`, backgroundColor: m.barColor }}
                     />
                   </div>
-                  <div className="flex items-center gap-3 text-[11px] font-mono text-[#F7F3EE]/60 mb-1.5">
+                  <div className={`flex items-center gap-3 text-[11px] font-mono mb-1.5 ${isDark ? "text-[#F7F3EE]/60" : "text-[#0D2B45]/60"}`}>
                     <span>{m.users}</span>
                     <span>·</span>
                     <span>{m.conv}</span>
                   </div>
-                  <p className="text-xs text-[#F7F3EE]/70 font-inter leading-relaxed mb-2.5">
+                  <p className={`text-xs font-inter leading-relaxed mb-2.5 ${isDark ? "text-[#F7F3EE]/70" : "text-[#0D2B45]/75"}`}>
                     {m.verdict}
                   </p>
                   <button
@@ -484,19 +638,27 @@ export default function DashboardPage() {
           </div>
 
           {/* Needs You / Inbox */}
-          <div className="bg-[#0D2B45] rounded-2xl p-5">
+          <div
+            className={`rounded-2xl p-5 transition-all ${
+              isDark
+                ? "bg-[#0D2B45]"
+                : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)] text-[#0D2B45]"
+            }`}
+          >
             <div className="flex items-baseline justify-between gap-2 mb-3">
               <span className="text-[10px] font-semibold tracking-[0.16em] text-[#C9943A] uppercase">
                 NEEDS YOU
               </span>
-              <span className="text-xs font-mono text-[#F7F3EE]/45">5 open</span>
+              <span className={`text-xs font-mono ${isDark ? "text-[#F7F3EE]/45" : "text-[#0D2B45]/55"}`}>5 open</span>
             </div>
             <div className="space-y-1.5">
               {INBOX_ITEMS.map((item) => (
                 <div
                   key={item.t}
                   onClick={() => navigate(item.route)}
-                  className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#0A0A0A]/40 transition-colors cursor-pointer"
+                  className={`flex items-center gap-3 p-2.5 rounded-xl transition-colors cursor-pointer ${
+                    isDark ? "hover:bg-[#0A0A0A]/40" : "hover:bg-[#FAF7F2]"
+                  }`}
                 >
                   <div
                     className={`w-2 h-2 rounded-full shrink-0 ${
@@ -504,14 +666,14 @@ export default function DashboardPage() {
                         ? "bg-[#C9943A]"
                         : item.tone === "copper"
                         ? "bg-[#B5651D]"
-                        : "bg-[#F7F3EE]/30"
+                        : isDark ? "bg-[#F7F3EE]/30" : "bg-[rgba(13,43,69,0.25)]"
                     }`}
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs sm:text-sm font-semibold text-[#F7F3EE] truncate">
+                    <div className={`text-xs sm:text-sm font-semibold truncate ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
                       {item.t}
                     </div>
-                    <div className="text-[11px] text-[#F7F3EE]/50 truncate">{item.note}</div>
+                    <div className={`text-[11px] truncate ${isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"}`}>{item.note}</div>
                   </div>
                   <span
                     className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${
@@ -519,7 +681,7 @@ export default function DashboardPage() {
                         ? "bg-[#C9943A]/20 text-[#C9943A]"
                         : item.tone === "copper"
                         ? "bg-[#B5651D]/20 text-[#D98A3E]"
-                        : "bg-[#F7F3EE]/10 text-[#F7F3EE]/40"
+                        : isDark ? "bg-[#F7F3EE]/10 text-[#F7F3EE]/40" : "bg-[rgba(13,43,69,0.08)] text-[#0D2B45]/55"
                     }`}
                   >
                     {item.c}
@@ -530,7 +692,13 @@ export default function DashboardPage() {
           </div>
 
           {/* Push Something, Now / Levers */}
-          <div className="bg-[#0D2B45] rounded-2xl p-5">
+          <div
+            className={`rounded-2xl p-5 transition-all ${
+              isDark
+                ? "bg-[#0D2B45]"
+                : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)] text-[#0D2B45]"
+            }`}
+          >
             <div className="text-[10px] font-semibold tracking-[0.16em] text-[#C9943A] uppercase mb-3">
               PUSH SOMETHING, NOW
             </div>
@@ -539,13 +707,17 @@ export default function DashboardPage() {
                 <div
                   key={lever.t}
                   onClick={() => openDrawer(lever.drawer)}
-                  className="p-3 rounded-xl bg-[#0A0A0A]/60 border border-[#F7F3EE]/5 hover:border-[#C9943A]/40 flex items-center justify-between gap-3 cursor-pointer transition-all"
+                  className={`p-3 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                    isDark
+                      ? "bg-[#0A0A0A]/60 border border-[#F7F3EE]/5 hover:border-[#C9943A]/40"
+                      : "bg-[#FAF7F2] border border-[rgba(13,43,69,0.08)] hover:border-[#C9943A]/40 shadow-xs"
+                  }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs sm:text-sm font-semibold text-[#F7F3EE]">
+                    <div className={`text-xs sm:text-sm font-semibold ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
                       {lever.t}
                     </div>
-                    <div className="text-[11px] text-[#F7F3EE]/50 mt-0.5 leading-snug">
+                    <div className={`text-[11px] mt-0.5 leading-snug ${isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/60"}`}>
                       {lever.note}
                     </div>
                   </div>
@@ -556,18 +728,25 @@ export default function DashboardPage() {
           </div>
 
           {/* Retention Gate */}
-          <div className="bg-[#0D2B45] rounded-2xl p-5">
+          <div
+            style={{ borderLeftWidth: 3, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
+            className={`rounded-2xl p-5 transition-all ${
+              isDark
+                ? "bg-[#0D2B45] border border-[#F7F3EE]/10 text-[#F7F3EE]"
+                : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)] text-[#0D2B45]"
+            }`}
+          >
             <div className="text-[10px] font-semibold tracking-[0.16em] text-[#C9943A] uppercase mb-1">
               RETENTION GATE
             </div>
-            <div className="text-xs text-[#F7F3EE]/60 font-inter mb-3 leading-snug">
+            <div className={`text-xs font-inter mb-3 leading-snug ${isDark ? "text-[#F7F3EE]/60" : "text-[#0D2B45]/70"}`}>
               Day-7 above 45% for four straight weeks is the signal to spend on ads. Not before.
             </div>
             <div className="space-y-2 mb-3">
               {COHORTS.map((c) => (
                 <div key={c.w} className="flex items-center gap-2 text-xs">
-                  <span className="w-14 shrink-0 font-mono text-[#F7F3EE]/50">{c.w}</span>
-                  <div className="flex-1 h-1.5 rounded-full bg-[#F7F3EE]/10 overflow-hidden">
+                  <span className={`w-14 shrink-0 font-mono ${isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/60"}`}>{c.w}</span>
+                  <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${isDark ? "bg-[#F7F3EE]/10" : "bg-[rgba(13,43,69,0.08)]"}`}>
                     <div
                       className={`h-full rounded-full ${
                         c.v >= 45 ? "bg-[#5FC48E]" : "bg-[#D98A3E]"
@@ -575,13 +754,13 @@ export default function DashboardPage() {
                       style={{ width: `${c.v}%` }}
                     />
                   </div>
-                  <span className="w-10 text-right font-mono font-bold text-[#F7F3EE]">
+                  <span className={`w-10 text-right font-mono font-bold ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
                     {c.pct}
                   </span>
                 </div>
               ))}
             </div>
-            <div className="p-2.5 rounded-xl bg-[#1A7A4A]/20 border-l-2 border-[#1A7A4A] text-xs font-mono text-[#5FC48E]">
+            <div className="p-2.5 rounded-xl bg-[#1A7A4A]/20 border border-[#1A7A4A]/30 text-xs font-mono text-[#5FC48E]">
               GATE PASS · 3 OF 4 WEEKS OVER 45%
             </div>
           </div>

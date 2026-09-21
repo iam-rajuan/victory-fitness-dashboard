@@ -78,9 +78,9 @@ function SignInPage() {
         {/* Header Section with Brand */}
         <div className="text-center mb-8">
           <img
-            src="/logo_light.png?v=5"
+            src="/vf-logo-white.png?v=8"
             alt="Victory Fitness"
-            className="h-12 sm:h-14 w-auto object-contain mx-auto mb-4"
+            className="h-14 w-auto object-contain mx-auto mb-4"
           />
           <div className="text-[10px] sm:text-[11px] font-medium tracking-[0.2em] text-[#B5651D] uppercase">
             Admin Dashboard Control
@@ -94,7 +94,7 @@ function SignInPage() {
         </div>
 
         {/* Card */}
-        <div className="bg-[#0D2B45] border-l-4 border-[#B5651D] border border-r-[#F7F3EE]/10 border-t-[#F7F3EE]/10 border-b-[#F7F3EE]/10 rounded-[22px] p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+        <div className="bg-[#0D2B45] border border-[#F7F3EE]/15 border-l-4 border-l-[#B5651D] rounded-[22px] p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
           {isCheckingSession ? (
             <div className="py-14 text-center">
               <div className="w-8 h-8 border-2 border-[#C9943A] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
@@ -105,7 +105,7 @@ function SignInPage() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               {error && (
-                <div className="p-3.5 rounded-xl bg-[#B5651D]/20 border-l-3 border-[#B5651D] text-xs font-inter text-[#F7F3EE] leading-relaxed">
+                <div className="p-3.5 rounded-xl bg-[#B5651D]/20 border border-[#B5651D]/40 text-xs font-inter text-[#F7F3EE] leading-relaxed">
                   {error}
                 </div>
               )}

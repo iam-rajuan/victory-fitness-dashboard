@@ -60,8 +60,7 @@ function VerificationCode() {
       next[index] = sanitized;
       return next;
     });
-    setError("");
-    setInfo("");
+
     if (sanitized && index < CODE_LENGTH - 1) {
       focusInput(index + 1);
     }
@@ -71,42 +70,27 @@ function VerificationCode() {
     if (event.key === "Backspace" && !digits[index] && index > 0) {
       focusInput(index - 1);
     }
-    if (event.key === "ArrowLeft" && index > 0) {
-      focusInput(index - 1);
-    }
-    if (event.key === "ArrowRight" && index < CODE_LENGTH - 1) {
-      focusInput(index + 1);
-    }
   };
 
   const handlePaste = (event) => {
-    const pasted = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, CODE_LENGTH);
-    if (!pasted) {
-      return;
-    }
     event.preventDefault();
+    const pasted = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, CODE_LENGTH);
+    if (!pasted) return;
+
     const next = new Array(CODE_LENGTH).fill("");
-    pasted.split("").forEach((char, index) => {
-      next[index] = char;
-    });
+    for (let i = 0; i < pasted.length; i++) {
+      next[i] = pasted[i];
+    }
     setDigits(next);
-    setError("");
-    setInfo("");
     focusInput(Math.min(pasted.length, CODE_LENGTH - 1));
   };
 
   const handleVerify = async (event) => {
     event.preventDefault();
-    setError("");
-    setInfo("");
-
-    if (!resetEmail) {
-      navigate("/forget-password", { replace: true });
-      return;
-    }
+    if (!resetEmail) return;
 
     if (joinedCode.length !== CODE_LENGTH) {
-      setError("Enter the full 4-digit code.");
+      setError(`Please enter the complete ${CODE_LENGTH}-digit code.`);
       return;
     }
 
@@ -126,9 +110,7 @@ function VerificationCode() {
   };
 
   const handleResend = async () => {
-    if (!resetEmail || cooldown > 0) {
-      return;
-    }
+    if (!resetEmail || cooldown > 0) return;
     setError("");
     setInfo("");
     setIsResending(true);
@@ -150,33 +132,60 @@ function VerificationCode() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-10">
-      <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-4xl items-center justify-center">
-        <div className="w-full max-w-2xl rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_32px_80px_rgba(15,23,42,0.14)] sm:p-10">
-          <Link
-            to="/forget-password"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-          >
-            <FiArrowLeft />
-            Back
-          </Link>
+    <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden font-dmsans">
+      {/* Ambient glow */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-[#B5651D]/10 blur-[130px] pointer-events-none rounded-full" />
+      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-[#C9943A]/8 blur-[110px] pointer-events-none rounded-full" />
 
-          <div className="mt-8">
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600/10 text-blue-600">
-              <FiShield size={24} />
+      <div className="w-full max-w-[480px] relative z-10">
+        {/* Header Section with Brand */}
+        <div className="text-center mb-8">
+          <img
+            src="/vf-logo-white.png?v=8"
+            alt="Victory Fitness"
+            className="h-14 w-auto object-contain mx-auto mb-4"
+          />
+          <div className="text-[10px] sm:text-[11px] font-medium tracking-[0.2em] text-[#B5651D] uppercase">
+            Admin Dashboard Control
+          </div>
+          <h1 className="mt-2 text-3xl sm:text-4xl font-semibold tracking-tight text-[#F7F3EE] font-clash">
+            Verify Code
+          </h1>
+          <p className="mt-2 text-sm text-[#F7F3EE]/60 font-inter">
+            Enter the 4-digit authentication code sent to your mailbox.
+          </p>
+        </div>
+
+        {/* Card */}
+        <div className="bg-[#0D2B45] border border-[#F7F3EE]/15 border-l-4 border-l-[#B5651D] rounded-[22px] p-6 sm:p-8 shadow-2xl backdrop-blur-xl relative">
+          <div className="absolute top-6 left-6">
+            <Link
+              to="/forget-password"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#F7F3EE]/15 text-[#F7F3EE]/60 hover:text-[#F7F3EE] hover:border-[#C9943A] transition-colors"
+              title="Back"
+            >
+              <FiArrowLeft size={14} />
+            </Link>
+          </div>
+
+          <div className="flex flex-col items-center mt-2">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#C9943A]/15 text-[#C9943A] mb-3">
+              <FiShield size={22} />
             </div>
-            <p className="mt-6 text-xs font-bold uppercase tracking-[0.28em] text-blue-600">
+
+            <span className="text-[9.5px] font-bold uppercase tracking-widest text-[#C9943A] font-mono">
               Step 2 of 3
-            </p>
-            <h1 className="mt-3 text-3xl font-black text-slate-900">Verify reset code</h1>
-            <p className="mt-3 text-sm leading-7 text-slate-500">
-              Enter the 4-digit code we sent to{" "}
-              <span className="font-semibold text-slate-700">{maskEmail(resetEmail)}</span>.
+            </span>
+            <h3 className="text-lg font-bold text-[#F7F3EE] mt-1 font-clash">
+              Enter 4-digit code
+            </h3>
+            <p className="mt-1 text-xs text-[#F7F3EE]/60 text-center leading-relaxed max-w-xs font-inter">
+              Sent to <span className="font-mono text-[#F7F3EE]">{maskEmail(resetEmail)}</span>
             </p>
           </div>
 
-          <form className="mt-10" onSubmit={handleVerify}>
-            <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+          <form className="mt-6 space-y-6" onSubmit={handleVerify}>
+            <div className="flex justify-center gap-3">
               {digits.map((digit, index) => (
                 <input
                   key={index}
@@ -191,41 +200,41 @@ function VerificationCode() {
                   onChange={(event) => handleDigitChange(event.target.value, index)}
                   onKeyDown={(event) => handleKeyDown(event, index)}
                   onPaste={handlePaste}
-                  className="h-16 w-16 rounded-2xl border border-slate-300 bg-white text-center text-2xl font-black text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:h-20 sm:w-20"
+                  className="h-14 w-14 sm:h-16 sm:w-16 rounded-xl border border-[#F7F3EE]/15 bg-[#0A0A0A] text-center text-2xl font-bold font-mono text-[#F7F3EE] outline-none transition-all focus:border-[#C9943A] focus:ring-1 focus:ring-[#C9943A]"
                 />
               ))}
             </div>
 
             {error ? (
-              <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600">
+              <div className="p-3.5 rounded-xl bg-[#B5651D]/20 border border-[#B5651D]/40 text-xs font-inter text-[#F7F3EE] leading-relaxed">
                 {error}
               </div>
             ) : null}
 
             {info ? (
-              <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                {info}
+              <div className="p-3.5 rounded-xl bg-[#1A7A4A]/20 border border-[#1A7A4A]/40 text-xs font-mono text-[#5FC48E]">
+                ✓ {info}
               </div>
             ) : null}
 
             <button
               type="submit"
               disabled={isLoading}
-              className="mt-8 inline-flex min-h-[56px] w-full items-center justify-center rounded-2xl bg-blue-600 px-6 text-base font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full h-12 bg-[#C9943A] hover:bg-[#d8a24a] text-[#0D0D0D] font-bold text-sm rounded-xl transition-all shadow-lg active:scale-[0.99] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {isLoading ? "Verifying code..." : "Continue"}
+              {isLoading ? "Verifying code..." : "Verify Code →"}
             </button>
           </form>
 
-          <div className="mt-6 flex flex-col items-center gap-3 text-center">
-            <p className="text-sm text-slate-500">
-              Didn’t receive the email? Check spam or request another code.
+          <div className="mt-6 flex flex-col items-center gap-2 text-center border-t border-[#F7F3EE]/10 pt-4">
+            <p className="text-xs text-[#F7F3EE]/50 font-inter">
+              Didn't receive the code? Check spam or request a new code.
             </p>
             <button
               type="button"
               disabled={isResending || cooldown > 0}
               onClick={handleResend}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[#C9943A] hover:text-[#d8a24a] transition-colors cursor-pointer disabled:opacity-40"
             >
               <FiRefreshCw className={isResending ? "animate-spin" : ""} />
               {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
+import { useTheme } from "../../context/ThemeContext";
 import { adminApiRequest } from "../../../services/auth.service";
 
 const DRAWER_CONFIGS = {
@@ -361,27 +362,27 @@ export default function ClaudeDrawer() {
   return (
     <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex justify-end font-dmsans">
       <div
-        className="w-[620px] max-w-[95vw] h-screen overflow-y-auto bg-[#0D0D0D] border-l border-[#F7F3EE]/15 p-6 sm:p-8 flex flex-col justify-between shadow-2xl animate-in slide-in-from-right duration-200"
+        className={`w-[620px] max-w-[95vw] h-screen overflow-y-auto p-6 sm:p-8 flex flex-col justify-between shadow-2xl animate-in slide-in-from-right duration-200 transition-colors ${isDark ? "bg-[#0D0D0D] border-l border-[#F7F3EE]/15 text-[#F7F3EE]" : "bg-white border-l border-[rgba(13,43,69,0.1)] text-[#0D2B45]"}`}
         role="dialog"
       >
         <div>
           {/* Header */}
-          <div className="flex items-start justify-between gap-4 mb-6 pb-4 border-b border-[#F7F3EE]/10">
+          <div className={`flex items-start justify-between gap-4 mb-6 pb-4 border-b transition-colors ${isDark ? "border-[#F7F3EE]/10" : "border-[rgba(13,43,69,0.08)]"}`}>
             <div>
               <div className="text-[10px] font-medium tracking-[0.16em] text-[#B5651D] uppercase mb-1 font-dmsans">
                 {config.kicker}
               </div>
-              <h2 className="text-2xl sm:text-3xl font-semibold text-[#F7F3EE] font-clash leading-tight">
+              <h2 className={`text-2xl sm:text-3xl font-semibold font-clash leading-tight ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
                 {config.title}
               </h2>
-              <p className="mt-1.5 text-xs sm:text-sm text-[#F7F3EE]/60 font-inter leading-relaxed max-w-lg">
+              <p className={`mt-1.5 text-xs sm:text-sm font-inter leading-relaxed max-w-lg ${isDark ? "text-[#F7F3EE]/60" : "text-[#0D2B45]/70"}`}>
                 {config.sub}
               </p>
             </div>
             <button
               type="button"
               onClick={closeDrawer}
-              className="text-2xl text-[#F7F3EE]/50 hover:text-[#F7F3EE] transition-colors p-1"
+              className={`text-2xl transition-colors p-1 cursor-pointer ${isDark ? "text-[#F7F3EE]/50 hover:text-[#F7F3EE]" : "text-[#0D2B45]/50 hover:text-[#0D2B45]"}`}
               aria-label="Close drawer"
             >
               ×
@@ -390,7 +391,12 @@ export default function ClaudeDrawer() {
 
           {/* Media preview block */}
           {config.mediaLabel && (
-            <div className="bg-[#0D2B45] rounded-2xl border-l-4 border-[#B5651D] p-4 mb-5">
+            <div
+              style={{ borderLeftWidth: 4, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
+              className={`rounded-2xl border p-4 mb-5 transition-colors ${
+                isDark ? "bg-[#0D2B45] border-[#F7F3EE]/10" : "bg-[#FAF7F2] border-[rgba(13,43,69,0.08)]"
+              }`}
+            >
               <div className="text-[10px] font-medium tracking-[0.14em] text-[#C9943A] uppercase mb-2.5">
                 {config.mediaLabel}
               </div>
@@ -402,18 +408,22 @@ export default function ClaudeDrawer() {
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${
                       idx === 0
                         ? "bg-[#C9943A] text-[#0D0D0D]"
-                        : "bg-[#F7F3EE]/10 text-[#F7F3EE]/70 hover:text-[#F7F3EE]"
+                        : isDark
+                        ? "bg-[#F7F3EE]/10 text-[#F7F3EE]/70 hover:text-[#F7F3EE]"
+                        : "bg-white border border-[rgba(13,43,69,0.12)] text-[#0D2B45]/75 hover:text-[#0D2B45]"
                     }`}
                   >
                     {kind}
                   </button>
                 ))}
               </div>
-              <div className="h-28 rounded-xl bg-gradient-to-br from-[#12314c] to-[#0a2439] flex flex-col items-center justify-center gap-2 border border-[#F7F3EE]/10">
+              <div className={`h-28 rounded-xl flex flex-col items-center justify-center gap-2 border ${
+                isDark ? "bg-gradient-to-br from-[#12314c] to-[#0a2439] border-[#F7F3EE]/10" : "bg-[#F0EBE1] border-[rgba(13,43,69,0.08)]"
+              }`}>
                 <div className="w-10 h-8 rounded-lg bg-[#C9943A] flex items-center justify-center">
                   <div className="w-0 h-0 border-l-[10px] border-l-[#0D0D0D] border-y-[6px] border-y-transparent ml-1" />
                 </div>
-                <span className="text-[11px] font-mono text-[#F7F3EE]/45">
+                <span className={`text-[11px] font-mono ${isDark ? "text-[#F7F3EE]/45" : "text-[#0D2B45]/55"}`}>
                   {config.mediaHint}
                 </span>
               </div>
@@ -422,16 +432,25 @@ export default function ClaudeDrawer() {
 
           {/* Pricing table block */}
           {config.hasTable && config.priceRows && (
-            <div className="bg-[#0D2B45] rounded-2xl border-l-4 border-[#B5651D] overflow-hidden mb-5">
-              <div className="flex text-[9.5px] font-semibold tracking-wider text-[#F7F3EE]/50 px-4 py-3 border-b border-[#F7F3EE]/10 uppercase">
+            <div
+              style={{ borderLeftWidth: 4, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
+              className={`rounded-2xl border overflow-hidden mb-5 transition-colors ${
+                isDark ? "bg-[#0D2B45] border-[#F7F3EE]/10" : "bg-[#FAF7F2] border-[rgba(13,43,69,0.08)]"
+              }`}
+            >
+              <div className={`flex text-[9.5px] font-semibold tracking-wider px-4 py-3 border-b uppercase ${
+                isDark ? "text-[#F7F3EE]/50 border-[#F7F3EE]/10" : "text-[#0D2B45]/55 border-[rgba(13,43,69,0.08)]"
+              }`}>
                 <span className="flex-1">Plan</span>
                 <span className="w-20 text-right">Standard</span>
                 <span className="w-24 text-right text-[#C9943A]">With Offer</span>
               </div>
               {config.priceRows.map((pr) => (
-                <div key={pr.n} className="flex items-center text-xs px-4 py-2.5 border-b border-[#F7F3EE]/5">
-                  <span className="flex-1 font-semibold text-[#F7F3EE]">{pr.n}</span>
-                  <span className="w-20 text-right font-mono text-[#F7F3EE]/60">{pr.year}</span>
+                <div key={pr.n} className={`flex items-center text-xs px-4 py-2.5 border-b ${
+                  isDark ? "border-[#F7F3EE]/5" : "border-[rgba(13,43,69,0.06)]"
+                }`}>
+                  <span className={`flex-1 font-semibold ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>{pr.n}</span>
+                  <span className={`w-20 text-right font-mono ${isDark ? "text-[#F7F3EE]/60" : "text-[#0D2B45]/60"}`}>{pr.year}</span>
                   <span className="w-24 text-right font-mono font-bold text-[#5FC48E]">{pr.sale}</span>
                 </div>
               ))}
@@ -441,7 +460,9 @@ export default function ClaudeDrawer() {
           {/* Starters block for notification templates */}
           {config.starters && (
             <div className="mb-5 space-y-3">
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-[#F7F3EE]/50">
+              <div className={`text-[10px] font-semibold uppercase tracking-wider ${
+                isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
+              }`}>
                 CHOOSE A STARTER VARIANT
               </div>
               <div className="flex flex-wrap gap-2">
@@ -456,18 +477,25 @@ export default function ClaudeDrawer() {
                     key={name}
                     type="button"
                     onClick={() => setSelectedStarter(name)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
                       selectedStarter === name
                         ? "bg-[#C9943A] text-[#0D0D0D]"
-                        : "bg-[#F7F3EE]/8 text-[#F7F3EE]/70 hover:text-[#F7F3EE]"
+                        : isDark
+                        ? "bg-[#F7F3EE]/8 text-[#F7F3EE]/70 hover:text-[#F7F3EE]"
+                        : "bg-white border border-[rgba(13,43,69,0.12)] text-[#0D2B45]/75 hover:text-[#0D2B45]"
                     }`}
                   >
                     {name}
                   </button>
                 ))}
               </div>
-              <div className="bg-[#0D2B45] rounded-xl border-l-4 border-[#B5651D] p-4 text-xs font-inter leading-relaxed text-[#F7F3EE]/90">
-                <div className="font-semibold text-sm text-[#F7F3EE] mb-1 font-clash">
+              <div
+                style={{ borderLeftWidth: 4, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
+                className={`rounded-xl border border-[#B5651D]/30 p-4 text-xs font-inter leading-relaxed transition-colors ${
+                  isDark ? "bg-[#0D2B45] text-[#F7F3EE]/90" : "bg-[#FAF7F2] text-[#0D2B45]/85"
+                }`}
+              >
+                <div className={`font-semibold text-sm mb-1 font-clash ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
                   {selectedStarter}
                 </div>
                 <div>
@@ -481,10 +509,10 @@ export default function ClaudeDrawer() {
           <div className="space-y-4">
             {(config.fields || []).map((field) => (
               <div key={field.k} className="space-y-1.5">
-                <div className="flex items-baseline justify-between text-[10px] font-semibold uppercase tracking-[0.14em] text-[#F7F3EE]/50">
+                <div className={`flex items-baseline justify-between text-[10px] font-semibold uppercase tracking-[0.14em] ${isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"}`}>
                   <span>{field.k}</span>
                   {field.hint && (
-                    <span className="font-mono text-[#F7F3EE]/40 normal-case">{field.hint}</span>
+                    <span className={`font-mono normal-case ${isDark ? "text-[#F7F3EE]/40" : "text-[#0D2B45]/45"}`}>{field.hint}</span>
                   )}
                 </div>
 
@@ -500,7 +528,9 @@ export default function ClaudeDrawer() {
                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
                             isSelected
                               ? "bg-[#C9943A] text-[#0D0D0D]"
-                              : "bg-[#F7F3EE]/8 text-[#F7F3EE]/70 hover:bg-[#F7F3EE]/15 hover:text-[#F7F3EE]"
+                              : isDark
+                              ? "bg-[#F7F3EE]/8 text-[#F7F3EE]/70 hover:bg-[#F7F3EE]/15 hover:text-[#F7F3EE]"
+                              : "bg-white border border-[rgba(13,43,69,0.12)] text-[#0D2B45]/75 hover:bg-[#F7F3EE] hover:text-[#0D2B45]"
                           }`}
                         >
                           {opt}
@@ -515,7 +545,7 @@ export default function ClaudeDrawer() {
                     type="text"
                     value={formValues[field.k] ?? ""}
                     onChange={(e) => handleTextChange(field.k, e.target.value)}
-                    className="w-full px-4 py-2.5 bg-[#0A0A0A] border border-[#F7F3EE]/15 rounded-xl text-[#F7F3EE] text-xs sm:text-sm font-dmsans outline-none focus:border-[#C9943A]"
+                    className={`w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm font-dmsans outline-none focus:border-[#C9943A] transition-colors ${isDark ? "bg-[#0A0A0A] border border-[#F7F3EE]/15 text-[#F7F3EE]" : "bg-[#F7F3EE] border border-[rgba(13,43,69,0.15)] text-[#0D2B45]"}`}
                   />
                 )}
 
@@ -524,26 +554,30 @@ export default function ClaudeDrawer() {
                     rows={3}
                     value={formValues[field.k] ?? ""}
                     onChange={(e) => handleTextChange(field.k, e.target.value)}
-                    className="w-full px-4 py-2.5 bg-[#0A0A0A] border border-[#F7F3EE]/15 rounded-xl text-[#F7F3EE] text-xs sm:text-sm font-inter leading-relaxed outline-none focus:border-[#C9943A] resize-y"
+                    className={`w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm font-inter leading-relaxed outline-none focus:border-[#C9943A] resize-y transition-colors ${isDark ? "bg-[#0A0A0A] border border-[#F7F3EE]/15 text-[#F7F3EE]" : "bg-[#F7F3EE] border border-[rgba(13,43,69,0.15)] text-[#0D2B45]"}`}
                   />
                 )}
 
                 {field.type === "read" && (
-                  <div className="p-3.5 rounded-xl bg-[#F7F3EE]/5 border border-[#F7F3EE]/10 text-xs sm:text-sm font-inter text-[#F7F3EE]/80 leading-relaxed">
+                  <div className={`p-3.5 rounded-xl border text-xs sm:text-sm font-inter leading-relaxed ${
+                    isDark ? "bg-[#F7F3EE]/5 border-[#F7F3EE]/10 text-[#F7F3EE]/80" : "bg-[#FAF7F2] border-[rgba(13,43,69,0.1)] text-[#0D2B45]/85"
+                  }`}>
                     “{field.initial}”
                   </div>
                 )}
 
                 {field.type === "file" && (
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-[#F7F3EE]/6 border border-[#F7F3EE]/10">
+                    <div className={`flex items-center justify-between p-3 rounded-xl border ${
+                      isDark ? "bg-[#F7F3EE]/6 border-[#F7F3EE]/10" : "bg-[#FAF7F2] border-[rgba(13,43,69,0.1)]"
+                    }`}>
                       <div className="flex items-center gap-3">
                         <span className="px-2 py-1 bg-[#C9943A] text-[#0D0D0D] font-mono text-[10px] font-bold rounded">
                           {field.ext || "DOC"}
                         </span>
                         <div>
-                          <div className="text-xs font-semibold text-[#F7F3EE]">{field.initial}</div>
-                          <div className="text-[10px] font-mono text-[#F7F3EE]/45">{field.meta}</div>
+                          <div className={`text-xs font-semibold ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>{field.initial}</div>
+                          <div className={`text-[10px] font-mono ${isDark ? "text-[#F7F3EE]/45" : "text-[#0D2B45]/55"}`}>{field.meta}</div>
                         </div>
                       </div>
                       <span className="text-xs font-semibold text-[#C9943A] hover:underline cursor-pointer">
@@ -552,7 +586,7 @@ export default function ClaudeDrawer() {
                     </div>
                     <div className="p-4 border-1.5 border-dashed border-[#C9943A]/50 rounded-xl text-center cursor-pointer hover:bg-[#C9943A]/5 transition-colors">
                       <div className="text-xs font-semibold text-[#C9943A]">{field.drop}</div>
-                      <div className="text-[10px] text-[#F7F3EE]/45 mt-0.5">{field.accepts}</div>
+                      <div className={`text-[10px] mt-0.5 ${isDark ? "text-[#F7F3EE]/45" : "text-[#0D2B45]/55"}`}>{field.accepts}</div>
                     </div>
                   </div>
                 )}
@@ -562,14 +596,19 @@ export default function ClaudeDrawer() {
 
           {/* Drawer note */}
           {config.note && (
-            <div className="mt-5 p-3.5 rounded-xl bg-[#B5651D]/15 border-l-3 border-[#B5651D] text-xs font-inter text-[#F7F3EE]/85 leading-relaxed">
+            <div
+              style={{ borderLeftWidth: 3, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
+              className={`mt-5 p-3.5 rounded-xl border border-[#B5651D]/30 text-xs font-inter leading-relaxed ${
+                isDark ? "bg-[#B5651D]/15 text-[#F7F3EE]/85" : "bg-[#B5651D]/10 text-[#0D2B45]"
+              }`}
+            >
               {config.note}
             </div>
           )}
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center gap-3 mt-8 pt-4 border-t border-[#F7F3EE]/10">
+        <div className={`flex items-center gap-3 mt-8 pt-4 border-t transition-colors ${isDark ? "border-[#F7F3EE]/10" : "border-[rgba(13,43,69,0.08)]"}`}>
           <button
             type="button"
             disabled={isSubmitting}
@@ -581,7 +620,11 @@ export default function ClaudeDrawer() {
           <button
             type="button"
             onClick={closeDrawer}
-            className="w-28 h-12 border border-[#F7F3EE]/20 hover:border-[#F7F3EE]/40 text-[#F7F3EE] font-semibold text-sm rounded-xl transition-colors cursor-pointer font-dmsans"
+            className={`w-28 h-12 border transition-colors cursor-pointer font-dmsans font-semibold text-sm rounded-xl ${
+              isDark
+                ? "border-[#F7F3EE]/20 hover:border-[#F7F3EE]/40 text-[#F7F3EE]"
+                : "border-[rgba(13,43,69,0.2)] hover:border-[rgba(13,43,69,0.4)] text-[#0D2B45]"
+            }`}
           >
             {config.alt || "Close"}
           </button>

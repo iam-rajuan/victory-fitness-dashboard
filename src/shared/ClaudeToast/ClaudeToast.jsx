@@ -8,7 +8,8 @@ export default function ClaudeToast() {
   return (
     <div
       onClick={dismissToast}
-      className="fixed bottom-6 right-6 z-[120] max-w-md bg-[#0D2B45] border-l-4 border-[#C9943A] border border-[#F7F3EE]/15 px-5 py-3.5 rounded-xl shadow-2xl flex items-center justify-between gap-4 cursor-pointer animate-in fade-in slide-in-from-bottom-3 duration-200"
+      style={{ borderLeftWidth: 4, borderLeftColor: "#C9943A", borderLeftStyle: "solid" }}
+      className="fixed bottom-6 right-6 z-[120] max-w-md bg-[#0D2B45] border border-[#F7F3EE]/15 px-5 py-3.5 rounded-xl shadow-2xl flex items-center justify-between gap-4 cursor-pointer animate-in fade-in slide-in-from-bottom-3 duration-200"
       role="alert"
     >
       <span className="text-sm font-semibold text-[#F7F3EE] font-dmsans">{toast}</span>

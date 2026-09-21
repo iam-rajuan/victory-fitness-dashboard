@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { IoEyeOffOutline, IoEyeOutline } from "react-icons/io5";
-import { FiArrowLeft, FiCheckCircle, FiLock } from "react-icons/fi";
+import { FiArrowLeft, FiCheckCircle } from "react-icons/fi";
 import {
   clearResetFlow,
   getResetToken,
@@ -79,124 +79,146 @@ function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-10">
-      <div className="mx-auto flex min-h-[calc(100vh-5rem)] max-w-4xl items-center justify-center">
-        <div className="w-full max-w-2xl rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_32px_80px_rgba(15,23,42,0.14)] sm:p-10">
-          <Link
-            to="/verification-code"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
-          >
-            <FiArrowLeft />
-            Back
-          </Link>
+    <div className="min-h-screen bg-[#0D0D0D] text-[#F7F3EE] flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden font-dmsans">
+      {/* Background Decorative Radial Gradient */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#0D2B45]/40 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-10 right-10 w-[350px] h-[350px] bg-[#C9943A]/10 rounded-full blur-2xl pointer-events-none" />
 
-          <div className="mt-8">
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600/10 text-blue-600">
-              <FiLock size={24} />
-            </div>
-            <p className="mt-6 text-xs font-bold uppercase tracking-[0.28em] text-blue-600">
-              Step 3 of 3
-            </p>
-            <h1 className="mt-3 text-3xl font-black text-slate-900">Create a new password</h1>
-            <p className="mt-3 text-sm leading-7 text-slate-500">
-              Choose a new password for your admin dashboard account. Once saved, the old password
-              will stop working immediately.
-            </p>
+      <div className="w-full max-w-md relative z-10">
+        {/* Header Section with Brand */}
+        <div className="text-center mb-8">
+          <img
+            src="/vf-logo-white.png?v=8"
+            alt="Victory Fitness"
+            className="h-14 w-auto object-contain mx-auto mb-4"
+          />
+          <div className="text-[10.5px] font-medium tracking-[0.2em] text-[#B5651D] uppercase">
+            Admin Security Control
           </div>
+          <h1 className="text-3xl font-bold font-clash text-[#F7F3EE] mt-2 tracking-tight">
+            Create new password
+          </h1>
+          <p className="text-xs text-[#F7F3EE]/60 mt-1 max-w-xs mx-auto">
+            Choose a new strong password for your admin account. The previous password will stop working immediately.
+          </p>
+        </div>
 
-          <form className="mt-10 space-y-6" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-                New password
+        {/* Form Card */}
+        <div className="bg-[#0D2B45]/90 backdrop-blur-md border border-[#F7F3EE]/15 rounded-2xl p-7 shadow-2xl relative">
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#B5651D] via-[#C9943A] to-[#B5651D] rounded-t-2xl" />
+
+          {error && (
+            <div className="mb-5 p-3.5 bg-red-950/60 border border-red-500/40 rounded-xl text-red-200 text-xs flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {success && (
+            <div className="mb-5 p-3.5 bg-emerald-950/60 border border-emerald-500/40 rounded-xl text-emerald-200 text-xs flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+              <span>{success}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-[11px] font-medium text-[#F7F3EE]/70 uppercase tracking-wider mb-1.5">
+                New Password
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  placeholder="Enter new password"
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-5 py-4 pr-14 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   value={password}
-                  onChange={(event) => {
-                    setPassword(event.target.value);
+                  onChange={(e) => {
+                    setPassword(e.target.value);
                     setError("");
-                    setSuccess("");
                   }}
+                  placeholder="••••••••••••"
+                  className="w-full bg-[#0D0D0D]/70 border border-[#F7F3EE]/20 rounded-xl px-3.5 py-2.5 text-sm text-[#F7F3EE] placeholder-[#F7F3EE]/30 focus:outline-none focus:border-[#C9943A] focus:ring-1 focus:ring-[#C9943A] transition"
                   required
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword((current) => !current)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-700"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#F7F3EE]/50 hover:text-[#F7F3EE] transition"
                 >
-                  {showPassword ? <IoEyeOffOutline size={22} /> : <IoEyeOutline size={22} />}
+                  {showPassword ? <IoEyeOffOutline className="w-4 h-4" /> : <IoEyeOutline className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Confirm new password
+            <div>
+              <label className="block text-[11px] font-medium text-[#F7F3EE]/70 uppercase tracking-wider mb-1.5">
+                Confirm Password
               </label>
               <div className="relative">
                 <input
                   type={showConfirmPassword ? "text" : "password"}
-                  autoComplete="new-password"
-                  placeholder="Re-enter new password"
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-5 py-4 pr-14 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                   value={confirmPassword}
-                  onChange={(event) => {
-                    setConfirmPassword(event.target.value);
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
                     setError("");
-                    setSuccess("");
                   }}
+                  placeholder="••••••••••••"
+                  className="w-full bg-[#0D0D0D]/70 border border-[#F7F3EE]/20 rounded-xl px-3.5 py-2.5 text-sm text-[#F7F3EE] placeholder-[#F7F3EE]/30 focus:outline-none focus:border-[#C9943A] focus:ring-1 focus:ring-[#C9943A] transition"
                   required
                 />
                 <button
                   type="button"
-                  onClick={() => setShowConfirmPassword((current) => !current)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-slate-700"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#F7F3EE]/50 hover:text-[#F7F3EE] transition"
                 >
-                  {showConfirmPassword ? <IoEyeOffOutline size={22} /> : <IoEyeOutline size={22} />}
+                  {showConfirmPassword ? <IoEyeOffOutline className="w-4 h-4" /> : <IoEyeOutline className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-slate-500">
-                Password checks
-              </p>
-              <div className="mt-3 space-y-2">
-                {passwordChecks.map((check) => (
-                  <div key={check.label} className="flex items-center gap-2 text-sm">
-                    <FiCheckCircle className={check.valid ? "text-emerald-500" : "text-slate-300"} />
-                    <span className={check.valid ? "text-slate-700" : "text-slate-500"}>
-                      {check.label}
-                    </span>
-                  </div>
-                ))}
+            {/* Validation checks */}
+            <div className="bg-[#0D0D0D]/50 border border-[#F7F3EE]/10 rounded-xl p-3 space-y-1.5">
+              <div className="text-[10px] uppercase font-bold tracking-wider text-[#F7F3EE]/40 mb-1">
+                Password Requirements
               </div>
+              {passwordChecks.map((check) => (
+                <div key={check.label} className="flex items-center gap-2 text-xs">
+                  <FiCheckCircle className={`w-3.5 h-3.5 ${check.valid ? "text-[#1A7A4A]" : "text-[#F7F3EE]/25"}`} />
+                  <span className={check.valid ? "text-[#F7F3EE]/90 font-medium" : "text-[#F7F3EE]/45"}>
+                    {check.label}
+                  </span>
+                </div>
+              ))}
             </div>
-
-            {error ? (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600">
-                {error}
-              </div>
-            ) : null}
-
-            {success ? (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                {success}
-              </div>
-            ) : null}
 
             <button
               type="submit"
               disabled={isLoading}
-              className="inline-flex min-h-[56px] w-full items-center justify-center rounded-2xl bg-blue-600 px-6 text-base font-bold text-white shadow-lg shadow-blue-600/25 transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full bg-[#C9943A] hover:bg-[#d8a24a] text-[#0D0D0D] font-bold text-sm py-3 rounded-xl transition duration-150 flex items-center justify-center gap-2 shadow-lg shadow-[#C9943A]/20 disabled:opacity-50 disabled:cursor-not-allowed mt-2 cursor-pointer"
             >
-              {isLoading ? "Updating password..." : "Update password"}
+              {isLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-[#0D0D0D] border-t-transparent rounded-full animate-spin" />
+                  <span>Updating Password...</span>
+                </>
+              ) : (
+                <span>Update Password</span>
+              )}
             </button>
           </form>
+
+          <div className="mt-6 text-center">
+            <Link
+              to="/sign-in"
+              className="inline-flex items-center gap-1.5 text-xs text-[#F7F3EE]/60 hover:text-[#C9943A] transition"
+            >
+              <FiArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Sign In</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Footer info */}
+        <div className="text-center mt-6 text-[11px] text-[#F7F3EE]/35">
+          Victory Fitness Executive Suite · Authorized Personnel Only
         </div>
       </div>
     </div>

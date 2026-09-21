@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
+import { useTheme } from "../../context/ThemeContext";
 
 export default function ClaudeAdminTable({
   pageKicker,
@@ -25,6 +26,7 @@ export default function ClaudeAdminTable({
   const [activeFilter, setActiveFilter] = useState(filters[0] || "All");
   const [adviceDone, setAdviceDone] = useState(false);
   const { showToast } = useAdminDrawer();
+  const { isDark } = useTheme();
 
   // Filter rows based on active filter
   const filteredRows = useMemo(() => {
@@ -80,11 +82,19 @@ export default function ClaudeAdminTable({
               {pageKicker}
             </div>
           )}
-          <h1 className="text-3xl sm:text-[34px] font-semibold text-[#F7F3EE] font-clash tracking-tight leading-tight mb-2">
+          <h1
+            className={`text-3xl sm:text-[34px] font-semibold font-clash tracking-tight leading-tight mb-2 transition-colors ${
+              isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
+            }`}
+          >
             {pageTitle}
           </h1>
           {pageSub && (
-            <p className="max-w-2xl text-xs sm:text-[14.5px] text-[#F7F3EE]/60 font-inter leading-relaxed">
+            <p
+              className={`max-w-2xl text-xs sm:text-[14.5px] font-inter leading-relaxed transition-colors ${
+                isDark ? "text-[#F7F3EE]/60" : "text-[#0D2B45]/70"
+              }`}
+            >
               {pageSub}
             </p>
           )}
@@ -94,7 +104,11 @@ export default function ClaudeAdminTable({
           <button
             type="button"
             onClick={handleExportCSV}
-            className="h-11 px-4 sm:px-5 rounded-xl border border-[#F7F3EE]/22 hover:border-[#F7F3EE]/40 text-[#F7F3EE] font-bold text-xs sm:text-[13.5px] transition-colors cursor-pointer bg-transparent"
+            className={`h-11 px-4 sm:px-5 rounded-xl border font-bold text-xs sm:text-[13.5px] transition-all cursor-pointer ${
+              isDark
+                ? "border-[#F7F3EE]/22 hover:border-[#F7F3EE]/40 text-[#F7F3EE] bg-transparent"
+                : "border-[rgba(13,43,69,0.18)] hover:border-[rgba(13,43,69,0.35)] text-[#0D2B45] bg-white shadow-xs"
+            }`}
           >
             {pageSecondary}
           </button>
@@ -114,15 +128,32 @@ export default function ClaudeAdminTable({
           {pageStats.map((stat, idx) => (
             <div
               key={stat.k || idx}
-              className="bg-[#0D2B45] rounded-2xl p-4 sm:p-5 border-l-3 border-[#C9943A] flex flex-col justify-between"
+              style={{ borderLeftWidth: 4, borderLeftColor: "#C9943A", borderLeftStyle: "solid" }}
+              className={`rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-all ${
+                isDark
+                  ? "bg-[#0D2B45] border border-[#F7F3EE]/10 text-[#F7F3EE]"
+                  : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)] text-[#0D2B45]"
+              }`}
             >
-              <div className="text-[9.5px] font-semibold tracking-[0.14em] text-[#F7F3EE]/50 uppercase mb-2">
+              <div
+                className={`text-[9.5px] font-semibold tracking-[0.14em] uppercase mb-2 ${
+                  isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
+                }`}
+              >
                 {stat.k}
               </div>
-              <div className="text-2xl sm:text-[27px] font-bold font-mono text-[#F7F3EE] tracking-tight leading-none mb-2">
+              <div
+                className={`text-2xl sm:text-[27px] font-bold font-mono tracking-tight leading-none mb-2 ${
+                  isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
+                }`}
+              >
                 {stat.v}
               </div>
-              <div className="text-xs text-[#F7F3EE]/55 font-inter leading-tight">
+              <div
+                className={`text-xs font-inter leading-tight ${
+                  isDark ? "text-[#F7F3EE]/55" : "text-[#0D2B45]/60"
+                }`}
+              >
                 {stat.note}
               </div>
             </div>
@@ -132,12 +163,23 @@ export default function ClaudeAdminTable({
 
       {/* Actionable Advice Banner */}
       {pageAdvice && (
-        <div className="bg-[#0D2B45] rounded-2xl border-l-4 border-[#B5651D] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div
+          style={{ borderLeftWidth: 4, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
+          className={`rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
+            isDark
+              ? "bg-[#0D2B45] border border-[#F7F3EE]/10"
+              : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)]"
+          }`}
+        >
           <div className="flex-1 min-w-0">
             <div className="text-[10px] font-semibold tracking-[0.14em] text-[#C9943A] uppercase mb-1">
               WHAT TO DO ON THIS PAGE
             </div>
-            <div className="text-xs sm:text-sm text-[#F7F3EE]/80 font-inter leading-relaxed">
+            <div
+              className={`text-xs sm:text-sm font-inter leading-relaxed ${
+                isDark ? "text-[#F7F3EE]/80" : "text-[#0D2B45]/85"
+              }`}
+            >
               {pageAdvice}
             </div>
           </div>
@@ -158,22 +200,51 @@ export default function ClaudeAdminTable({
             <span className="text-[10px] font-semibold tracking-[0.15em] text-[#C9943A] uppercase">
               MOST JOINED THIS WEEK · WHAT MEMBERS SEE ON THE MOBILE SCREEN
             </span>
-            <span className="text-[11px] font-mono text-[#F7F3EE]/45">mirrors the mobile rail</span>
+            <span
+              className={`text-[11px] font-mono ${
+                isDark ? "text-[#F7F3EE]/45" : "text-[#0D2B45]/50"
+              }`}
+            >
+              mirrors the mobile rail
+            </span>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2">
             {rail.map((c) => (
               <div
                 key={c.n}
-                className="w-[210px] shrink-0 bg-[#0D2B45] rounded-2xl border-l-3 border-[#B5651D] p-4"
+                style={{ borderLeftWidth: 3, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
+                className={`w-[210px] shrink-0 rounded-2xl p-4 transition-all ${
+                  isDark
+                    ? "bg-[#0D2B45] border border-[#F7F3EE]/10"
+                    : "bg-white border border-[rgba(13,43,69,0.08)] shadow-sm"
+                }`}
               >
                 <div className="flex items-baseline justify-between mb-1">
-                  <span className="text-lg font-mono font-bold text-[#F7F3EE]">{c.d}</span>
+                  <span
+                    className={`text-lg font-mono font-bold ${
+                      isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
+                    }`}
+                  >
+                    {c.d}
+                  </span>
                   <span className="text-[9.5px] font-semibold text-[#C9943A] uppercase">
                     {c.type}
                   </span>
                 </div>
-                <div className="font-semibold text-sm text-[#F7F3EE] truncate">{c.n}</div>
-                <div className="text-[11px] font-mono text-[#F7F3EE]/50 mt-1">{c.joined}</div>
+                <div
+                  className={`font-semibold text-sm truncate ${
+                    isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
+                  }`}
+                >
+                  {c.n}
+                </div>
+                <div
+                  className={`text-[11px] font-mono mt-1 ${
+                    isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
+                  }`}
+                >
+                  {c.joined}
+                </div>
                 <div className="flex gap-2 mt-3">
                   <button
                     type="button"
@@ -185,7 +256,7 @@ export default function ClaudeAdminTable({
                   <button
                     type="button"
                     onClick={c.onRemove}
-                    className="w-8 h-8 rounded-lg border border-red-400/50 hover:border-red-400 text-red-400 font-bold text-sm"
+                    className="w-8 h-8 rounded-lg border border-red-400/50 hover:border-red-400 text-red-500 font-bold text-sm"
                   >
                     ×
                   </button>
@@ -206,8 +277,10 @@ export default function ClaudeAdminTable({
               onClick={() => setActiveFilter(f)}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 activeFilter === f
-                  ? "bg-[#C9943A] text-[#0D0D0D]"
-                  : "bg-[#F7F3EE]/6 text-[#F7F3EE]/70 hover:bg-[#F7F3EE]/12 hover:text-[#F7F3EE]"
+                  ? "bg-[#C9943A] text-[#0D0D0D] shadow-xs"
+                  : isDark
+                  ? "bg-[#F7F3EE]/6 text-[#F7F3EE]/70 hover:bg-[#F7F3EE]/12 hover:text-[#F7F3EE]"
+                  : "bg-white border border-[rgba(13,43,69,0.12)] text-[#0D2B45]/75 hover:bg-[#F7F3EE] hover:text-[#0D2B45] shadow-xs"
               }`}
             >
               {f}
@@ -220,9 +293,21 @@ export default function ClaudeAdminTable({
       )}
 
       {/* Table Container */}
-      <div className="bg-[#0D2B45] rounded-2xl overflow-hidden border border-[#F7F3EE]/10">
+      <div
+        className={`rounded-2xl overflow-hidden border transition-all ${
+          isDark
+            ? "bg-[#0D2B45] border-[#F7F3EE]/10"
+            : "bg-white border-[rgba(13,43,69,0.08)] shadow-[0_4px_20px_rgba(13,43,69,0.04)]"
+        }`}
+      >
         {/* Table Header */}
-        <div className="flex items-center px-4 sm:px-6 py-3 border-b border-[#F7F3EE]/12 text-[10px] font-semibold tracking-wider text-[#F7F3EE]/50 uppercase">
+        <div
+          className={`flex items-center px-4 sm:px-6 py-3 border-b text-[10px] font-semibold tracking-wider uppercase transition-colors ${
+            isDark
+              ? "border-[#F7F3EE]/12 text-[#F7F3EE]/50 bg-[#0A0A0A]/30"
+              : "border-[rgba(13,43,69,0.08)] text-[#0D2B45]/55 bg-[#FAF7F2]"
+          }`}
+        >
           <div className="flex-2 min-w-0 pr-4">{cols[0] || "ITEM"}</div>
           <div className="flex-1 min-w-0 text-left">{cols[1] || "TYPE"}</div>
           <div className="flex-1 min-w-0 text-left">{cols[2] || "DETAIL"}</div>
@@ -234,41 +319,75 @@ export default function ClaudeAdminTable({
         {isLoading ? (
           <div className="py-16 text-center">
             <div className="w-7 h-7 border-2 border-[#C9943A] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <div className="text-xs font-mono text-[#F7F3EE]/50">Loading records...</div>
+            <div
+              className={`text-xs font-mono ${
+                isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
+              }`}
+            >
+              Loading records...
+            </div>
           </div>
         ) : filteredRows.length === 0 ? (
-          <div className="py-14 text-center text-xs sm:text-sm text-[#F7F3EE]/50 font-inter">
+          <div
+            className={`py-14 text-center text-xs sm:text-sm font-inter ${
+              isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
+            }`}
+          >
             Nothing matches this filter. Good news, usually.
           </div>
         ) : (
-          <div className="divide-y divide-[#F7F3EE]/5">
+          <div
+            className={`divide-y transition-colors ${
+              isDark ? "divide-[#F7F3EE]/5" : "divide-[rgba(13,43,69,0.06)]"
+            }`}
+          >
             {filteredRows.map((r, idx) => {
               const tone = r.tone;
               return (
                 <div
                   key={r.id || idx}
                   onClick={() => onRowClick && onRowClick(r)}
-                  className="flex items-center px-4 sm:px-6 py-3.5 hover:bg-[#0A0A0A]/40 transition-colors group cursor-pointer"
+                  className={`flex items-center px-4 sm:px-6 py-3.5 transition-colors group cursor-pointer ${
+                    isDark
+                      ? "hover:bg-[#0A0A0A]/40"
+                      : "hover:bg-[#F7F3EE]/60"
+                  }`}
                 >
                   {/* Column 0: Title & Subtitle */}
                   <div className="flex-2 min-w-0 pr-4">
-                    <div className="font-semibold text-sm sm:text-[14.5px] text-[#F7F3EE] truncate group-hover:text-[#C9943A] transition-colors">
+                    <div
+                      className={`font-semibold text-sm sm:text-[14.5px] truncate group-hover:text-[#C9943A] transition-colors ${
+                        isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
+                      }`}
+                    >
                       {r.a}
                     </div>
                     {r.b && (
-                      <div className="text-[11.5px] font-mono text-[#F7F3EE]/50 truncate mt-0.5">
+                      <div
+                        className={`text-[11.5px] font-mono truncate mt-0.5 ${
+                          isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
+                        }`}
+                      >
                         {r.b}
                       </div>
                     )}
                   </div>
 
                   {/* Column 1 */}
-                  <div className="flex-1 min-w-0 text-xs sm:text-sm text-[#F7F3EE]/80 truncate font-inter">
+                  <div
+                    className={`flex-1 min-w-0 text-xs sm:text-sm truncate font-inter ${
+                      isDark ? "text-[#F7F3EE]/80" : "text-[#0D2B45]/85"
+                    }`}
+                  >
                     {r.c}
                   </div>
 
                   {/* Column 2 */}
-                  <div className="flex-1 min-w-0 text-xs sm:text-sm font-mono text-[#F7F3EE]/70 truncate">
+                  <div
+                    className={`flex-1 min-w-0 text-xs sm:text-sm font-mono truncate ${
+                      isDark ? "text-[#F7F3EE]/70" : "text-[#0D2B45]/75"
+                    }`}
+                  >
                     {r.d}
                   </div>
 
@@ -278,12 +397,20 @@ export default function ClaudeAdminTable({
                       <span
                         className={`inline-block px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold ${
                           tone === "good"
-                            ? "bg-[#1A7A4A]/20 text-[#5FC48E]"
+                            ? isDark
+                              ? "bg-[#1A7A4A]/20 text-[#5FC48E]"
+                              : "bg-[#1A7A4A]/12 text-[#1A7A4A]"
                             : tone === "warn"
-                            ? "bg-[#C9943A]/20 text-[#C9943A]"
+                            ? isDark
+                              ? "bg-[#C9943A]/20 text-[#C9943A]"
+                              : "bg-[#C9943A]/15 text-[#B5651D]"
                             : tone === "bad"
-                            ? "bg-[#B5651D]/20 text-[#D98A3E]"
-                            : "bg-[#F7F3EE]/10 text-[#F7F3EE]/60"
+                            ? isDark
+                              ? "bg-[#B5651D]/20 text-[#D98A3E]"
+                              : "bg-red-50 text-red-600 border border-red-200"
+                            : isDark
+                            ? "bg-[#F7F3EE]/10 text-[#F7F3EE]/60"
+                            : "bg-[rgba(13,43,69,0.06)] text-[#0D2B45]/65"
                         }`}
                       >
                         {r.e}
