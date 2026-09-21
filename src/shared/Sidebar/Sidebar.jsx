@@ -1,70 +1,69 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { RxDashboard } from "react-icons/rx";
-import { LuUsers } from "react-icons/lu";
-import { IoMdSettings } from "react-icons/io";
 import { IoCloseSharp, IoLogOutOutline } from "react-icons/io5";
-import { MdCardMembership, MdOutlineGroups, MdQuiz } from "react-icons/md";
-import { FaDumbbell, FaTrophy, FaGraduationCap, FaUsers, FaFileAlt, FaHeadset } from "react-icons/fa";
-import { MdFormatQuote, MdAnalytics, MdWorkspacePremium } from "react-icons/md";
-import { logoutAdmin } from "../../../services/auth.service";
+import { logoutAdmin, getUserData } from "../../../services/auth.service";
 
-/**
- * Sidebar item config — single source of truth for the navigation.
- * Adding a new link here is enough: no other file needs to change.
- */
 const NAV_GROUPS = [
   {
-    label: "Main Menu",
+    label: "MAIN MENU",
     items: [
-      { to: "/", label: "Dashboard", icon: RxDashboard, exact: true },
-      { to: "/user-details", label: "All Users", icon: LuUsers },
-      { to: "/workouts", label: "Workouts", icon: FaDumbbell },
-      { to: "/challenges", label: "Challenges", icon: FaTrophy },
-      { to: "/masterclasses", label: "Masterclasses", icon: FaGraduationCap },
-      { to: "/subscriptions", label: "Subscriptions", icon: MdCardMembership },
-      { to: "/beta-analytics", label: "21-Day Gold Beta", icon: MdWorkspacePremium },
-      { to: "/trial-analytics", label: "5-Day Gold Trial", icon: MdWorkspacePremium },
-      { to: "/all-subscribers", label: "All Subscribers", icon: FaUsers },
-      { to: "/community", label: "Community", icon: MdOutlineGroups },
-      { to: "/applications", label: "Applications", icon: FaFileAlt },
-      { to: "/support-inbox", label: "Help & Support", icon: FaHeadset },
-      { to: "/quotes", label: "Quotes", icon: MdFormatQuote },
+      { to: "/", label: "Dashboard", exact: true },
+      { to: "/user-details", label: "All Users" },
+      { to: "/workouts", label: "Workouts" },
+      { to: "/challenges", label: "Challenges" },
+      { to: "/masterclasses", label: "Masterclasses" },
+      { to: "/subscriptions", label: "Subscriptions" },
+      { to: "/beta-analytics", label: "21-Day Gold Beta", badge: "15" },
+      { to: "/trial-analytics", label: "5-Day Gold Trial", badge: "19" },
+      { to: "/all-subscribers", label: "All Subscribers" },
+      { to: "/community", label: "Community" },
+      { to: "/applications", label: "Applications", badge: "2" },
+      { to: "/support-inbox", label: "Help & Support", badge: "3" },
+      { to: "/quotes", label: "Quotes" },
     ],
   },
   {
-    label: "Insights",
+    label: "INSIGHTS",
     items: [
-      { to: "/audit-logs", label: "Audit Logs", icon: MdAnalytics },
+      { to: "/payments", label: "Payments" },
+      { to: "/audit-logs", label: "Audit Logs" },
+      { to: "/feature-flags", label: "Feature Flags" },
+      { to: "/notifications", label: "Notification Templates" },
     ],
   },
   {
-    label: "Administration",
+    label: "ADMINISTRATION",
     items: [
-      { to: "/faq", label: "FAQ", icon: MdQuiz },
-      { to: "/settings", label: "Settings", icon: IoMdSettings },
+      { to: "/faq", label: "FAQ" },
+      { to: "/settings", label: "Settings" },
     ],
   },
 ];
 
-function NavItem({ to, label, icon: Icon, exact, isActive, matchesPrefix, onClick }) {
+function NavItem({ to, label, badge, exact, isActive, matchesPrefix, onClick }) {
   const active = exact ? isActive(to) : matchesPrefix(to);
+
   return (
-    <Link to={to} onClick={onClick} className="block">
-      <li
-        className={`group flex items-center gap-2 sm:gap-3 cursor-pointer transition-all duration-300 ease-in-out list-none
-          ${active
-            ? "nav-active px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-lg sm:rounded-xl scale-[1.02]"
-            : "text-surface-700 nav-hover px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-lg sm:rounded-xl hover:scale-[1.01]"
-          }`}
+    <Link to={to} onClick={onClick} className="block select-none">
+      <div
+        className={`group flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-150 cursor-pointer ${
+          active
+            ? "bg-[#C9943A]/16 border-l-[3px] border-[#C9943A] text-[#F7F3EE] font-semibold"
+            : "text-[#F7F3EE]/65 hover:text-[#F7F3EE] hover:bg-[#F7F3EE]/5 font-normal border-l-[3px] border-transparent"
+        }`}
       >
-        <Icon
-          className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 ${active ? "" : "group-hover:scale-110"}`}
-        />
-        <p className="text-xs sm:text-sm font-semibold">{label}</p>
-        {active && (
-          <div className="ml-auto w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+        <span className="text-[13.5px] leading-tight font-dmsans truncate">{label}</span>
+        {badge && (
+          <span
+            className={`text-[11px] font-jetbrains px-2 py-0.5 rounded-md ${
+              active
+                ? "bg-[#C9943A] text-[#0D0D0D] font-bold"
+                : "bg-[#F7F3EE]/10 text-[#C9943A] font-semibold"
+            }`}
+          >
+            {badge}
+          </span>
         )}
-      </li>
+      </div>
     </Link>
   );
 }
@@ -75,9 +74,17 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const isActive = (path) => currentPath === path;
   const matchesPrefix = (path) => path !== "/" && currentPath.startsWith(path);
   const navigate = useNavigate();
+  const user = getUserData();
+  const displayName = user?.fullName || user?.name || "Victor Akko";
+  const initials = displayName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "VA";
 
   const handleLinkClick = () => {
-    if (window.innerWidth < 768) {
+    if (window.innerWidth < 1024 && toggleSidebar) {
       toggleSidebar();
     }
   };
@@ -86,55 +93,48 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     await logoutAdmin();
     localStorage.removeItem("resetToken");
     navigate("/sign-in");
-    if (window.innerWidth < 768) {
+    if (window.innerWidth < 1024 && toggleSidebar) {
       toggleSidebar();
     }
   };
 
   return (
-    <div
-      className={`bg-gradient-to-br from-brand-50 via-white to-accent-50 h-screen overflow-y-auto z-[60] transition-all duration-500 ease-in-out
-        w-[100%] sm:w-[85%] md:w-72 xl:w-80
-        ${isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full shadow-none "}
-        fixed top-0 left-0
-        md:sticky md:top-0 md:translate-x-0 md:shadow-xl md:flex-shrink-0
-        border-r border-surface-200
-        [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-brand-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-brand-300
-      `}
+    <aside
+      className={`fixed lg:sticky top-0 left-0 h-screen w-[248px] bg-[#0A0A0A] border-r border-[#F7F3EE]/10 flex flex-col z-[70] transition-transform duration-300 ease-in-out ${
+        isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
+      }`}
     >
-      {/* Decorative gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-brand-100/30 pointer-events-none"></div>
-
-      {/* Close Button (Mobile Only) */}
+      {/* Mobile Close Button */}
       <button
+        type="button"
         onClick={toggleSidebar}
-        className="absolute top-6 right-6 md:hidden text-white bg-brand-gradient hover:opacity-90 focus:outline-none p-2.5 rounded-full shadow-lg transition-all duration-300 hover:scale-110 z-[70]"
+        className="lg:hidden absolute top-4 right-4 p-2 text-[#F7F3EE]/60 hover:text-[#F7F3EE] bg-[#0D0D0D] border border-[#F7F3EE]/10 rounded-lg"
         aria-label="Close sidebar"
       >
         <IoCloseSharp className="w-5 h-5" />
       </button>
 
-      {/* Logo Section */}
-      <div className="relative flex flex-col justify-center items-center gap-2 px-4 sm:px-6 pt-6 sm:pt-8 pb-4 sm:pb-6">
-        <div className="relative"></div>
-        <div className="text-center">
-          <img src="/logo_light.png?v=4" alt="Victory Fitness" className="h-9 sm:h-11 w-auto object-contain mx-auto" />
-          <p className="text-[10px] sm:text-xs text-surface-500 font-bold uppercase tracking-wider mt-2">
-            Admin Dashboard
-          </p>
-        </div>
+      {/* Header / Brand */}
+      <div className="pt-6 pb-5 px-5 border-b border-[#F7F3EE]/10 shrink-0">
+        <Link to="/" onClick={handleLinkClick} className="block">
+          <img
+            src="/logo_light.png?v=5"
+            alt="Victory Fitness"
+            className="h-10 w-auto object-contain mb-2.5"
+          />
+          <div className="text-[9.5px] font-medium tracking-[0.19em] text-[#F7F3EE]/45 uppercase font-dmsans">
+            ADMIN DASHBOARD
+          </div>
+        </Link>
       </div>
 
-      {/* Divider */}
-      <div className="mx-4 sm:mx-6 h-px bg-gradient-to-r from-transparent via-surface-300 to-transparent"></div>
-
-      {/* Sidebar Menu */}
-      <nav className="relative mt-4 sm:mt-6 px-3 sm:px-4 pb-28 sm:pb-32">
-        {NAV_GROUPS.map((group, groupIdx) => (
-          <div key={group.label} className={groupIdx === 0 ? "space-y-0.5 sm:space-y-1" : "mt-4 sm:mt-6 space-y-0.5 sm:space-y-1"}>
-            <p className="text-[10px] sm:text-xs font-semibold text-surface-400 uppercase tracking-wider px-2 sm:px-3 mb-2 sm:mb-3">
+      {/* Navigation List */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
+        {NAV_GROUPS.map((group) => (
+          <div key={group.label} className="space-y-1">
+            <div className="text-[9.5px] font-medium tracking-[0.17em] text-[#F7F3EE]/35 px-3 py-1 uppercase font-dmsans">
               {group.label}
-            </p>
+            </div>
             {group.items.map((item) => (
               <NavItem
                 key={item.to}
@@ -148,17 +148,35 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         ))}
       </nav>
 
-      {/* Logout Button */}
-      <div className="sticky bottom-0 left-0 right-0 p-3 sm:p-5 bg-gradient-to-t from-surface-100 to-surface-50 backdrop-blur-sm">
-        <button
-          onClick={handleLogout}
-          className="group flex items-center justify-center gap-2 sm:gap-3 w-full py-2.5 sm:py-3.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-danger-500 to-danger-600 hover:from-danger-600 hover:to-red-700 shadow-lg shadow-red-500/30 transition-all duration-300 text-white text-sm sm:text-base font-semibold hover:scale-[1.02] hover:shadow-xl hover:shadow-red-500/40"
-        >
-          <IoLogOutOutline className="w-4 h-4 sm:w-5 sm:h-5 font-bold transition-transform duration-300 group-hover:translate-x-[-2px]" />
-          <span>Logout</span>
-        </button>
+      {/* Footer Profile & Logout */}
+      <div className="p-3 border-t border-[#F7F3EE]/10 shrink-0 bg-[#0A0A0A]">
+        <div className="flex items-center justify-between p-2 rounded-xl bg-[#0D0D0D] border border-[#F7F3EE]/10">
+          <Link
+            to="/profile"
+            onClick={handleLinkClick}
+            className="flex items-center gap-2.5 min-w-0 flex-1 hover:opacity-85 transition-opacity"
+          >
+            <div className="w-8 h-8 rounded-full bg-[#C9943A] flex items-center justify-center shrink-0">
+              <span className="font-bold text-xs text-[#0D0D0D] font-dmsans">{initials}</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13px] font-semibold text-[#F7F3EE] truncate font-dmsans">
+                {displayName}
+              </div>
+              <div className="text-[10px] font-mono text-[#F7F3EE]/45">admin</div>
+            </div>
+          </Link>
+          <button
+            type="button"
+            onClick={handleLogout}
+            title="Log out"
+            className="p-1.5 text-[#F7F3EE]/50 hover:text-red-400 hover:bg-[#F7F3EE]/5 rounded-lg transition-colors cursor-pointer shrink-0"
+          >
+            <IoLogOutOutline className="w-4 h-4" />
+          </button>
+        </div>
       </div>
-    </div>
+    </aside>
   );
 };
 

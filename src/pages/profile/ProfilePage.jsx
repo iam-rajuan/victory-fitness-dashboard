@@ -61,9 +61,7 @@ function ProfilePage() {
 
   const handleImageUpload = async (event) => {
     const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
+    if (!file) return;
 
     const reader = new FileReader();
     reader.onload = async () => {
@@ -88,9 +86,7 @@ function ProfilePage() {
         });
 
         setProfileData((current) => {
-          if (!current) {
-            return current;
-          }
+          if (!current) return current;
           const nextProfile = {
             ...current,
             profileImage: uploadResponse.image_url,
@@ -108,91 +104,133 @@ function ProfilePage() {
     reader.readAsDataURL(file);
   };
 
+  const displayName = profileData?.fullName || "Victor Akko";
+  const displayRole = profileData?.role || "admin";
+
   return (
-    <div className="overflow-y-auto">
-      <div className="px-5 pb-5 h-full">
-        <div className="bg-blue-600 px-4 md:px-5 py-3 rounded-md mb-3 flex flex-wrap md:flex-nowrap items-start md:items-center gap-2 md:gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="text-white hover:opacity-90 transition"
-            aria-label="Go back"
-          >
-            <IoChevronBack className="w-6 h-6" />
-          </button>
-          <h1 className="text-white text-xl sm:text-2xl font-bold">Profile</h1>
+    <div className="space-y-6 font-dmsans animate-in fade-in duration-200">
+      {/* Header */}
+      <div className="flex items-center gap-3 pb-2 border-b border-[#F7F3EE]/10">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="p-2 rounded-xl bg-[#0D2B45] border border-[#F7F3EE]/15 text-[#F7F3EE]/70 hover:text-[#F7F3EE] hover:border-[#C9943A] transition-colors cursor-pointer"
+          aria-label="Go back"
+        >
+          <IoChevronBack className="w-5 h-5" />
+        </button>
+        <div>
+          <div className="text-[10px] font-medium tracking-[0.18em] text-[#B5651D] uppercase font-dmsans">
+            ADMIN ACCOUNT CONTROL
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-[#F7F3EE] font-clash leading-tight">
+            Administrator Profile
+          </h1>
         </div>
-        <div className="mx-auto flex flex-col justify-center items-center">
-          <div className="flex flex-col md:flex-row justify-center items-center bg-blue-600 mt-5 text-white w-full max-w-3xl mx-auto p-4 md:p-5 gap-4 md:gap-5 rounded-lg">
-            <div className="relative">
-              <div className="w-[122px] h-[122px] bg-blue-600 rounded-full border-4 border-white shadow-xl flex justify-center items-center">
-                <img
-                  src={profileData?.profileImage || "/userimg.png"}
-                  alt="profile"
-                  className="h-30 w-32 rounded-full object-cover"
-                  onError={(e) => {
-                    e.target.src = "/userimg.png";
-                  }}
-                />
-                <div className="absolute bottom-2 right-2 bg-white p-2 rounded-full shadow-md cursor-pointer">
-                  <label htmlFor="profilePicUpload" className="cursor-pointer">
-                    <FaCamera className="text-[#575757]" />
-                  </label>
-                  <input
-                    type="file"
-                    id="profilePicUpload"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    disabled={isUpdating}
-                  />
-                </div>
+      </div>
+
+      <div className="max-w-3xl mx-auto space-y-6">
+        {/* Profile Hero Card */}
+        <div className="bg-[#0D2B45] rounded-[22px] border-l-4 border-[#B5651D] p-6 sm:p-7 flex flex-col sm:flex-row items-center gap-5 sm:gap-6 shadow-xl relative overflow-hidden">
+          {/* Avatar with Camera badge */}
+          <div className="relative shrink-0">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-2 border-[#C9943A] bg-[#0A0A0A] overflow-hidden shadow-2xl flex items-center justify-center">
+              <img
+                src={profileData?.profileImage || "/userimg.png"}
+                alt="profile"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.src = "/userimg.png";
+                }}
+              />
+            </div>
+            <label
+              htmlFor="profilePicUpload"
+              className="absolute bottom-0 right-0 p-2.5 rounded-full bg-[#C9943A] hover:bg-[#d8a24a] text-[#0D0D0D] shadow-lg cursor-pointer transition-transform active:scale-95"
+              title="Upload profile picture"
+            >
+              <FaCamera className="w-3.5 h-3.5" />
+            </label>
+            <input
+              type="file"
+              id="profilePicUpload"
+              className="hidden"
+              accept="image/*"
+              onChange={handleImageUpload}
+              disabled={isUpdating}
+            />
+          </div>
+
+          <div className="text-center sm:text-left flex-1 min-w-0">
+            <h2 className="text-2xl sm:text-3xl font-semibold text-[#F7F3EE] font-clash truncate">
+              {isLoading ? "Loading..." : displayName}
+            </h2>
+            <div className="flex items-center justify-center sm:justify-start gap-2.5 mt-1.5 flex-wrap">
+              <span className="text-xs font-mono font-semibold text-[#C9943A] bg-[#C9943A]/15 px-2.5 py-0.5 rounded-md uppercase">
+                {displayRole}
+              </span>
+              <span className="text-xs text-[#F7F3EE]/50 font-mono">
+                {profileData?.email || "office@victoryfitness.de"}
+              </span>
+            </div>
+            {isUpdating && (
+              <div className="text-xs font-mono text-[#5FC48E] mt-2 animate-pulse">
+                Updating profile photo...
               </div>
-            </div>
-            <div className="text-center md:text-left">
-              <p className="text-lg sm:text-xl md:text-3xl font-bold">
-                {isLoading ? "Loading..." : profileData?.fullName || "Admin"}
-              </p>
-              <p className="text-base sm:text-lg font-semibold">
-                {profileData?.role || "Admin"}
-              </p>
-            </div>
+            )}
           </div>
+        </div>
 
-          {error ? (
-            <div className="w-full max-w-3xl mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-              {error}
-            </div>
-          ) : null}
-
-          <div className="flex flex-wrap justify-center items-center gap-3 md:gap-5 text-sm sm:text-base md:text-xl font-semibold my-4 md:my-5">
-            <p
-              onClick={() => setActiveTab("editProfile")}
-              className={`cursor-pointer px-3 py-1 rounded-md pb-1 ${activeTab === "editProfile" ? "text-[#111827] border-b-2 border-[#111827]" : "text-[#6A6D76]"}`}
-            >
-              Edit Profile
-            </p>
-            <p
-              onClick={() => setActiveTab("changePassword")}
-              className={`cursor-pointer px-3 py-1 rounded-md pb-1 ${activeTab === "changePassword" ? "text-[#111827] border-b-2 border-[#111827]" : "text-[#6A6D76]"}`}
-            >
-              Change Password
-            </p>
+        {error && (
+          <div className="p-3.5 rounded-xl bg-[#B5651D]/15 border-l-3 border-[#B5651D] text-xs font-inter text-[#F7F3EE]/90 leading-relaxed">
+            {error}
           </div>
+        )}
 
-          <div className="flex justify-center items-center p-4 md:p-5 rounded-md w-full">
-            <div className="w-full max-w-3xl">
-              {activeTab === "editProfile" && (
-                <EditProfile
-                  profileData={profileData}
-                  onProfileUpdated={(updatedProfile) => {
-                    setProfileData(updatedProfile);
-                    syncStoredAdminProfile(updatedProfile);
-                  }}
-                />
-              )}
-              {activeTab === "changePassword" && <ChangePass />}
-            </div>
-          </div>
+        {/* Tab Navigation */}
+        <div className="flex border-b border-[#F7F3EE]/15 gap-6 text-sm font-semibold">
+          <button
+            type="button"
+            onClick={() => setActiveTab("editProfile")}
+            className={`pb-3 transition-colors cursor-pointer relative ${
+              activeTab === "editProfile"
+                ? "text-[#C9943A]"
+                : "text-[#F7F3EE]/60 hover:text-[#F7F3EE]"
+            }`}
+          >
+            Edit Profile
+            {activeTab === "editProfile" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C9943A]" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("changePassword")}
+            className={`pb-3 transition-colors cursor-pointer relative ${
+              activeTab === "changePassword"
+                ? "text-[#C9943A]"
+                : "text-[#F7F3EE]/60 hover:text-[#F7F3EE]"
+            }`}
+          >
+            Change Password
+            {activeTab === "changePassword" && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#C9943A]" />
+            )}
+          </button>
+        </div>
+
+        {/* Tab Content Container */}
+        <div>
+          {activeTab === "editProfile" && (
+            <EditProfile
+              profileData={profileData}
+              onProfileUpdated={(updatedProfile) => {
+                setProfileData(updatedProfile);
+                syncStoredAdminProfile(updatedProfile);
+              }}
+            />
+          )}
+          {activeTab === "changePassword" && <ChangePass />}
         </div>
       </div>
     </div>

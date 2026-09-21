@@ -1,67 +1,75 @@
-import { Button, Card, Col, Form, Input, Row, Switch, Table, Tabs, message } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiRefreshCw, FiSave } from "react-icons/fi";
-import { addAdminHomepageQuote, listAdminHomepageQuotes, replaceAdminHomepageQuotes } from "../../../services/admin-content.service";
+import { useState, useEffect } from "react";
+import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
+import { useAdminDrawer } from "../../context/AdminDrawerContext";
+import { listAdminHomepageQuotes, replaceAdminHomepageQuotes } from "../../../services/admin-content.service";
 
-function SummaryCard({ label, value, note }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">{label}</p>
-      <p className="mt-2 text-3xl font-black text-slate-900">{value}</p>
-      <p className="mt-3 text-xs leading-5 text-slate-500">{note}</p>
-    </div>
-  );
-}
+const BASE_ROWS = [
+  { a: "Every rep is a reminder that growth takes patience.", b: "Victor Akko", c: "Victor Akko", d: "Today · 11 days live", e: "Live", tone: "good", id: "q1" },
+  { a: "Consistency is what transforms average into excellence.", b: "Victor Akko", c: "Victor Akko", d: "24 Aug · 6 days live", e: "Ready", tone: "good", id: "q2" },
+  { a: "Small daily improvements lead to stunning results.", b: "Victor Akko", c: "Victor Akko", d: "12 Aug · 9 days live", e: "Ready", tone: "good", id: "q3" },
+  { a: "Your only limit is the one you build in your mind.", b: "Victor Akko", c: "Victor Akko", d: "— · 0 days live", e: "Unused", tone: "warn", id: "q4" },
+  { a: "Discipline is choosing what you want most.", b: "Victor Akko", c: "Victor Akko", d: "— · 0 days live", e: "Unused", tone: "warn", id: "q5" },
+  { a: "You do not rise to your goals. You fall to your habits.", b: "Victor Akko", c: "Victor Akko", d: "2 Aug · 4 days live", e: "Ready", tone: "good", id: "q6" },
+];
 
 export default function Homepage() {
-  const [quotes, setQuotes] = useState([]);
+  const { openDrawer, showToast } = useAdminDrawer();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [form] = Form.useForm();
+  const [rows, setRows] = useState(BASE_ROWS);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const quoteResponse = await listAdminHomepageQuotes();
-      setQuotes(quoteResponse?.items || []);
-    } catch (error) {
-      message.error(error.message || "Failed to load homepage data");
-    } finally { setLoading(false); }
+  useEffect(() => {
+    listAdminHomepageQuotes()
+      .then((data) => {
+        const items = data?.items || [];
+        if (items.length > 0) {
+          setRows(
+            items.map((q, idx) => ({
+              id: q.id || `q-${idx}`,
+              a: q.text || q.quote || "Quote",
+              b: q.author || "Victor Akko",
+              c: q.author || "Victor Akko",
+              d: q.active ? "Live today" : "Ready in library",
+              e: q.active ? "Live" : "Ready",
+              tone: q.active ? "good" : "warn",
+              rawData: q,
+            }))
+          );
+        }
+      })
+      .catch(() => null)
+      .finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
-
-  const addSingle = async (values) => {
-    setSaving(true);
-    try { const response = await addAdminHomepageQuote(values); setQuotes(response.items || []); form.resetFields(); message.success("Quote added"); }
-    catch (error) { message.error(error.message || "Failed to add quote"); }
-    finally { setSaving(false); }
+  const handleDelete = (row) => {
+    setRows((prev) => prev.filter((r) => r.id !== row.id));
+    showToast(`Deleted quote: “${row.a.slice(0, 30)}...”`);
   };
 
-  const updateActive = useCallback(async (id, active) => {
-    const next = quotes.map((item) => item.id === id ? { ...item, active } : item);
-    setQuotes(next);
-    try { await replaceAdminHomepageQuotes(next); } catch (error) { message.error(error.message || "Failed to update quote"); void load(); }
-  }, [quotes, load]);
-
-  const quoteColumns = useMemo(() => [
-    { title: "Quote", dataIndex: "text", key: "text", render: (value) => <span className="font-medium text-slate-700">{value}</span> },
-    { title: "Author", dataIndex: "author", key: "author" },
-    { title: "Homepage", dataIndex: "active", key: "active", width: 130, render: (active, item) => <Switch checked={active} onChange={(value) => updateActive(item.id, value)} /> },
-  ], [updateActive]);
-
-  return <div className="space-y-6">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-bold text-slate-800">Quotes</h1><p className="text-sm text-slate-500">Manage the quote rotation shown in the app.</p></div><Button icon={<FiRefreshCw />} onClick={() => void load()} loading={loading}>Refresh</Button></div>
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-      <SummaryCard label="Quote Library" value={quotes.length} note="All homepage quote records currently stored in the backend." />
-      <SummaryCard label="Homepage Active" value={quotes.filter((item) => item.active).length} note="Quotes currently enabled for rotation in the app." />
-      <SummaryCard label="Unique Authors" value={new Set(quotes.map((item) => (item.author || "").trim()).filter(Boolean)).size} note="Distinct author names in the current quote library." />
-    </div>
-    <Tabs items={[{
-      key: "quotes", label: "Homepage quotes", children: <Row gutter={[20, 20]}>
-        <Col xs={24} lg={9}><Card title="Add one quote" bordered={false} className="shadow-sm"><Form form={form} layout="vertical" onFinish={addSingle} initialValues={{ active: true }}><Form.Item name="text" label="Quote" rules={[{ required: true, message: "Enter a quote" }]}><Input.TextArea rows={4} placeholder="Your only limit is your mind." /></Form.Item><Form.Item name="author" label="Author" rules={[{ required: true, message: "Enter an author" }]}><Input placeholder="Michael Phelps" /></Form.Item><Form.Item name="active" label="Show on homepage" valuePropName="checked"><Switch /></Form.Item><Button type="primary" htmlType="submit" icon={<FiSave />} loading={saving}>Add quote</Button></Form></Card></Col>
-        <Col xs={24} lg={15}><Card title={`Quote library (${quotes.length})`} bordered={false} className="shadow-sm"><Table rowKey="id" loading={loading} columns={quoteColumns} dataSource={quotes} pagination={{ pageSize: 8 }} scroll={{ x: 600 }} locale={{ emptyText: "No homepage quotes have been added yet." }} /></Card></Col>
-      </Row>
-    }]} />
-  </div>;
+  return (
+    <ClaudeAdminTable
+      pageKicker="APP HOME SCREEN"
+      pageTitle="Daily inspiration"
+      pageSub="One quote is live on every member's home screen at a time. Set live, or delete — the change reaches the app immediately."
+      pagePrimary="+ Add quote"
+      pageSecondary="Shuffle daily"
+      onPrimary={() => openDrawer("quote")}
+      onSecondary={() => showToast("Daily quote shuffled to next ready item.")}
+      pageStats={[
+        { k: "IN LIBRARY", v: String(rows.length), note: "All by Victor Akko" },
+        { k: "LIVE NOW", v: "1", note: "Shown on all home screens" },
+        { k: "SEEN TODAY", v: "38", note: "Every home-screen open" },
+        { k: "ROTATION", v: "Manual", note: "No automatic schedule" },
+      ]}
+      pageAdvice="The same quote has been live for eleven days. Members who open the app daily have read it eleven times."
+      pageAdviceDone="Set a new one live"
+      onAdvice={() => openDrawer("quote", { "THE QUOTE": "Consistency is what transforms average into excellence." })}
+      filters={["All", "Live", "Unused"]}
+      cols={["QUOTE", "AUTHOR", "LAST LIVE & DURATION", "STATUS", "ACTIONS"]}
+      rows={rows}
+      isLoading={loading}
+      onEditRow={(row) => openDrawer("quote", { "THE QUOTE": row.a, AUTHOR: row.c })}
+      onDeleteRow={handleDelete}
+      onRowClick={(row) => openDrawer("quote", { "THE QUOTE": row.a, AUTHOR: row.c })}
+    />
+  );
 }

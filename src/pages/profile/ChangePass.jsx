@@ -3,7 +3,8 @@ import { IoEyeOffOutline, IoEyeOutline } from "react-icons/io5";
 import { adminApiRequest } from "../../../services/auth.service";
 
 function ChangePass() {
-  const [showPassword, setShowPassword] = useState(false);
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [formData, setFormData] = useState({
     oldPassword: "",
     newPassword: "",
@@ -49,7 +50,7 @@ function ChangePass() {
         },
       });
 
-      setSuccess("Password changed successfully");
+      setSuccess("Administrator password updated successfully.");
       setFormData({
         oldPassword: "",
         newPassword: "",
@@ -63,100 +64,107 @@ function ChangePass() {
   };
 
   return (
-    <div className="bg-white w-full px-4 sm:px-6 md:px-8 pt-8 py-5 rounded-md border border-gray-200 shadow-sm">
-      <p className="text-[#111827] text-center font-bold text-xl sm:text-2xl mb-5">
-        Change Password
-      </p>
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        <div className="w-full">
-          <label
-            htmlFor="oldPassword"
-            className="text-sm md:text-base text-[#111827] mb-2 font-semibold block"
-          >
+    <div className="bg-[#0D2B45] rounded-[22px] border border-[#F7F3EE]/15 p-6 sm:p-8 shadow-xl font-dmsans">
+      <div className="mb-6">
+        <h3 className="text-xl sm:text-2xl font-semibold text-[#F7F3EE] font-clash">
+          Update Security Password
+        </h3>
+        <p className="text-xs sm:text-sm text-[#F7F3EE]/60 font-inter mt-1">
+          Provide your current credentials and choose a strong minimum 8-character password.
+        </p>
+      </div>
+
+      {success && (
+        <div className="p-3.5 rounded-xl bg-[#1A7A4A]/20 border-l-3 border-[#1A7A4A] text-xs font-mono text-[#5FC48E] mb-5">
+          ✓ {success}
+        </div>
+      )}
+
+      {error && (
+        <div className="p-3.5 rounded-xl bg-[#B5651D]/15 border-l-3 border-[#B5651D] text-xs font-inter text-[#F7F3EE]/90 mb-5">
+          {error}
+        </div>
+      )}
+
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        <div>
+          <label className="block text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#F7F3EE]/55 mb-2">
             Current Password
           </label>
-          <div className="w-full relative">
+          <div className="relative">
             <input
-              type={showPassword ? "text" : "password"}
+              type={showOldPassword ? "text" : "password"}
               name="oldPassword"
               value={formData.oldPassword}
               onChange={handleInputChange}
-              placeholder="**********"
-              className="w-full border border-gray-300 rounded-md outline-none px-4 py-3 placeholder:text-sm md:placeholder:text-base focus:ring-2 focus:ring-[#74AA2E]"
+              placeholder="••••••••••••"
+              className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#F7F3EE]/15 rounded-xl text-[#F7F3EE] text-sm font-jetbrains outline-none focus:border-[#C9943A] focus:ring-1 focus:ring-[#C9943A] transition-all"
               required
             />
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-[#6A6D76]"
+              onClick={() => setShowOldPassword(!showOldPassword)}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#F7F3EE]/40 hover:text-[#F7F3EE]/80 transition-colors p-1"
             >
-              {showPassword ? <IoEyeOffOutline className="w-5 h-5" /> : <IoEyeOutline className="w-5 h-5" />}
+              {showOldPassword ? (
+                <IoEyeOffOutline className="w-5 h-5" />
+              ) : (
+                <IoEyeOutline className="w-5 h-5" />
+              )}
             </button>
           </div>
         </div>
-        <div className="w-full">
-          <label
-            htmlFor="newPassword"
-            className="text-sm md:text-base text-[#111827] mb-2 font-semibold block"
-          >
+
+        <div>
+          <label className="block text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#F7F3EE]/55 mb-2">
             New Password
           </label>
-          <div className="w-full relative">
+          <div className="relative">
             <input
-              type={showPassword ? "text" : "password"}
+              type={showNewPassword ? "text" : "password"}
               name="newPassword"
               value={formData.newPassword}
               onChange={handleInputChange}
-              placeholder="**********"
-              className="w-full border border-gray-300 rounded-md outline-none px-4 py-3 placeholder:text-sm md:placeholder:text-base focus:ring-2 focus:ring-[#74AA2E]"
+              placeholder="••••••••••••"
+              className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#F7F3EE]/15 rounded-xl text-[#F7F3EE] text-sm font-jetbrains outline-none focus:border-[#C9943A] focus:ring-1 focus:ring-[#C9943A] transition-all"
               required
             />
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-[#6A6D76]"
+              onClick={() => setShowNewPassword(!showNewPassword)}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#F7F3EE]/40 hover:text-[#F7F3EE]/80 transition-colors p-1"
             >
-              {showPassword ? <IoEyeOffOutline className="w-5 h-5" /> : <IoEyeOutline className="w-5 h-5" />}
+              {showNewPassword ? (
+                <IoEyeOffOutline className="w-5 h-5" />
+              ) : (
+                <IoEyeOutline className="w-5 h-5" />
+              )}
             </button>
           </div>
         </div>
-        <div className="w-full">
-          <label
-            htmlFor="confirmPassword"
-            className="text-sm md:text-base text-[#111827] mb-2 font-semibold block"
-          >
+
+        <div>
+          <label className="block text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#F7F3EE]/55 mb-2">
             Confirm New Password
           </label>
-          <div className="w-full relative">
-            <input
-              type={showPassword ? "text" : "password"}
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleInputChange}
-              placeholder="**********"
-              className="w-full border border-gray-300 rounded-md outline-none px-4 py-3 placeholder:text-sm md:placeholder:text-base focus:ring-2 focus:ring-[#74AA2E]"
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center text-[#6A6D76]"
-            >
-              {showPassword ? <IoEyeOffOutline className="w-5 h-5" /> : <IoEyeOutline className="w-5 h-5" />}
-            </button>
-          </div>
+          <input
+            type="password"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleInputChange}
+            placeholder="••••••••••••"
+            className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#F7F3EE]/15 rounded-xl text-[#F7F3EE] text-sm font-jetbrains outline-none focus:border-[#C9943A] focus:ring-1 focus:ring-[#C9943A] transition-all"
+            required
+          />
         </div>
 
-        {error ? <div className="text-red-500 text-sm text-center">{error}</div> : null}
-        {success ? <div className="text-green-500 text-sm text-center">{success}</div> : null}
-
-        <div className="text-center pt-2">
+        <div className="pt-3">
           <button
             type="submit"
             disabled={isLoading}
-            className="bg-blue-600 text-white font-semibold w-full py-3 rounded-md hover:opacity-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto px-8 h-12 bg-[#C9943A] hover:bg-[#d8a24a] text-[#0D0D0D] font-bold text-sm rounded-xl transition-all shadow-lg active:scale-[0.99] cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {isLoading ? "Changing..." : "Save & Change"}
+            {isLoading ? "Updating password..." : "Update Password →"}
           </button>
         </div>
       </form>

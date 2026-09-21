@@ -1,76 +1,80 @@
 import { useState, useEffect } from "react";
-import Sidebar from "../shared/Sidebar/Sidebar";
-import MainHeader from "../shared/MainHeader/MainHeader";
 import { Outlet, useLocation } from "react-router-dom";
+import { IoMenu } from "react-icons/io5";
+import Sidebar from "../shared/Sidebar/Sidebar";
 import RequireAdminAuth from "../components/RequireAdminAuth";
 import { AnalyticsFilterProvider } from "../context/AnalyticsFilterContext";
+import { AdminDrawerProvider } from "../context/AdminDrawerContext";
+import ClaudeDrawer from "../shared/ClaudeDrawer/ClaudeDrawer";
+import ClaudeToast from "../shared/ClaudeToast/ClaudeToast";
 
 const MainLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
 
-  // Close sidebar when route changes (for mobile)
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 768) {
-        setIsSidebarOpen(true);
-      } else {
-        setIsSidebarOpen(false);
-      }
-    };
-
-    // Set initial state based on screen size
-    handleResize();
-
-    // Add event listener for window resize
-    window.addEventListener('resize', handleResize);
-
-    // Cleanup
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Close sidebar when route changes on mobile
-  useEffect(() => {
-    if (window.innerWidth < 768) {
+    // Close mobile drawer on route change
+    if (window.innerWidth < 1024) {
       setIsSidebarOpen(false);
     }
   }, [location.pathname]);
 
   const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
+    setIsSidebarOpen((prev) => !prev);
   };
 
   return (
-    <div className="relative flex h-screen overflow-hidden bg-gradient-to-br from-surface-50 via-brand-50/30 to-accent-50/30">
-      {/* Mobile Overlay */}
-      {isSidebarOpen && (
-        <div
-          onClick={toggleSidebar}
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
-          aria-label="Close sidebar overlay"
-        />
-      )}
+    <RequireAdminAuth>
+      <AdminDrawerProvider>
+        <AnalyticsFilterProvider>
+          <div className="min-h-screen bg-[#0D0D0D] text-[#F7F3EE] flex items-stretch font-dmsans selection:bg-[#C9943A]/30 selection:text-[#F7F3EE]">
+            {/* Mobile Drawer Overlay */}
+            {isSidebarOpen && (
+              <div
+                onClick={toggleSidebar}
+                className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[65] lg:hidden transition-opacity"
+                aria-label="Close menu"
+              />
+            )}
 
+            {/* Sidebar */}
+            <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
 
-      {/* Sidebar - Fixed on mobile with animation, static on desktop */}
-      <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
+            {/* Main Stage */}
+            <div className="flex-1 min-w-0 flex flex-col h-screen overflow-hidden">
+              {/* Mobile Top Navbar (Hidden on lg+) */}
+              <div className="lg:hidden shrink-0 flex items-center justify-between px-4 py-3 bg-[#0A0A0A] border-b border-[#F7F3EE]/10 z-30">
+                <button
+                  type="button"
+                  onClick={toggleSidebar}
+                  className="p-2 text-[#F7F3EE]/70 hover:text-[#F7F3EE] focus:outline-none"
+                  aria-label="Open menu"
+                >
+                  <IoMenu className="w-6 h-6" />
+                </button>
+                <img
+                  src="/logo_light.png?v=5"
+                  alt="Victory Fitness"
+                  className="h-8 w-auto object-contain"
+                />
+                <div className="w-8" />
+              </div>
 
-      {/* Main Content - Takes full width on mobile */}
-      <div className="flex h-screen min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="shrink-0">
-          <MainHeader toggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
-        </div>
-        <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-3 sm:p-4 lg:p-6">
-          <div className="page-card min-h-[calc(100vh-6rem)] sm:min-h-[calc(100vh-2rem)] p-3 sm:p-4 lg:p-6">
-            <RequireAdminAuth>
-              <AnalyticsFilterProvider>
-                <Outlet />
-              </AnalyticsFilterProvider>
-            </RequireAdminAuth>
+              {/* Scrollable Page Content */}
+              <main className="flex-1 min-w-0 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-7">
+                <div className="max-w-[1580px] mx-auto">
+                  <Outlet />
+                </div>
+              </main>
+            </div>
+
+            {/* Universal Interactive Drawer & Toast */}
+            <ClaudeDrawer />
+            <ClaudeToast />
           </div>
-        </main>
-      </div>
-    </div>
+        </AnalyticsFilterProvider>
+      </AdminDrawerProvider>
+    </RequireAdminAuth>
   );
 };
 

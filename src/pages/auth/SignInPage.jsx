@@ -2,25 +2,24 @@ import { useState, useEffect } from "react";
 import { IoEyeOffOutline, IoEyeOutline } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
 import { clearUserInfo, ensureAdminSession, loginAdmin } from "../../../services/auth.service";
+
 function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
-    password: ""
+    password: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     let isMounted = true;
     ensureAdminSession()
       .then((allowed) => {
-        if (!isMounted) {
-          return;
-        }
+        if (!isMounted) return;
         if (allowed) {
           navigate("/", { replace: true });
           return;
@@ -28,27 +27,28 @@ function SignInPage() {
         setIsCheckingSession(false);
       })
       .catch(() => {
-        if (!isMounted) {
-          return;
-        }
+        if (!isMounted) return;
         setIsCheckingSession(false);
       });
-    // Clear any plaintext password and saved email details on mount
-    localStorage.removeItem('rememberedPassword');
-    localStorage.removeItem('rememberedEmail');
-    localStorage.removeItem('rememberMe');
+
+    // Clean any plaintext legacy credentials
+    localStorage.removeItem("rememberedPassword");
+    localStorage.removeItem("rememberedEmail");
+    localStorage.removeItem("rememberMe");
     return () => {
       isMounted = false;
     };
   }, [navigate]);
+
   const handleCheckboxChange = (event) => {
-    const checked = event.target.checked;
-    setIsChecked(checked);
+    setIsChecked(event.target.checked);
   };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -62,62 +62,87 @@ function SignInPage() {
       navigate("/", { replace: true });
     } catch (err) {
       console.error("Login failed:", err);
-      setError(err instanceof Error ? err.message : "Login failed. Please try again.");
+      setError(err instanceof Error ? err.message : "Invalid credentials or unauthorized admin role.");
     } finally {
       setIsLoading(false);
     }
   };
+
   return (
-    <div className="bg-[#f8fafc] min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Subtle background glow effect */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[350px] bg-gradient-to-b from-[#a855f7]/5 via-transparent to-transparent blur-3xl pointer-events-none" />
-      <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-[#a855f7]/5 blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-[#06b6d4]/5 blur-3xl pointer-events-none" />
-      <div className="w-full max-w-md z-10">
-        <div className="flex flex-col items-center mb-8">
-          <img 
-            src="/logo.png?v=3" 
-            alt="Victory Fitness" 
-            className="h-12 w-auto object-contain mb-3" 
+    <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden font-dmsans">
+      {/* Ambient background glows */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-[#B5651D]/10 blur-[130px] pointer-events-none rounded-full" />
+      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-[#C9943A]/8 blur-[110px] pointer-events-none rounded-full" />
+
+      <div className="w-full max-w-[480px] relative z-10">
+        {/* Header Section with Brand */}
+        <div className="text-center mb-8">
+          <img
+            src="/logo_light.png?v=5"
+            alt="Victory Fitness"
+            className="h-12 sm:h-14 w-auto object-contain mx-auto mb-4"
           />
-          <h2 className="text-2xl font-black tracking-tight text-slate-800 uppercase">
-            Admin Portal
-          </h2>
-          <p className="mt-1.5 text-xs text-slate-400 font-semibold uppercase tracking-wider">
-            Victory Fitness Dashboard Control
+          <div className="text-[10px] sm:text-[11px] font-medium tracking-[0.2em] text-[#B5651D] uppercase">
+            Admin Dashboard Control
+          </div>
+          <h1 className="mt-2 text-3xl sm:text-4xl font-semibold tracking-tight text-[#F7F3EE] font-clash">
+            Executive Portal
+          </h1>
+          <p className="mt-2 text-sm text-[#F7F3EE]/60 font-inter">
+            Enter your credentials to manage operations, members, and revenue.
           </p>
         </div>
-        <div className="bg-white border border-slate-100 p-8 rounded-2xl shadow-xl shadow-slate-200/40">
+
+        {/* Card */}
+        <div className="bg-[#0D2B45] border-l-4 border-[#B5651D] border border-r-[#F7F3EE]/10 border-t-[#F7F3EE]/10 border-b-[#F7F3EE]/10 rounded-[22px] p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
           {isCheckingSession ? (
-            <div className="py-12 text-center text-sm font-semibold text-purple-600">
-              Verifying admin session credentials...
+            <div className="py-14 text-center">
+              <div className="w-8 h-8 border-2 border-[#C9943A] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <div className="text-xs font-semibold uppercase tracking-wider text-[#C9943A] font-jetbrains">
+                Verifying administrative session...
+              </div>
             </div>
           ) : (
-            <form className="space-y-5" onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {error && (
+                <div className="p-3.5 rounded-xl bg-[#B5651D]/20 border-l-3 border-[#B5651D] text-xs font-inter text-[#F7F3EE] leading-relaxed">
+                  {error}
+                </div>
+              )}
+
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">
-                  Email Address
+                <label className="block text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#F7F3EE]/55 mb-2">
+                  Admin Email
                 </label>
                 <input
                   type="email"
                   name="email"
-                  placeholder="Enter your email"
-                  className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-405 outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/10 focus:border-purple-500 transition-all text-sm"
+                  placeholder="admin@victoryfitness.de"
+                  className="w-full px-4 py-3.5 bg-[#0A0A0A] border border-[#F7F3EE]/15 rounded-xl text-[#F7F3EE] placeholder-[#F7F3EE]/30 outline-none focus:border-[#C9943A] focus:ring-1 focus:ring-[#C9943A] transition-all text-sm font-dmsans"
                   value={formData.email}
                   onChange={handleInputChange}
                   required
                 />
               </div>
+
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">
-                  Password
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#F7F3EE]/55">
+                    Password
+                  </label>
+                  <Link
+                    to="/forget-password"
+                    className="text-xs font-medium text-[#C9943A] hover:text-[#d8a24a] transition-colors"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
                     placeholder="••••••••••••"
-                    className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-410 outline-none focus:bg-white focus:ring-2 focus:ring-purple-500/10 focus:border-purple-500 transition-all text-sm"
+                    className="w-full px-4 py-3.5 bg-[#0A0A0A] border border-[#F7F3EE]/15 rounded-xl text-[#F7F3EE] placeholder-[#F7F3EE]/30 outline-none focus:border-[#C9943A] focus:ring-1 focus:ring-[#C9943A] transition-all text-sm font-jetbrains"
                     value={formData.password}
                     onChange={handleInputChange}
                     required
@@ -125,7 +150,8 @@ function SignInPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#F7F3EE]/40 hover:text-[#F7F3EE]/80 transition-colors p-1"
+                    aria-label="Toggle password visibility"
                   >
                     {showPassword ? (
                       <IoEyeOffOutline className="w-5 h-5" />
@@ -135,88 +161,49 @@ function SignInPage() {
                   </button>
                 </div>
               </div>
-              <div className="flex justify-between items-center text-xs pt-1">
-                <label className="flex items-center gap-2 cursor-pointer select-none group">
+
+              <div className="flex items-center justify-between pt-1">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
                   <input
                     type="checkbox"
-                    className="hidden"
+                    checked={isChecked}
                     onChange={handleCheckboxChange}
+                    className="rounded border-[#F7F3EE]/20 bg-[#0A0A0A] text-[#C9943A] focus:ring-[#C9943A]/20"
                   />
-                  {isChecked ? (
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 21 21"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <g id="Group 335">
-                        <rect
-                          id="Rectangle 331"
-                          x="-0.00012207"
-                          y="6.10352e-05"
-                          width="21"
-                          height="21"
-                          rx="5"
-                          className="fill-purple-600"
-                          stroke="#a855f7"
-                        ></rect>
-                        <path
-                          id="Vector"
-                          d="M8.19594 15.4948C8.0646 15.4949 7.93453 15.4681 7.81319 15.4157C7.69186 15.3633 7.58167 15.2865 7.48894 15.1896L4.28874 11.8566C4.10298 11.6609 3.99914 11.3965 3.99988 11.1213C4.00063 10.8461 4.10591 10.5824 4.29272 10.3878C4.47953 10.1932 4.73269 10.0835 4.99689 10.0827C5.26109 10.0819 5.51485 10.1901 5.70274 10.3836L8.19591 12.9801L14.2887 6.6335C14.4767 6.4402 14.7304 6.3322 14.9945 6.33307C15.2586 6.33395 15.5116 6.44362 15.6983 6.63815C15.8851 6.83268 15.9903 7.09627 15.9912 7.37137C15.992 7.64647 15.8883 7.91073 15.7027 8.10648L8.90294 15.1896C8.8102 15.2865 8.7 15.3633 8.57867 15.4157C8.45734 15.4681 8.32727 15.4949 8.19594 15.4948Z"
-                          fill="white"
-                        ></path>
-                      </g>
-                    </svg>
-                  ) : (
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 21 21"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <g id="Group 335">
-                        <rect
-                          id="Rectangle 331"
-                          x="-0.00012207"
-                          y="6.10352e-05"
-                          width="21"
-                          height="21"
-                          rx="5"
-                          className="fill-transparent"
-                          stroke="#cbd5e1"
-                        ></rect>
-                      </g>
-                    </svg>
-                  )}
-                  <span className="text-slate-500 group-hover:text-slate-800 transition-colors font-medium">
-                    Remember email
+                  <span className="text-xs text-[#F7F3EE]/60 hover:text-[#F7F3EE] transition-colors">
+                    Keep signed in
                   </span>
                 </label>
-                <Link to="/forget-password" className="text-purple-600 hover:text-purple-500 transition-colors font-semibold">
-                  Forgot Password?
-                </Link>
+                <span className="text-[11px] font-mono text-[#F7F3EE]/40">v2.4 live</span>
               </div>
+
               <div className="pt-2">
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-purple-500/10 hover:shadow-purple-500/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  className="w-full h-12 bg-[#C9943A] hover:bg-[#d8a24a] text-[#0D0D0D] font-bold text-sm rounded-xl transition-all shadow-lg shadow-[#C9943A]/10 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer font-dmsans"
                 >
-                  {isLoading ? "Signing In..." : "Sign In"}
+                  {isLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-[#0D0D0D] border-t-transparent rounded-full animate-spin" />
+                      <span>Authenticating...</span>
+                    </>
+                  ) : (
+                    <span>Enter Dashboard →</span>
+                  )}
                 </button>
               </div>
-              {error && (
-                <div className="text-red-650 text-center text-xs bg-red-55 border border-red-100 py-2.5 rounded-lg font-medium">
-                  {error}
-                </div>
-              )}
             </form>
           )}
+        </div>
+
+        {/* Footer info */}
+        <div className="mt-8 text-center text-xs text-[#F7F3EE]/40 font-jetbrains">
+          Victory Fitness · Strictly Authorized Access Only
         </div>
       </div>
     </div>
   );
 }
+
 export default SignInPage;

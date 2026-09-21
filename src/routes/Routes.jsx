@@ -29,6 +29,8 @@ const Homepage = lazy(() => import("../pages/Homepage/Homepage"));
 const AuditLogs = lazy(() => import("../pages/AuditLogs/AuditLogs"));
 const BetaAnalytics = lazy(() => import("../pages/BetaAnalytics/BetaAnalytics"));
 const TrialExperience = lazy(() => import("../pages/TrialExperience/TrialExperience"));
+const Payments = lazy(() => import("../pages/Payments/Payments"));
+const FeatureFlags = lazy(() => import("../pages/FeatureFlags/FeatureFlags"));
 
 function RouteFallback() {
   return (
@@ -153,6 +155,14 @@ const router = createBrowserRouter([
       {
         path: "/audit-logs",
         element: withSuspense(AuditLogs),
+      },
+      {
+        path: "/payments",
+        element: withSuspense(Payments),
+      },
+      {
+        path: "/feature-flags",
+        element: withSuspense(FeatureFlags),
       },
       {
         path: "/analytics",

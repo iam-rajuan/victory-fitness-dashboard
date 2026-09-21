@@ -12,9 +12,7 @@ function EditProfile({ profileData, onProfileUpdated }) {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!profileData) {
-      return;
-    }
+    if (!profileData) return;
 
     setFormData({
       fullName: profileData.fullName || "",
@@ -50,7 +48,7 @@ function EditProfile({ profileData, onProfileUpdated }) {
       });
 
       onProfileUpdated?.(updatedProfile);
-      setSuccess("Profile updated successfully");
+      setSuccess("Profile details updated successfully.");
     } catch (err) {
       setError(err.message || "Failed to update profile");
     } finally {
@@ -59,84 +57,102 @@ function EditProfile({ profileData, onProfileUpdated }) {
   };
 
   return (
-    <div className="w-full p-0">
-      <div className="bg-white w-full px-4 sm:px-6 md:px-8 py-5 rounded-md border border-gray-200 shadow-sm">
-        <p className="text-[#111827] text-center font-bold text-xl sm:text-2xl mb-5">
-          Edit Your Profile
+    <div className="bg-[#0D2B45] rounded-[22px] border border-[#F7F3EE]/15 p-6 sm:p-8 shadow-xl font-dmsans">
+      <div className="mb-6">
+        <h3 className="text-xl sm:text-2xl font-semibold text-[#F7F3EE] font-clash">
+          Edit Administrative Details
+        </h3>
+        <p className="text-xs sm:text-sm text-[#F7F3EE]/60 font-inter mt-1">
+          Update your public administrator name, jurisdiction country, and support direct contact.
         </p>
-        <form className="space-y-4" onSubmit={handleSubmit}>
-          <div>
-            <label className="text-sm md:text-base text-[#111827] mb-2 font-semibold block">
-              User Name
-            </label>
-            <input
-              type="text"
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleInputChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-md outline-none placeholder:text-sm md:placeholder:text-base focus:ring-2 focus:ring-[#74AA2E]"
-              placeholder="Enter full name"
-              required
-            />
-          </div>
+      </div>
 
-          <div>
-            <label className="text-sm md:text-base text-[#111827] mb-2 font-semibold block">
-              Email
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={profileData?.email || ""}
-              className="w-full px-4 py-3 border border-gray-300 rounded-md outline-none placeholder:text-sm md:placeholder:text-base focus:ring-2 focus:ring-[#74AA2E] bg-gray-50"
-              placeholder="Enter email"
-              disabled
-              readOnly
-            />
-          </div>
+      {success && (
+        <div className="p-3.5 rounded-xl bg-[#1A7A4A]/20 border-l-3 border-[#1A7A4A] text-xs font-mono text-[#5FC48E] mb-5">
+          ✓ {success}
+        </div>
+      )}
 
-          <div>
-            <label className="text-sm md:text-base text-[#0D0D0D] mb-2 font-semibold block">
-              Contact Number
-            </label>
-            <input
-              type="text"
-              name="contactNumber"
-              value={formData.contactNumber}
-              onChange={handleInputChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-md outline-none placeholder:text-sm md:placeholder:text-base focus:ring-2 focus:ring-[#74AA2E]"
-              placeholder="Enter contact number"
-            />
-          </div>
+      {error && (
+        <div className="p-3.5 rounded-xl bg-[#B5651D]/15 border-l-3 border-[#B5651D] text-xs font-inter text-[#F7F3EE]/90 mb-5">
+          {error}
+        </div>
+      )}
 
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        <div>
+          <label className="block text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#F7F3EE]/55 mb-2">
+            Administrator Name
+          </label>
+          <input
+            type="text"
+            name="fullName"
+            value={formData.fullName}
+            onChange={handleInputChange}
+            className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#F7F3EE]/15 rounded-xl text-[#F7F3EE] text-sm outline-none focus:border-[#C9943A] focus:ring-1 focus:ring-[#C9943A] transition-all"
+            placeholder="Victor Akko"
+            required
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#F7F3EE]/55">
+              Email Address
+            </label>
+            <span className="text-[10.5px] font-mono text-[#F7F3EE]/40">Root credentials</span>
+          </div>
+          <input
+            type="email"
+            name="email"
+            value={profileData?.email || ""}
+            className="w-full px-4 py-3 bg-[#0A0A0A]/50 border border-[#F7F3EE]/10 rounded-xl text-[#F7F3EE]/60 text-sm font-mono cursor-not-allowed outline-none"
+            placeholder="office@victoryfitness.de"
+            disabled
+            readOnly
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm md:text-base text-[#0D0D0D] mb-2 font-semibold block">
-              Country
+            <label className="block text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#F7F3EE]/55 mb-2">
+              Country / Jurisdiction
             </label>
             <input
               type="text"
               name="country"
               value={formData.country}
               onChange={handleInputChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-md outline-none placeholder:text-sm md:placeholder:text-base focus:ring-2 focus:ring-[#74AA2E]"
-              placeholder="Enter country"
+              className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#F7F3EE]/15 rounded-xl text-[#F7F3EE] text-sm outline-none focus:border-[#C9943A] focus:ring-1 focus:ring-[#C9943A] transition-all"
+              placeholder="Germany"
             />
           </div>
 
-          {error ? <div className="text-red-500 text-sm text-center">{error}</div> : null}
-          {success ? <div className="text-green-500 text-sm text-center">{success}</div> : null}
-
-          <div className="text-center pt-2">
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="bg-blue-600 text-white font-semibold w-full py-3 rounded-lg hover:opacity-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "Updating..." : "Save & Change"}
-            </button>
+          <div>
+            <label className="block text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#F7F3EE]/55 mb-2">
+              Contact Phone / WhatsApp
+            </label>
+            <input
+              type="tel"
+              name="contactNumber"
+              value={formData.contactNumber}
+              onChange={handleInputChange}
+              className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#F7F3EE]/15 rounded-xl text-[#F7F3EE] text-sm font-mono outline-none focus:border-[#C9943A] focus:ring-1 focus:ring-[#C9943A] transition-all"
+              placeholder="+49 171 555 0912"
+            />
           </div>
-        </form>
-      </div>
+        </div>
+
+        <div className="pt-3">
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full sm:w-auto px-8 h-12 bg-[#C9943A] hover:bg-[#d8a24a] text-[#0D0D0D] font-bold text-sm rounded-xl transition-all shadow-lg active:scale-[0.99] cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isLoading ? "Saving changes..." : "Save Changes →"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
