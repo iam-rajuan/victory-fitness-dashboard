@@ -47,7 +47,7 @@ export default function Applications() {
       pageSub="Five questions, straight to you. No checkout exists for Inner Circle — you read the answers, then decide whether to call."
       pagePrimary="Book a call"
       pageSecondary="Export answers"
-      onPrimary={() => openDrawer("application")}
+      onPrimary={() => openDrawer("application", { applicantName: "Ingrid Vogel" })}
       pageStats={[
         { k: "WAITING", v: "2", note: "Oldest: 4 days" },
         { k: "CALLS BOOKED", v: "1", note: "Thursday 19:00 CET" },
@@ -56,14 +56,14 @@ export default function Applications() {
       ]}
       pageAdvice="Two applications have been waiting four days. The screen promises a reply within three — the oldest one is already past that."
       pageAdviceDone="Read them now"
-      onAdvice={() => openDrawer("application")}
+      onAdvice={() => openDrawer("application", { applicantName: "Ingrid Vogel" })}
       filters={["All", "Waiting", "Call booked", "Accepted", "Declined"]}
       cols={["APPLICANT", "MARKET", "GOAL & TIMELINE", "STATUS", "ACTIONS"]}
       rows={rows}
       isLoading={loading}
-      onEditRow={(row) => openDrawer("application", { CONTACT: row.a })}
+      onEditRow={(row) => openDrawer("application", row)}
       onDeleteRow={(row) => showToast(`Archived application from ${row.a}.`)}
-      onRowClick={(row) => openDrawer("application", { CONTACT: row.a })}
+      onRowClick={(row) => openDrawer("application", row)}
     />
   );
 }

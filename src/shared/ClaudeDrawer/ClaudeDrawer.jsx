@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { useTheme } from "../../context/ThemeContext";
 import { adminApiRequest } from "../../../services/auth.service";
+import ClaudeApplicationDrawer from "./ClaudeApplicationDrawer";
 
 const DRAWER_CONFIGS = {
   workout: {
@@ -77,21 +78,22 @@ const DRAWER_CONFIGS = {
     ],
   },
   application: {
-    kicker: "INNER CIRCLE APPLICATION",
-    title: "Applicant review & call scheduling",
-    sub: "Five answers as written, nothing summarised. Prompt response within 3 business days promised on mobile.",
+    kicker: "INNER CIRCLE APPLICATION · INGRID VOGEL",
+    title: "Read, then decide",
+    sub: "Her five answers as written, nothing summarised. Waiting four days — the screen promises three.",
     cta: "Book the call",
     alt: "Decline kindly",
-    note: "Declining is not a dead end: pick the tier that does fit and they receive that personalized offer instead of silence.",
+    note: "Declining is not a dead end: pick the tier that does fit and she gets that offer instead of silence.",
     fields: [
-      { k: "1 · GOAL FOR NEXT 12 MONTHS", type: "read", initial: "I competed in athletics until I was 34 and stopped when my daughter was born. I want to enter the masters 800m next summer. I am 52 and I know what that costs." },
-      { k: "2 · PREVIOUS BARRIER", type: "read", initial: "Two years of a commercial gym plan. It worked until I hurt my hamstring, and nobody there knew how to adjust it, so I stopped entirely for eight months." },
-      { k: "3 · HOURS COMMITTED", type: "read", initial: "Six hours, split into four sessions. Early mornings only — I run a medical practice and the evenings are not mine." },
-      { k: "4 · WHAT NEEDS TO CHANGE", type: "read", initial: "Someone has to tell me when to stop. I do not have a problem with effort. I have a problem with restraint." },
-      { k: "5 · WHY NOW", type: "read", initial: "Because at 52 the window is closing and I would rather find that out trying than assume it." },
+      { k: "1 · WHAT ARE YOU TRAINING FOR IN THE NEXT TWELVE MONTHS?", type: "read", initial: "I competed in athletics until I was 34 and stopped when my daughter was born. I want to enter the masters 800m next summer. I am 52 and I know what that costs." },
+      { k: "2 · WHAT HAVE YOU ALREADY TRIED, AND WHERE DID IT STOP WORKING?", type: "read", initial: "Two years of a commercial gym plan. It worked until I hurt my hamstring, and nobody there knew how to adjust it, so I stopped entirely for eight months." },
+      { k: "3 · HOW MANY HOURS A WEEK CAN YOU GENUINELY COMMIT?", type: "read", initial: "Six, split into four sessions. Early mornings only — I run a practice and the evenings are not mine." },
+      { k: "4 · WHAT NEEDS TO CHANGE FIRST FOR A COACH TO BE WORTH IT?", type: "read", initial: "Someone has to tell me when to stop. I do not have a problem with effort. I have a problem with restraint." },
+      { k: "5 · WHY NOW?", type: "read", initial: "Because at 52 the window is closing and I would rather find that out trying than assume it." },
+      { k: "CONTACT", type: "text", initial: "Ingrid Vogel · ingrid.vogel@praxis-vogel.de · +49 171 555 0912 · Germany, CET", hint: "best time to call: weekday evenings" },
       { k: "YOUR VERDICT", type: "chips", initial: "Book a call", options: ["Book a call", "Ask one more question", "Decline · offer Platinum", "Decline · offer Gold"] },
       { k: "CALL SLOT", type: "chips", initial: "Thu 19:00 CET", options: ["Thu 19:00 CET", "Thu 20:00 CET", "Mon 19:00 CET", "Send my calendar link"] },
-      { k: "WHAT APPLICANT RECEIVES", type: "input", initial: "Read all five answers, and the restraint answer is the one that decided it. Thursday 19:00 CET works for a call. Thirty minutes, no pitch.", hint: "sent via email and WhatsApp" },
+      { k: "WHAT SHE RECEIVES", type: "input", initial: "Ingrid — read all five, and the restraint answer is the one that decided it. Thursday 19:00 CET works for a call. Thirty minutes, no pitch.", hint: "sent by email and WhatsApp" },
     ],
   },
   support: {
@@ -310,7 +312,19 @@ export default function ClaudeDrawer() {
     }
   }, [type, payload, config]);
 
-  if (!isOpen || !config) return null;
+  if (!isOpen) return null;
+
+  if (type === "application") {
+    return (
+      <ClaudeApplicationDrawer
+        isOpen={isOpen}
+        onClose={closeDrawer}
+        payload={payload}
+      />
+    );
+  }
+
+  if (!config) return null;
 
   const handleChipSelect = (fieldKey, value) => {
     setFormValues((prev) => ({ ...prev, [fieldKey]: value }));
@@ -506,18 +520,58 @@ export default function ClaudeDrawer() {
           )}
 
           {/* Form fields */}
-          <div className="space-y-4">
+          {/* Form fields */}
+          <div className="space-y-2.5">
             {(config.fields || []).map((field) => (
-              <div key={field.k} className="space-y-1.5">
-                <div className={`flex items-baseline justify-between text-[10px] font-semibold uppercase tracking-[0.14em] ${isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"}`}>
-                  <span>{field.k}</span>
+              <div
+                key={field.k}
+                style={{
+                  backgroundColor: isDark ? "#0D2B45" : "#0D2B45",
+                  borderRadius: "15px",
+                  padding: "15px 17px",
+                  marginBottom: "9px",
+                  boxSizing: "border-box",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    justifyContent: "space-between",
+                    gap: "10px",
+                    marginBottom: "8px",
+                  }}
+                >
+                  <span
+                    style={{
+                      font: "500 10px 'DM Sans', sans-serif",
+                      letterSpacing: "0.14em",
+                      color: "rgba(247, 243, 238, 0.5)",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {field.k}
+                  </span>
                   {field.hint && (
-                    <span className={`font-mono normal-case ${isDark ? "text-[#F7F3EE]/40" : "text-[#0D2B45]/45"}`}>{field.hint}</span>
+                    <span
+                      style={{
+                        font: "400 10.5px 'JetBrains Mono', monospace",
+                        color: "rgba(247, 243, 238, 0.4)",
+                      }}
+                    >
+                      {field.hint}
+                    </span>
                   )}
                 </div>
 
                 {field.type === "chips" && (
-                  <div className="flex flex-wrap gap-2">
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "7px",
+                      flexWrap: "wrap",
+                    }}
+                  >
                     {(field.options || []).map((opt) => {
                       const isSelected = formValues[field.k] === opt;
                       return (
@@ -525,13 +579,20 @@ export default function ClaudeDrawer() {
                           key={opt}
                           type="button"
                           onClick={() => handleChipSelect(field.k, opt)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                            isSelected
-                              ? "bg-[#C9943A] text-[#0D0D0D]"
-                              : isDark
-                              ? "bg-[#F7F3EE]/8 text-[#F7F3EE]/70 hover:bg-[#F7F3EE]/15 hover:text-[#F7F3EE]"
-                              : "bg-white border border-[rgba(13,43,69,0.12)] text-[#0D2B45]/75 hover:bg-[#F7F3EE] hover:text-[#0D2B45]"
-                          }`}
+                          style={{
+                            padding: "9px 14px",
+                            borderRadius: "10px",
+                            cursor: "pointer",
+                            whiteSpace: "nowrap",
+                            font: `${isSelected ? "700" : "500"} 12.5px 'DM Sans', sans-serif`,
+                            backgroundColor: isSelected ? "#C9943A" : "transparent",
+                            color: isSelected ? "#0D0D0D" : "rgba(247, 243, 238, 0.65)",
+                            border: isSelected
+                              ? "1px solid #C9943A"
+                              : "1px solid rgba(247, 243, 238, 0.2)",
+                            boxSizing: "border-box",
+                            transition: "all 0.15s ease",
+                          }}
                         >
                           {opt}
                         </button>
@@ -541,12 +602,16 @@ export default function ClaudeDrawer() {
                 )}
 
                 {field.type === "text" && (
-                  <input
-                    type="text"
-                    value={formValues[field.k] ?? ""}
-                    onChange={(e) => handleTextChange(field.k, e.target.value)}
-                    className={`w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm font-dmsans outline-none focus:border-[#C9943A] transition-colors ${isDark ? "bg-[#0A0A0A] border border-[#F7F3EE]/15 text-[#F7F3EE]" : "bg-[#F7F3EE] border border-[rgba(13,43,69,0.15)] text-[#0D2B45]"}`}
-                  />
+                  <div
+                    style={{
+                      font: "500 14px/1.6 'DM Sans', sans-serif",
+                      color: "#F7F3EE",
+                      textWrap: "pretty",
+                      wordBreak: "break-word",
+                    }}
+                  >
+                    {formValues[field.k] ?? field.initial}
+                  </div>
                 )}
 
                 {field.type === "input" && (
@@ -554,39 +619,97 @@ export default function ClaudeDrawer() {
                     rows={3}
                     value={formValues[field.k] ?? ""}
                     onChange={(e) => handleTextChange(field.k, e.target.value)}
-                    className={`w-full px-4 py-2.5 rounded-xl text-xs sm:text-sm font-inter leading-relaxed outline-none focus:border-[#C9943A] resize-y transition-colors ${isDark ? "bg-[#0A0A0A] border border-[#F7F3EE]/15 text-[#F7F3EE]" : "bg-[#F7F3EE] border border-[rgba(13,43,69,0.15)] text-[#0D2B45]"}`}
+                    style={{
+                      minHeight: "76px",
+                      boxSizing: "border-box",
+                      border: "1.5px solid rgba(247, 243, 238, 0.2)",
+                      borderRadius: "12px",
+                      padding: "13px 15px",
+                      font: "400 14px/1.6 'Inter', sans-serif",
+                      color: "rgba(247, 243, 238, 0.85)",
+                      backgroundColor: "transparent",
+                      outline: "none",
+                      width: "100%",
+                      resize: "vertical",
+                      display: "block",
+                      transition: "border-color 0.15s ease",
+                    }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = "#C9943A")}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(247, 243, 238, 0.2)")}
                   />
                 )}
 
                 {field.type === "read" && (
-                  <div className={`p-3.5 rounded-xl border text-xs sm:text-sm font-inter leading-relaxed ${
-                    isDark ? "bg-[#F7F3EE]/5 border-[#F7F3EE]/10 text-[#F7F3EE]/80" : "bg-[#FAF7F2] border-[rgba(13,43,69,0.1)] text-[#0D2B45]/85"
-                  }`}>
-                    “{field.initial}”
-                  </div>
+                  <p
+                    style={{
+                      margin: 0,
+                      font: "400 14.5px/1.65 'Inter', sans-serif",
+                      color: "rgba(247, 243, 238, 0.85)",
+                      textWrap: "pretty",
+                      overflowWrap: "break-word",
+                    }}
+                  >
+                    {formValues[field.k] ?? field.initial}
+                  </p>
                 )}
 
                 {field.type === "file" && (
                   <div className="space-y-2">
-                    <div className={`flex items-center justify-between p-3 rounded-xl border ${
-                      isDark ? "bg-[#F7F3EE]/6 border-[#F7F3EE]/10" : "bg-[#FAF7F2] border-[rgba(13,43,69,0.1)]"
-                    }`}>
-                      <div className="flex items-center gap-3">
-                        <span className="px-2 py-1 bg-[#C9943A] text-[#0D0D0D] font-mono text-[10px] font-bold rounded">
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "13px",
+                        backgroundColor: "rgba(247,243,238,.06)",
+                        borderRadius: "12px",
+                        padding: "14px 15px",
+                        marginBottom: "9px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "34px",
+                          height: "42px",
+                          borderRadius: "5px",
+                          boxSizing: "border-box",
+                          border: "1.5px solid rgba(201,148,58,.6)",
+                          display: "flex",
+                          alignItems: "flex-end",
+                          justifyContent: "center",
+                          paddingBottom: "5px",
+                          flex: "none",
+                        }}
+                      >
+                        <span style={{ font: "700 8.5px 'JetBrains Mono', monospace", color: "#C9943A" }}>
                           {field.ext || "DOC"}
                         </span>
-                        <div>
-                          <div className={`text-xs font-semibold ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>{field.initial}</div>
-                          <div className={`text-[10px] font-mono ${isDark ? "text-[#F7F3EE]/45" : "text-[#0D2B45]/55"}`}>{field.meta}</div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ font: "600 14px 'DM Sans', sans-serif", color: "#F7F3EE", overflowWrap: "break-word" }}>
+                          {field.initial}
+                        </div>
+                        <div style={{ font: "400 11.5px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.5)", marginTop: "3px" }}>
+                          {field.meta}
                         </div>
                       </div>
-                      <span className="text-xs font-semibold text-[#C9943A] hover:underline cursor-pointer">
+                      <span style={{ font: "700 12px 'DM Sans', sans-serif", color: "#C9943A", cursor: "pointer", flex: "none" }}>
                         Download
                       </span>
                     </div>
-                    <div className="p-4 border-1.5 border-dashed border-[#C9943A]/50 rounded-xl text-center cursor-pointer hover:bg-[#C9943A]/5 transition-colors">
-                      <div className="text-xs font-semibold text-[#C9943A]">{field.drop}</div>
-                      <div className={`text-[10px] mt-0.5 ${isDark ? "text-[#F7F3EE]/45" : "text-[#0D2B45]/55"}`}>{field.accepts}</div>
+                    <div
+                      style={{
+                        boxSizing: "border-box",
+                        border: "1.5px dashed rgba(201,148,58,.5)",
+                        borderRadius: "12px",
+                        padding: "18px",
+                        textAlign: "center",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div style={{ font: "600 13.5px 'DM Sans', sans-serif", color: "#C9943A" }}>{field.drop}</div>
+                      <div style={{ font: "400 11.5px 'Inter', sans-serif", color: "rgba(247,243,238,.5)", marginTop: "4px" }}>
+                        {field.accepts}
+                      </div>
                     </div>
                   </div>
                 )}
