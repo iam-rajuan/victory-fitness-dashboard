@@ -22,9 +22,9 @@ export default function Notifications() {
       pageTitle="Notification templates"
       pageSub="The wording, frequency cap and approval state for every automatic message. The five member-facing ones are exactly what a member sees under Profile → Reminders — they pick the channel and time, you set the wording and the cap ceiling."
       pagePrimary="+ New template"
-      pageSecondary="Save all"
+      pageSecondary="Edit active rule"
       onPrimary={() => openDrawer("newTemplate")}
-      onSecondary={() => showToast("All notification rules saved and synchronized.")}
+      onSecondary={() => openDrawer("template")}
       pageStats={[
         { k: "TEMPLATES", v: "7", note: "Five member-facing, two system" },
         { k: "APPROVED", v: "5", note: "Sending normally" },

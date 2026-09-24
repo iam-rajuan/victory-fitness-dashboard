@@ -51,9 +51,9 @@ export default function FAQ() {
       pageTitle="FAQ"
       pageSub="What members read before they write to support. Every question answered here is a support message that never arrives."
       pagePrimary="+ Add question"
-      pageSecondary="Reorder"
+      pageSecondary="Write FAQ entry"
       onPrimary={() => openDrawer("faq")}
-      onSecondary={() => showToast("FAQ reordered by highest search view count.")}
+      onSecondary={() => openDrawer("faq")}
       pageStats={[
         { k: "ENTRIES", v: String(rows.length), note: "Six categories" },
         { k: "VIEWS, 7 DAYS", v: "412", note: "Payment is most read" },

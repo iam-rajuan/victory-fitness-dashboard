@@ -22,9 +22,9 @@ export default function Payments() {
       pageKicker="TRANSACTION LEDGER · 5 PAYMENT RAILS"
       pageTitle="Payments"
       pageSub="Every transaction across SEPA, card, MoMo, Telecel, UPI and PayPal. Failures surface here before they become churn."
-      pagePrimary="Retry failed"
+      pagePrimary="Pricing & discounts"
       pageSecondary="Export ledger"
-      onPrimary={() => showToast("Dispatched retry webhook to payment gateways.")}
+      onPrimary={() => openDrawer("pricing")}
       pageStats={[
         { k: "COLLECTED THIS MONTH", v: "€4,180", note: "Across 3 currencies" },
         { k: "FAILED", v: "2", note: "Both card declines" },

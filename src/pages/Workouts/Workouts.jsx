@@ -86,9 +86,7 @@ export default function Workouts() {
       pageStats={stats}
       pageAdvice="23 workouts are sitting in draft and invisible to members. Six of them are under 20 minutes — the filter people use most."
       pageAdviceDone="Publish the short ones"
-      onAdvice={() => {
-        showToast("Filtering short draft workouts for bulk publish.");
-      }}
+      onAdvice={() => openDrawer("workout")}
       filters={["All", "Published", "Draft", "Untagged", "Under 20 min", "No equipment"]}
       cols={["WORKOUT", "PURPOSE", "LENGTH & STARTS", "STATUS", "ACTIONS"]}
       rows={rows}

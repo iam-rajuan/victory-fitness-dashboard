@@ -45,10 +45,10 @@ export default function AuditLogs() {
       pageKicker="ADMIN OVERSIGHT"
       pageTitle="Audit log"
       pageSub="Every administrative action, who took it and when. Nothing here can be edited or deleted, including by you."
-      pagePrimary="Export range"
-      pageSecondary="Filter by admin"
-      onPrimary={() => showToast("Exported immutable audit range to CSV.")}
-      onSecondary={() => showToast("Filtered to owner account: Victor Akko")}
+      pagePrimary="Inspect latest"
+      pageSecondary="Export range"
+      onPrimary={() => openDrawer("audit")}
+      onSecondary={() => openDrawer("audit")}
       pageStats={[
         { k: "ENTRIES", v: "184", note: "Since launch" },
         { k: "ADMINS", v: "1", note: "Victor Akko only" },

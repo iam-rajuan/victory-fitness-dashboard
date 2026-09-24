@@ -20,10 +20,10 @@ export default function Settings() {
       pageKicker="ADMINISTRATION"
       pageTitle="Settings"
       pageSub="Legal pages, company details and the switches that apply to the whole platform rather than to any one member."
-      pagePrimary="Save changes"
-      pageSecondary="View as member"
-      onPrimary={() => showToast("Platform settings saved and synchronized.")}
-      onSecondary={() => showToast("Previewing live app settings schema.")}
+      pagePrimary="Update policy"
+      pageSecondary="Edit About us"
+      onPrimary={() => openDrawer("settingDoc")}
+      onSecondary={() => openDrawer("settingText")}
       pageStats={[
         { k: "LEGAL PAGES", v: "3", note: "Privacy, terms, about" },
         { k: "LAST UPDATED", v: "4 mo", note: "Before 2 markets launched" },

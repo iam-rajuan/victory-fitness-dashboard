@@ -48,6 +48,7 @@ export default function SupportInbox() {
       pagePrimary="Reply to oldest"
       pageSecondary="Canned replies"
       onPrimary={() => openDrawer("support")}
+      onSecondary={() => openDrawer("support")}
       pageStats={[
         { k: "OPEN", v: "3", note: "Awaiting first reply" },
         { k: "IN PROGRESS", v: "1", note: "Being worked on" },

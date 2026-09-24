@@ -21,9 +21,9 @@ export default function FeatureFlags() {
       pageTitle="Feature flags"
       pageSub="Turn features on for a percentage of members, in chosen markets, without shipping a new build. Roll back by moving one number to zero."
       pagePrimary="+ New flag"
-      pageSecondary="Rollback all"
+      pageSecondary="Configure flags"
       onPrimary={() => openDrawer("flag")}
-      onSecondary={() => showToast("All partial flags safely reset to baseline.")}
+      onSecondary={() => openDrawer("flag")}
       pageStats={[
         { k: "ACTIVE FLAGS", v: "4", note: "Two at partial rollout" },
         { k: "FULLY ROLLED OUT", v: "1", note: "Meal photo analysis" },

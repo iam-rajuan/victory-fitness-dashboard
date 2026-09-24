@@ -51,9 +51,9 @@ export default function Homepage() {
       pageTitle="Daily inspiration"
       pageSub="One quote is live on every member's home screen at a time. Set live, or delete — the change reaches the app immediately."
       pagePrimary="+ Add quote"
-      pageSecondary="Shuffle daily"
+      pageSecondary="Edit daily quote"
       onPrimary={() => openDrawer("quote")}
-      onSecondary={() => showToast("Daily quote shuffled to next ready item.")}
+      onSecondary={() => openDrawer("quote")}
       pageStats={[
         { k: "IN LIBRARY", v: String(rows.length), note: "All by Victor Akko" },
         { k: "LIVE NOW", v: "1", note: "Shown on all home screens" },
