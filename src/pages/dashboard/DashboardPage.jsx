@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
+import { useTheme } from "../../context/ThemeContext";
 
 const SCOPE_CONFIG = {
   today: {
@@ -467,7 +468,21 @@ export default function DashboardPage() {
   const [market, setMarket] = useState("All");
   const [doneList, setDoneList] = useState([]);
   const { openDrawer, showToast } = useAdminDrawer();
+  const { isDark } = useTheme();
   const navigate = useNavigate();
+
+  const t = {
+    text: isDark ? "#F7F3EE" : "#0D2B45",
+    subtext: isDark ? "rgba(247, 243, 238, 0.65)" : "rgba(13, 43, 69, 0.72)",
+    muted: isDark ? "rgba(247, 243, 238, 0.45)" : "rgba(13, 43, 69, 0.52)",
+    cardBg: isDark ? "#0D2B45" : "#FFFFFF",
+    cardBorder: isDark ? "rgba(247, 243, 238, 0.1)" : "rgba(13, 43, 69, 0.08)",
+    cardShadow: isDark ? "none" : "0 4px 20px rgba(13, 43, 69, 0.04)",
+    subtleBg: isDark ? "rgba(247, 243, 238, 0.05)" : "#FAF7F2",
+    pillBorder: isDark ? "rgba(247, 243, 238, 0.16)" : "rgba(13, 43, 69, 0.14)",
+    tabInactiveText: isDark ? "rgba(247, 243, 238, 0.6)" : "rgba(13, 43, 69, 0.65)",
+    rowBorder: isDark ? "rgba(247, 243, 238, 0.09)" : "rgba(13, 43, 69, 0.08)",
+  };
 
   const currentScopeData = SCOPE_CONFIG[scope] || SCOPE_CONFIG.today;
   const actions = currentScopeData.actions || [];
@@ -502,8 +517,8 @@ export default function DashboardPage() {
 
   const getToneColor = (tone) => {
     if (tone === "gold") return "#C9943A";
-    if (tone === "copper") return "#D98A3E";
-    return "rgba(247, 243, 238, 0.55)";
+    if (tone === "copper") return isDark ? "#D98A3E" : "#B5651D";
+    return isDark ? "rgba(247, 243, 238, 0.55)" : "rgba(13, 43, 69, 0.55)";
   };
 
   const handleActionOpen = (a) => {
@@ -517,17 +532,17 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="animate-in fade-in duration-200 font-dmsans text-[#F7F3EE]">
+    <div className={`animate-in fade-in duration-200 font-dmsans ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
       {/* Top Header Row */}
       <div className="flex items-start justify-between gap-6 flex-wrap mb-2">
         <div>
           <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: "0.18em", color: "#B5651D", marginBottom: "8px" }}>
             FRIDAY, 11 SEPTEMBER · 09:17
           </div>
-          <h1 style={{ margin: "0 0 8px", font: "600 36px/1.06 'Clash Display', 'DM Sans', sans-serif", color: "#F7F3EE", letterSpacing: "-0.015em" }}>
+          <h1 style={{ margin: "0 0 8px", font: "600 36px/1.06 'Clash Display', 'DM Sans', sans-serif", color: t.text, letterSpacing: "-0.015em" }}>
             {currentScopeData.headline}
           </h1>
-          <p style={{ margin: 0, maxWidth: "620px", font: "400 14.5px/1.6 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.6)", textWrap: "pretty" }}>
+          <p style={{ margin: 0, maxWidth: "620px", font: "400 14.5px/1.6 'Inter', sans-serif", color: t.subtext, textWrap: "pretty" }}>
             {currentScopeData.subhead}
           </p>
         </div>
@@ -535,7 +550,7 @@ export default function DashboardPage() {
         {/* Filter Segment Pills */}
         <div className="flex gap-2.5 items-center flex-wrap">
           {/* Scope Tabs */}
-          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", border: "1px solid rgba(247, 243, 238, 0.16)", borderRadius: "12px", padding: "4px" }}>
+          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", border: `1px solid ${t.pillBorder}`, backgroundColor: isDark ? "transparent" : "#FAF7F2", borderRadius: "12px", padding: "4px" }}>
             {[
               ["today", "Today"],
               ["week", "This week"],
@@ -555,7 +570,7 @@ export default function DashboardPage() {
                     whiteSpace: "nowrap",
                     font: `${on ? "700" : "500"} 12.5px 'DM Sans', sans-serif`,
                     backgroundColor: on ? "#C9943A" : "transparent",
-                    color: on ? "#0D0D0D" : "rgba(247, 243, 238, 0.6)",
+                    color: on ? "#0D0D0D" : t.tabInactiveText,
                     border: "none",
                     outline: "none",
                     transition: "all 0.15s ease",
@@ -568,7 +583,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Market Tabs */}
-          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", border: "1px solid rgba(247, 243, 238, 0.16)", borderRadius: "12px", padding: "4px" }}>
+          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", border: `1px solid ${t.pillBorder}`, backgroundColor: isDark ? "transparent" : "#FAF7F2", borderRadius: "12px", padding: "4px" }}>
             {["All", "Germany", "Ghana", "India", "Rest of world"].map((m) => {
               const on = market === m;
               return (
@@ -583,7 +598,7 @@ export default function DashboardPage() {
                     whiteSpace: "nowrap",
                     font: `${on ? "700" : "500"} 12.5px 'DM Sans', sans-serif`,
                     backgroundColor: on ? "#C9943A" : "transparent",
-                    color: on ? "#0D0D0D" : "rgba(247, 243, 238, 0.6)",
+                    color: on ? "#0D0D0D" : t.tabInactiveText,
                     border: "none",
                     outline: "none",
                     transition: "all 0.15s ease",
@@ -601,9 +616,9 @@ export default function DashboardPage() {
       <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", marginBottom: "26px" }}>
         {currentScopeData.pulse.map((p) => {
           const dirBorder =
-            p.dir === "down" ? "#B5651D" : p.dir === "flat" ? "rgba(247, 243, 238, 0.25)" : "#1A7A4A";
+            p.dir === "down" ? "#B5651D" : p.dir === "flat" ? (isDark ? "rgba(247, 243, 238, 0.25)" : "rgba(13, 43, 69, 0.2)") : "#1A7A4A";
           const deltaColor =
-            p.dir === "down" ? "#D98A3E" : p.dir === "flat" ? "rgba(247, 243, 238, 0.55)" : "#5FC48E";
+            p.dir === "down" ? "#D98A3E" : p.dir === "flat" ? t.muted : (isDark ? "#5FC48E" : "#1A7A4A");
 
           return (
             <div
@@ -611,25 +626,27 @@ export default function DashboardPage() {
               style={{
                 flex: "1 1 180px",
                 minWidth: "170px",
-                backgroundColor: "#0D2B45",
+                backgroundColor: t.cardBg,
                 borderRadius: "18px",
                 borderLeft: `4px solid ${dirBorder}`,
+                border: `1px solid ${t.cardBorder}`,
+                boxShadow: t.cardShadow,
                 padding: "17px 18px",
                 boxSizing: "border-box",
               }}
             >
               <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", marginBottom: "9px" }}>
-                <span style={{ font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: "0.14em", color: "rgba(247, 243, 238, 0.5)", textTransform: "uppercase" }}>
+                <span style={{ font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: "0.14em", color: t.muted, textTransform: "uppercase" }}>
                   {p.k}
                 </span>
                 <span style={{ font: "700 11.5px 'JetBrains Mono', monospace", color: deltaColor }}>
                   {p.delta}
                 </span>
               </div>
-              <div style={{ font: "700 30px/1 'JetBrains Mono', monospace", color: "#F7F3EE", letterSpacing: "-0.02em" }}>
+              <div style={{ font: "700 30px/1 'JetBrains Mono', monospace", color: t.text, letterSpacing: "-0.02em" }}>
                 {p.v}
               </div>
-              <div style={{ font: "400 12px/1.45 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.55)", marginTop: "7px" }}>
+              <div style={{ font: "400 12px/1.45 'Inter', sans-serif", color: t.subtext, marginTop: "7px" }}>
                 {p.note}
               </div>
             </div>
@@ -648,7 +665,7 @@ export default function DashboardPage() {
               <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".17em", color: "#B5651D", marginBottom: "5px" }}>
                 {queueKicker}
               </div>
-              <h2 style={{ margin: 0, font: "600 24px 'Clash Display', 'DM Sans', sans-serif", color: "#F7F3EE" }}>
+              <h2 style={{ margin: 0, font: "600 24px 'Clash Display', 'DM Sans', sans-serif", color: t.text }}>
                 {queueTitle}
               </h2>
             </div>
@@ -668,11 +685,13 @@ export default function DashboardPage() {
               <div
                 key={key}
                 style={{
-                  background: "#0D2B45",
+                  background: t.cardBg,
                   borderRadius: "18px",
                   padding: "18px 20px",
                   marginBottom: "10px",
-                  opacity: isDone ? 0.5 : 1,
+                  opacity: isDone ? 0.6 : 1,
+                  boxShadow: t.cardShadow,
+                  border: isDark ? "none" : `1px solid ${t.cardBorder}`,
                   borderLeft: isDone ? "4px solid #1A7A4A" : `4px solid ${toneColor}`,
                   boxSizing: "border-box",
                   transition: "opacity 0.15s ease, border-color 0.15s ease",
@@ -701,7 +720,8 @@ export default function DashboardPage() {
                             height: "22px",
                             borderRadius: "7px",
                             boxSizing: "border-box",
-                            border: "1.5px solid rgba(201,148,58,.6)",
+                            border: isDark ? "1.5px solid rgba(201,148,58,.6)" : "1.5px solid rgba(201,148,58,.8)",
+                            background: isDark ? "transparent" : "#FFF9F0",
                             flex: "none",
                             marginTop: "3px",
                             cursor: "pointer",
@@ -725,7 +745,7 @@ export default function DashboardPage() {
                       <span style={{ font: "700 9.5px 'DM Sans', sans-serif", letterSpacing: ".12em", color: toneColor }}>
                         {a.tag}
                       </span>
-                      <span style={{ font: "500 11px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.45)" }}>
+                      <span style={{ font: "500 11px 'JetBrains Mono', monospace", color: t.muted }}>
                         {a.when}
                       </span>
                     </div>
@@ -734,7 +754,7 @@ export default function DashboardPage() {
                     <div
                       style={{
                         font: `600 ${isDone ? "17" : "19"}px/1.25 'Clash Display', 'DM Sans', sans-serif`,
-                        color: "#F7F3EE",
+                        color: t.text,
                         textDecoration: isDone ? "line-through" : "none",
                       }}
                     >
@@ -746,7 +766,7 @@ export default function DashboardPage() {
                       style={{
                         margin: "7px 0 0",
                         font: "400 13.5px/1.55 'Inter', sans-serif",
-                        color: "rgba(247,243,238,.65)",
+                        color: t.subtext,
                         textWrap: "pretty",
                       }}
                     >
@@ -765,8 +785,8 @@ export default function DashboardPage() {
                                 padding: "0 16px",
                                 borderRadius: "11px",
                                 boxSizing: "border-box",
-                                border: "1.5px solid rgba(247,243,238,.22)",
-                                color: "rgba(247,243,238,.6)",
+                                border: isDark ? "1.5px solid rgba(247,243,238,.22)" : "1.5px solid rgba(13,43,69,.2)",
+                                color: t.muted,
                                 font: "700 13px 'DM Sans', sans-serif",
                                 display: "flex",
                                 alignItems: "center",
@@ -800,8 +820,8 @@ export default function DashboardPage() {
                           padding: "0 13px",
                           borderRadius: "11px",
                           boxSizing: "border-box",
-                          border: "1.5px solid rgba(247,243,238,.2)",
-                          color: "rgba(247,243,238,.7)",
+                          border: isDark ? "1.5px solid rgba(247,243,238,.2)" : "1.5px solid rgba(13,43,69,.15)",
+                          color: t.subtext,
                           font: "700 12.5px 'DM Sans', sans-serif",
                           display: "flex",
                           alignItems: "center",
@@ -815,20 +835,20 @@ export default function DashboardPage() {
 
                       {/* Impact Stat */}
                       {!isDone && a.impact && (
-                        <span style={{ font: "700 12.5px 'JetBrains Mono', monospace", color: "#5FC48E" }}>
+                        <span style={{ font: "700 12.5px 'JetBrains Mono', monospace", color: isDark ? "#5FC48E" : "#1A7A4A" }}>
                           {a.impact}
                         </span>
                       )}
 
                       {/* Effort Estimate */}
                       {!isDone && a.effort && (
-                        <span style={{ font: "400 12px 'Inter', sans-serif", color: "rgba(247,243,238,.4)" }}>
+                        <span style={{ font: "400 12px 'Inter', sans-serif", color: t.muted }}>
                           {a.effort}
                         </span>
                       )}
 
                       {/* Opens Target Hint */}
-                      <span style={{ font: "500 11px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.38)" }}>
+                      <span style={{ font: "500 11px 'JetBrains Mono', monospace", color: t.muted }}>
                         opens {target}
                       </span>
                     </div>
@@ -843,8 +863,10 @@ export default function DashboardPage() {
             <div
               style={{
                 marginTop: "20px",
-                backgroundColor: "#0D2B45",
+                backgroundColor: t.cardBg,
                 borderRadius: "20px",
+                boxShadow: t.cardShadow,
+                border: isDark ? "none" : `1px solid ${t.cardBorder}`,
                 borderLeft: "4px solid #B5651D",
                 padding: "22px",
                 boxSizing: "border-box",
@@ -855,11 +877,11 @@ export default function DashboardPage() {
                   <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: "0.16em", color: "#C9943A", marginBottom: "5px" }}>
                     THE WEEK AHEAD
                   </div>
-                  <h3 style={{ margin: 0, font: "600 20px 'Clash Display', 'DM Sans', sans-serif", color: "#F7F3EE" }}>
+                  <h3 style={{ margin: 0, font: "600 20px 'Clash Display', 'DM Sans', sans-serif", color: t.text }}>
                     Seven days, planned
                   </h3>
                 </div>
-                <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.5)" }}>
+                <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: t.muted }}>
                   auto-scheduled from your data
                 </span>
               </div>
@@ -873,14 +895,14 @@ export default function DashboardPage() {
                       alignItems: "center",
                       gap: "14px",
                       padding: "12px 0",
-                      borderBottom: idx < WEEK_ITEMS.length - 1 ? "1px solid rgba(247, 243, 238, 0.09)" : "none",
+                      borderBottom: idx < WEEK_ITEMS.length - 1 ? `1px solid ${t.rowBorder}` : "none",
                     }}
                   >
                     <div style={{ width: "74px", flex: "none" }}>
-                      <div style={{ font: "700 12px 'JetBrains Mono', monospace", color: w.hot ? "#C9943A" : "rgba(247, 243, 238, 0.6)" }}>
+                      <div style={{ font: "700 12px 'JetBrains Mono', monospace", color: w.hot ? "#C9943A" : t.subtext }}>
                         {w.d}
                       </div>
-                      <div style={{ font: "400 10.5px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.4)", marginTop: "2px" }}>
+                      <div style={{ font: "400 10.5px 'JetBrains Mono', monospace", color: t.muted, marginTop: "2px" }}>
                         {w.date}
                       </div>
                     </div>
@@ -889,18 +911,18 @@ export default function DashboardPage() {
                         width: "3px",
                         alignSelf: "stretch",
                         borderRadius: "99px",
-                        backgroundColor: w.hot ? "#C9943A" : "rgba(247, 243, 238, 0.16)",
+                        backgroundColor: w.hot ? "#C9943A" : isDark ? "rgba(247, 243, 238, 0.16)" : "rgba(13, 43, 69, 0.12)",
                       }}
                     />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ font: w.hot ? "600 14.5px 'DM Sans', sans-serif" : "500 14.5px 'DM Sans', sans-serif", color: w.hot ? "#F7F3EE" : "rgba(247, 243, 238, 0.75)" }}>
+                      <div style={{ font: w.hot ? "600 14.5px 'DM Sans', sans-serif" : "500 14.5px 'DM Sans', sans-serif", color: w.hot ? t.text : t.subtext }}>
                         {w.t}
                       </div>
-                      <div style={{ font: "400 12px 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.5)", marginTop: "2px" }}>
+                      <div style={{ font: "400 12px 'Inter', sans-serif", color: t.muted, marginTop: "2px" }}>
                         {w.note}
                       </div>
                     </div>
-                    <span style={{ font: "500 11px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.45)" }}>
+                    <span style={{ font: "500 11px 'JetBrains Mono', monospace", color: t.muted }}>
                       {w.owner}
                     </span>
                   </div>
@@ -914,8 +936,10 @@ export default function DashboardPage() {
             <div
               style={{
                 marginTop: "20px",
-                backgroundColor: "#0D2B45",
+                backgroundColor: t.cardBg,
                 borderRadius: "20px",
+                boxShadow: t.cardShadow,
+                border: isDark ? "none" : `1px solid ${t.cardBorder}`,
                 borderLeft: "4px solid #B5651D",
                 padding: "22px",
                 boxSizing: "border-box",
@@ -926,23 +950,23 @@ export default function DashboardPage() {
                   <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: "0.16em", color: "#C9943A", marginBottom: "5px" }}>
                     COMPANY HEALTH · AGAINST LAST YEAR
                   </div>
-                  <h3 style={{ margin: 0, font: "600 20px 'Clash Display', 'DM Sans', sans-serif", color: "#F7F3EE" }}>
+                  <h3 style={{ margin: 0, font: "600 20px 'Clash Display', 'DM Sans', sans-serif", color: t.text }}>
                     Where you were, where you are
                   </h3>
                 </div>
-                <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.5)" }}>
+                <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: t.muted }}>
                   Sep 2025 → Sep 2026
                 </span>
               </div>
 
-              <div style={{ display: "flex", gap: "10px", padding: "0 0 10px", borderBottom: "1px solid rgba(247, 243, 238, 0.12)" }}>
-                <span style={{ flex: 2, font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: "0.13em", color: "rgba(247, 243, 238, 0.5)", textTransform: "uppercase" }}>
+              <div style={{ display: "flex", gap: "10px", padding: "0 0 10px", borderBottom: `1px solid ${t.rowBorder}` }}>
+                <span style={{ flex: 2, font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: "0.13em", color: t.muted, textTransform: "uppercase" }}>
                   MEASURE
                 </span>
-                <span style={{ flex: 1, textAlign: "right", font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: "0.13em", color: "rgba(247, 243, 238, 0.5)", textTransform: "uppercase" }}>
+                <span style={{ flex: 1, textAlign: "right", font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: "0.13em", color: t.muted, textTransform: "uppercase" }}>
                   NOW
                 </span>
-                <span style={{ flex: 1, textAlign: "right", font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: "0.13em", color: "rgba(247, 243, 238, 0.5)", textTransform: "uppercase" }}>
+                <span style={{ flex: 1, textAlign: "right", font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: "0.13em", color: t.muted, textTransform: "uppercase" }}>
                   LAST YEAR
                 </span>
                 <span style={{ flex: 1, textAlign: "right", font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: "0.13em", color: "#C9943A", textTransform: "uppercase" }}>
@@ -959,16 +983,16 @@ export default function DashboardPage() {
                       alignItems: "center",
                       gap: "10px",
                       padding: "11px 0",
-                      borderBottom: idx < YEAR_ROWS.length - 1 ? "1px solid rgba(247, 243, 238, 0.08)" : "none",
+                      borderBottom: idx < YEAR_ROWS.length - 1 ? `1px solid ${t.rowBorder}` : "none",
                     }}
                   >
-                    <span style={{ flex: 2, minWidth: 0, font: "600 14px 'DM Sans', sans-serif", color: "#F7F3EE" }}>
+                    <span style={{ flex: 2, minWidth: 0, font: "600 14px 'DM Sans', sans-serif", color: t.text }}>
                       {y.k}
                     </span>
-                    <span style={{ flex: 1, textAlign: "right", font: "700 13.5px 'JetBrains Mono', monospace", color: "#F7F3EE" }}>
+                    <span style={{ flex: 1, textAlign: "right", font: "700 13.5px 'JetBrains Mono', monospace", color: t.text }}>
                       {y.now}
                     </span>
-                    <span style={{ flex: 1, textAlign: "right", font: "500 13px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.5)" }}>
+                    <span style={{ flex: 1, textAlign: "right", font: "500 13px 'JetBrains Mono', monospace", color: t.muted }}>
                       {y.then}
                     </span>
                     <span
@@ -976,7 +1000,7 @@ export default function DashboardPage() {
                         flex: 1,
                         textAlign: "right",
                         font: "700 13px 'JetBrains Mono', monospace",
-                        color: y.tone === "good" ? "#5FC48E" : "#D98A3E",
+                        color: y.tone === "good" ? (isDark ? "#5FC48E" : "#1A7A4A") : (isDark ? "#D98A3E" : "#B5651D"),
                       }}
                     >
                       {y.delta}
@@ -990,11 +1014,11 @@ export default function DashboardPage() {
                   marginTop: "16px",
                   padding: "13px 15px",
                   borderRadius: "13px",
-                  backgroundColor: "rgba(181, 101, 29, 0.14)",
+                  backgroundColor: isDark ? "rgba(181, 101, 29, 0.14)" : "rgba(181, 101, 29, 0.08)",
                   boxSizing: "border-box",
                   borderLeft: "3px solid #B5651D",
                   font: "400 12.5px/1.55 'Inter', sans-serif",
-                  color: "rgba(247, 243, 238, 0.8)",
+                  color: t.subtext,
                 }}
               >
                 Every measure improved except cost per acquisition, which rose 23% while revenue grew 312% — you bought growth, and it was worth it. Watch it if the gap narrows.
@@ -1009,8 +1033,10 @@ export default function DashboardPage() {
           {/* Where The Money Is */}
           <div
             style={{
-              backgroundColor: "#0D2B45",
+              backgroundColor: t.cardBg,
               borderRadius: "20px",
+              boxShadow: t.cardShadow,
+              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
               borderLeft: "4px solid #B5651D",
               padding: "20px",
               boxSizing: "border-box",
@@ -1025,22 +1051,22 @@ export default function DashboardPage() {
                   key={m.n}
                   style={{
                     padding: "16px 0",
-                    borderBottom: idx < MARKETS.length - 1 ? "1px solid rgba(247, 243, 238, 0.1)" : "none",
+                    borderBottom: idx < MARKETS.length - 1 ? `1px solid ${t.rowBorder}` : "none",
                     paddingBottom: idx === MARKETS.length - 1 ? 0 : "16px",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", marginBottom: "7px" }}>
-                    <span style={{ font: "600 15.5px 'DM Sans', sans-serif", color: "#F7F3EE" }}>{m.n}</span>
+                    <span style={{ font: "600 15.5px 'DM Sans', sans-serif", color: t.text }}>{m.n}</span>
                     <span style={{ font: "700 14px 'JetBrains Mono', monospace", color: "#C9943A" }}>{m.rev}</span>
                   </div>
-                  <div style={{ height: "6px", borderRadius: "99px", backgroundColor: "rgba(247, 243, 238, 0.12)", overflow: "hidden", marginBottom: "9px" }}>
+                  <div style={{ height: "6px", borderRadius: "99px", backgroundColor: isDark ? "rgba(247, 243, 238, 0.12)" : "rgba(13, 43, 69, 0.08)", overflow: "hidden", marginBottom: "9px" }}>
                     <div style={{ width: `${m.pct}%`, height: "100%", backgroundColor: m.tone }} />
                   </div>
                   <div style={{ display: "flex", gap: "14px", marginBottom: "9px" }}>
-                    <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.6)" }}>{m.users}</span>
-                    <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.6)" }}>{m.conv}</span>
+                    <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: t.muted }}>{m.users}</span>
+                    <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: t.muted }}>{m.conv}</span>
                   </div>
-                  <p style={{ margin: "0 0 10px", font: "400 12.5px/1.5 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.68)", textWrap: "pretty" }}>
+                  <p style={{ margin: "0 0 10px", font: "400 12.5px/1.5 'Inter', sans-serif", color: t.subtext, textWrap: "pretty" }}>
                     {m.verdict}
                   </p>
                   <div
@@ -1049,8 +1075,8 @@ export default function DashboardPage() {
                       height: "40px",
                       borderRadius: "11px",
                       boxSizing: "border-box",
-                      border: `1.5px solid ${m.ink}`,
-                      color: m.ink,
+                      border: `1.5px solid ${isDark ? m.ink : m.tone}`,
+                      color: isDark ? m.ink : m.tone,
                       font: "700 13px 'DM Sans', sans-serif",
                       display: "flex",
                       alignItems: "center",
@@ -1069,8 +1095,10 @@ export default function DashboardPage() {
           {/* Needs You / Inbox */}
           <div
             style={{
-              backgroundColor: "#0D2B45",
+              backgroundColor: t.cardBg,
               borderRadius: "20px",
+              boxShadow: t.cardShadow,
+              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
               padding: "20px",
               boxSizing: "border-box",
             }}
@@ -1079,7 +1107,7 @@ export default function DashboardPage() {
               <span style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A" }}>
                 NEEDS YOU
               </span>
-              <span style={{ font: "700 11.5px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.45)" }}>
+              <span style={{ font: "700 11.5px 'JetBrains Mono', monospace", color: t.muted }}>
                 {inboxCount}
               </span>
             </div>
@@ -1094,7 +1122,7 @@ export default function DashboardPage() {
                     gap: "12px",
                     padding: "12px 0",
                     cursor: "pointer",
-                    borderBottom: idx < INBOX_ITEMS.length - 1 ? "1px solid rgba(247, 243, 238, 0.09)" : "none",
+                    borderBottom: idx < INBOX_ITEMS.length - 1 ? `1px solid ${t.rowBorder}` : "none",
                   }}
                 >
                   <div
@@ -1104,14 +1132,16 @@ export default function DashboardPage() {
                       borderRadius: "99px",
                       flex: "none",
                       backgroundColor:
-                        item.c === "0" ? "rgba(247, 243, 238, 0.2)" : item.tone === "gold" ? "#C9943A" : "#D98A3E",
+                        item.c === "0"
+                          ? isDark ? "rgba(247, 243, 238, 0.2)" : "rgba(13, 43, 69, 0.2)"
+                          : item.tone === "gold" ? "#C9943A" : (isDark ? "#D98A3E" : "#B5651D"),
                     }}
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ font: "600 14px 'DM Sans', sans-serif", color: "#F7F3EE", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <div style={{ font: "600 14px 'DM Sans', sans-serif", color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {item.t}
                     </div>
-                    <div style={{ font: "400 11.5px 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.5)", marginTop: "2px" }}>
+                    <div style={{ font: "400 11.5px 'Inter', sans-serif", color: t.muted, marginTop: "2px" }}>
                       {item.note}
                     </div>
                   </div>
@@ -1119,7 +1149,7 @@ export default function DashboardPage() {
                     style={{
                       font: "700 13px 'JetBrains Mono', monospace",
                       flex: "none",
-                      color: item.c === "0" ? "rgba(247, 243, 238, 0.35)" : "#F7F3EE",
+                      color: item.c === "0" ? t.muted : t.text,
                     }}
                   >
                     {item.c}
@@ -1132,8 +1162,10 @@ export default function DashboardPage() {
           {/* Push Something, Now / Levers */}
           <div
             style={{
-              backgroundColor: "#0D2B45",
+              backgroundColor: t.cardBg,
               borderRadius: "20px",
+              boxShadow: t.cardShadow,
+              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
               padding: "20px",
               boxSizing: "border-box",
             }}
@@ -1150,7 +1182,8 @@ export default function DashboardPage() {
                     display: "flex",
                     alignItems: "center",
                     gap: "12px",
-                    backgroundColor: "rgba(247, 243, 238, 0.05)",
+                    backgroundColor: t.subtleBg,
+                    border: isDark ? "none" : `1px solid ${t.cardBorder}`,
                     borderRadius: "13px",
                     padding: "13px 15px",
                     cursor: "pointer",
@@ -1158,10 +1191,10 @@ export default function DashboardPage() {
                   }}
                 >
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ font: "600 14px 'DM Sans', sans-serif", color: "#F7F3EE" }}>
+                    <div style={{ font: "600 14px 'DM Sans', sans-serif", color: t.text }}>
                       {lever.t}
                     </div>
-                    <div style={{ font: "400 11.5px/1.45 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.5)", marginTop: "3px" }}>
+                    <div style={{ font: "400 11.5px/1.45 'Inter', sans-serif", color: t.muted, marginTop: "3px" }}>
                       {lever.note}
                     </div>
                   </div>
@@ -1174,8 +1207,10 @@ export default function DashboardPage() {
           {/* Country and Currency: Exact Claude Reference (lines 224-236) */}
           <div
             style={{
-              backgroundColor: "#0D2B45",
+              backgroundColor: t.cardBg,
               borderRadius: "20px",
+              boxShadow: t.cardShadow,
+              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
               borderLeft: "4px solid #B5651D",
               padding: "20px",
               boxSizing: "border-box",
@@ -1184,7 +1219,7 @@ export default function DashboardPage() {
             <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "6px" }}>
               COUNTRY AND CURRENCY
             </div>
-            <div style={{ font: "400 12.5px/1.5 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.6)", marginBottom: "14px" }}>
+            <div style={{ font: "400 12.5px/1.5 'Inter', sans-serif", color: t.subtext, marginBottom: "14px" }}>
               How someone registering from outside your three target markets is handled.
             </div>
             <div>
@@ -1195,7 +1230,7 @@ export default function DashboardPage() {
                     display: "flex",
                     gap: "11px",
                     padding: "10px 0",
-                    borderTop: "1px solid rgba(247, 243, 238, 0.09)",
+                    borderTop: `1px solid ${t.rowBorder}`,
                   }}
                 >
                   <div
@@ -1209,10 +1244,10 @@ export default function DashboardPage() {
                     }}
                   />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ font: "600 13.5px 'DM Sans', sans-serif", color: "#F7F3EE" }}>
+                    <div style={{ font: "600 13.5px 'DM Sans', sans-serif", color: t.text }}>
                       {m.k}
                     </div>
-                    <div style={{ font: "400 12px/1.5 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.6)", marginTop: "3px" }}>
+                    <div style={{ font: "400 12px/1.5 'Inter', sans-serif", color: t.subtext, marginTop: "3px" }}>
                       {m.v}
                     </div>
                   </div>
@@ -1224,8 +1259,10 @@ export default function DashboardPage() {
           {/* Retention Gate: Exact Claude Reference (lines 238-249) */}
           <div
             style={{
-              backgroundColor: "#0D2B45",
+              backgroundColor: t.cardBg,
               borderRadius: "20px",
+              boxShadow: t.cardShadow,
+              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
               padding: "20px",
               boxSizing: "border-box",
             }}
@@ -1233,16 +1270,16 @@ export default function DashboardPage() {
             <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "6px" }}>
               RETENTION GATE
             </div>
-            <div style={{ font: "400 12.5px/1.5 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.6)", marginBottom: "16px" }}>
+            <div style={{ font: "400 12.5px/1.5 'Inter', sans-serif", color: t.subtext, marginBottom: "16px" }}>
               Day-7 above 45% for four straight weeks is the signal to spend on ads. Not before.
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "14px" }}>
               {COHORTS.map((c) => (
                 <div key={c.w} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ width: "52px", flex: "none", font: "500 11px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.55)" }}>
+                  <span style={{ width: "52px", flex: "none", font: "500 11px 'JetBrains Mono', monospace", color: t.muted }}>
                     {c.w}
                   </span>
-                  <div style={{ flex: 1, height: "6px", borderRadius: "99px", backgroundColor: "rgba(247, 243, 238, 0.12)", overflow: "hidden" }}>
+                  <div style={{ flex: 1, height: "6px", borderRadius: "99px", backgroundColor: isDark ? "rgba(247, 243, 238, 0.12)" : "rgba(13, 43, 69, 0.08)", overflow: "hidden" }}>
                     <div
                       style={{
                         width: `${c.v}%`,
@@ -1251,7 +1288,7 @@ export default function DashboardPage() {
                       }}
                     />
                   </div>
-                  <span style={{ width: "44px", textAlign: "right", flex: "none", font: "700 12px 'JetBrains Mono', monospace", color: c.v >= 45 ? "#5FC48E" : "#D98A3E" }}>
+                  <span style={{ width: "44px", textAlign: "right", flex: "none", font: "700 12px 'JetBrains Mono', monospace", color: c.v >= 45 ? (isDark ? "#5FC48E" : "#1A7A4A") : (isDark ? "#D98A3E" : "#B5651D") }}>
                     {c.pct}
                   </span>
                 </div>
@@ -1261,11 +1298,11 @@ export default function DashboardPage() {
               style={{
                 padding: "13px 15px",
                 borderRadius: "13px",
-                backgroundColor: "rgba(181, 101, 29, 0.14)",
+                backgroundColor: isDark ? "rgba(181, 101, 29, 0.14)" : "rgba(181, 101, 29, 0.08)",
                 boxSizing: "border-box",
                 borderLeft: "3px solid #B5651D",
                 font: "400 12.5px/1.55 'Inter', sans-serif",
-                color: "rgba(247, 243, 238, 0.8)",
+                color: t.subtext,
               }}
             >
               Two of four weeks above the line. Hold ad spend one more week — if 08 Sep lands above 45%, scale Germany first.

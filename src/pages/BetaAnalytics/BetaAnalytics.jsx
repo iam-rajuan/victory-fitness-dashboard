@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { useTheme } from "../../context/ThemeContext";
 
 const BETA_HERO = [
-  { k: "CAPACITY", v: "300", c: "#F7F3EE" },
-  { k: "ENROLLED", v: "15", c: "#C9943A" },
-  { k: "STILL ACTIVE", v: "11", c: "#5FC48E" },
-  { k: "AVG DAYS LEFT", v: "12.4", c: "#F7F3EE" },
+  { k: "CAPACITY", v: "300", tone: "default" },
+  { k: "ENROLLED", v: "15", tone: "gold" },
+  { k: "STILL ACTIVE", v: "11", tone: "good" },
+  { k: "AVG DAYS LEFT", v: "12.4", tone: "default" },
 ];
 
 const BETA_STAGES = [
@@ -107,6 +107,24 @@ export default function BetaAnalytics() {
   const { isDark } = useTheme();
   const [bdone, setBdone] = useState([]);
 
+  const t = {
+    text: isDark ? "#F7F3EE" : "#0D2B45",
+    subtext: isDark ? "rgba(247, 243, 238, 0.65)" : "rgba(13, 43, 69, 0.72)",
+    muted: isDark ? "rgba(247, 243, 238, 0.45)" : "rgba(13, 43, 69, 0.52)",
+    cardBg: isDark ? "#0D2B45" : "#FFFFFF",
+    cardBorder: isDark ? "rgba(247, 243, 238, 0.1)" : "rgba(13, 43, 69, 0.08)",
+    cardShadow: isDark ? "none" : "0 4px 20px rgba(13, 43, 69, 0.04)",
+    subtleBg: isDark ? "rgba(247, 243, 238, 0.05)" : "#FAF7F2",
+    heroMetricBg: isDark ? "rgba(247, 243, 238, 0.06)" : "#FAF7F2",
+    rowBorder: isDark ? "rgba(247, 243, 238, 0.09)" : "rgba(13, 43, 69, 0.08)",
+  };
+
+  const getHeroColor = (tone) => {
+    if (tone === "gold") return "#C9943A";
+    if (tone === "good") return isDark ? "#5FC48E" : "#1A7A4A";
+    return t.text;
+  };
+
   const toggleDone = (index, title) => {
     setBdone((prev) => {
       const isDone = prev.includes(index);
@@ -121,14 +139,16 @@ export default function BetaAnalytics() {
   const fbCount = `${FEEDBACK.reduce((a, x) => a + x.c, 0)} responses · 5 themes`;
 
   return (
-    <div style={{ color: "#F7F3EE", fontFamily: "'DM Sans', system-ui, sans-serif" }} className="animate-in fade-in duration-200">
+    <div className={`animate-in fade-in duration-200 font-dmsans ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
       {/* Hero Banner: Exact Claude Reference (lines 258-278) */}
       <div
         style={{
-          background: "#0D2B45",
+          background: t.cardBg,
           borderRadius: "22px",
           padding: "26px 28px",
           marginBottom: "20px",
+          boxShadow: t.cardShadow,
+          border: isDark ? "none" : `1px solid ${t.cardBorder}`,
           position: "relative",
           overflow: "hidden",
         }}
@@ -149,25 +169,25 @@ export default function BetaAnalytics() {
               >
                 ONE-TIME PROGRAMME
               </span>
-              <span style={{ font: "500 11px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.55)" }}>
+              <span style={{ font: "500 11px 'JetBrains Mono', monospace", color: t.muted }}>
                 PHASE 1 · CLOSES 30 SEP
               </span>
             </div>
-            <h1 style={{ margin: "0 0 10px", font: "600 38px/1.05 'Clash Display', 'DM Sans', sans-serif", color: "#F7F3EE", letterSpacing: "-.015em" }}>
+            <h1 style={{ margin: "0 0 10px", font: "600 38px/1.05 'Clash Display', 'DM Sans', sans-serif", color: t.text, letterSpacing: "-.015em" }}>
               21-Day Gold Beta
             </h1>
-            <p style={{ margin: 0, maxWidth: "600px", font: "400 15px/1.6 'Inter', sans-serif", color: "rgba(247,243,238,.65)", textWrap: "pretty" }}>
+            <p style={{ margin: 0, maxWidth: "600px", font: "400 15px/1.6 'Inter', sans-serif", color: t.subtext, textWrap: "pretty" }}>
               Full Gold, free, for 21 days. No card, no auto-renewal. The purpose is not conversion — it is written feedback you can build from, and a warm list to sell to when the fixes ship.
             </p>
           </div>
 
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             {BETA_HERO.map((h) => (
-              <div key={h.k} style={{ width: "126px", background: "rgba(247,243,238,.06)", borderRadius: "14px", padding: "14px 15px", boxSizing: "border-box" }}>
-                <div style={{ font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: ".12em", color: "rgba(247,243,238,.5)", marginBottom: "6px" }}>
+              <div key={h.k} style={{ width: "126px", background: t.heroMetricBg, border: isDark ? "none" : `1px solid ${t.cardBorder}`, borderRadius: "14px", padding: "14px 15px", boxSizing: "border-box" }}>
+                <div style={{ font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: ".12em", color: t.muted, marginBottom: "6px" }}>
                   {h.k}
                 </div>
-                <div style={{ font: "700 28px/1 'JetBrains Mono', monospace", color: h.c }}>
+                <div style={{ font: "700 28px/1 'JetBrains Mono', monospace", color: getHeroColor(h.tone) }}>
                   {h.v}
                 </div>
               </div>
@@ -184,25 +204,27 @@ export default function BetaAnalytics() {
             style={{
               flex: "1 1 200px",
               minWidth: "190px",
-              background: "#0D2B45",
+              background: t.cardBg,
               borderRadius: "18px",
+              boxShadow: t.cardShadow,
+              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
               borderLeft: `4px solid ${b.border}`,
               padding: "17px 18px",
               boxSizing: "border-box",
             }}
           >
-            <div style={{ font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: ".13em", color: "rgba(247,243,238,.5)", marginBottom: "7px" }}>
+            <div style={{ font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: ".13em", color: t.muted, marginBottom: "7px" }}>
               {b.k}
             </div>
             <div style={{ display: "flex", alignItems: "baseline", gap: "7px" }}>
-              <span style={{ font: "700 30px/1 'JetBrains Mono', monospace", color: b.c }}>
+              <span style={{ font: "700 30px/1 'JetBrains Mono', monospace", color: b.c === "#5FC48E" ? (isDark ? "#5FC48E" : "#1A7A4A") : b.c === "#D98A3E" ? (isDark ? "#D98A3E" : "#B5651D") : "#C9943A" }}>
                 {b.v}
               </span>
-              <span style={{ font: "500 12px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.45)" }}>
+              <span style={{ font: "500 12px 'JetBrains Mono', monospace", color: t.muted }}>
                 {b.pct}
               </span>
             </div>
-            <div style={{ font: "400 12px/1.45 'Inter', sans-serif", color: "rgba(247,243,238,.55)", marginTop: "7px" }}>
+            <div style={{ font: "400 12px/1.45 'Inter', sans-serif", color: t.subtext, marginTop: "7px" }}>
               {b.note}
             </div>
           </div>
@@ -218,8 +240,10 @@ export default function BetaAnalytics() {
           {/* THE POINT OF THE PROGRAMME / Feedback inbox: Exact 1:1 Claude Reference */}
           <div
             style={{
-              background: "#0D2B45",
+              background: t.cardBg,
               borderRadius: "20px",
+              boxShadow: t.cardShadow,
+              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
               borderLeft: "4px solid #B5651D",
               padding: "22px",
               marginBottom: "16px",
@@ -231,7 +255,7 @@ export default function BetaAnalytics() {
                 <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "5px" }}>
                   THE POINT OF THE PROGRAMME
                 </div>
-                <h3 style={{ margin: 0, font: "600 21px 'Clash Display', 'DM Sans', sans-serif", color: "#F7F3EE" }}>
+                <h3 style={{ margin: 0, font: "600 21px 'Clash Display', 'DM Sans', sans-serif", color: t.text }}>
                   Feedback inbox
                 </h3>
               </div>
@@ -239,7 +263,7 @@ export default function BetaAnalytics() {
                 {fbCount}
               </span>
             </div>
-            <p style={{ margin: "0 0 16px", font: "400 13px/1.55 'Inter', sans-serif", color: "rgba(247,243,238,.55)" }}>
+            <p style={{ margin: "0 0 16px", font: "400 13px/1.55 'Inter', sans-serif", color: t.subtext }}>
               Grouped by theme, not by tester. Size of the group is how many people said it.
             </p>
 
@@ -247,8 +271,9 @@ export default function BetaAnalytics() {
               <div
                 key={fb.t}
                 style={{
-                  background: "rgba(247,243,238,.05)",
+                  background: t.subtleBg,
                   borderRadius: "15px",
+                  border: isDark ? "none" : `1px solid ${t.cardBorder}`,
                   padding: "16px 17px",
                   marginBottom: i < FEEDBACK.length - 1 ? "9px" : 0,
                   boxSizing: "border-box",
@@ -267,21 +292,21 @@ export default function BetaAnalytics() {
                   >
                     {fb.c}×
                   </span>
-                  <span style={{ font: "600 15.5px 'DM Sans', sans-serif", color: "#F7F3EE" }}>
+                  <span style={{ font: "600 15.5px 'DM Sans', sans-serif", color: t.text }}>
                     {fb.t}
                   </span>
                   <span
                     style={{
                       font: "700 9.5px 'DM Sans', sans-serif",
                       letterSpacing: ".11em",
-                      color: fb.tone === "good" ? "#5FC48E" : fb.tone === "warn" ? "#C9943A" : "#D98A3E",
+                      color: fb.tone === "good" ? (isDark ? "#5FC48E" : "#1A7A4A") : fb.tone === "warn" ? "#C9943A" : (isDark ? "#D98A3E" : "#B5651D"),
                     }}
                   >
                     {fb.status}
                   </span>
                 </div>
 
-                <p style={{ margin: "0 0 10px", font: "400 13.5px/1.55 'Inter', sans-serif", color: "rgba(247,243,238,.7)", textWrap: "pretty" }}>
+                <p style={{ margin: "0 0 10px", font: "400 13.5px/1.55 'Inter', sans-serif", color: t.subtext, textWrap: "pretty" }}>
                   “{fb.quote}”
                 </p>
 
@@ -304,7 +329,7 @@ export default function BetaAnalytics() {
                   >
                     {fb.cta}
                   </div>
-                  <span style={{ font: "400 11.5px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.45)" }}>
+                  <span style={{ font: "400 11.5px 'JetBrains Mono', monospace", color: t.muted }}>
                     {fb.who}
                   </span>
                 </div>
@@ -315,8 +340,10 @@ export default function BetaAnalytics() {
           {/* CHECKPOINT ANALYTICS / Where testers fall away: Exact Claude Reference (lines 321-335) */}
           <div
             style={{
-              background: "#0D2B45",
+              background: t.cardBg,
               borderRadius: "20px",
+              boxShadow: t.cardShadow,
+              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
               padding: "22px",
               boxSizing: "border-box",
             }}
@@ -324,10 +351,10 @@ export default function BetaAnalytics() {
             <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "5px" }}>
               CHECKPOINT ANALYTICS
             </div>
-            <h3 style={{ margin: "0 0 4px", font: "600 21px 'Clash Display', 'DM Sans', sans-serif", color: "#F7F3EE" }}>
+            <h3 style={{ margin: "0 0 4px", font: "600 21px 'Clash Display', 'DM Sans', sans-serif", color: t.text }}>
               Where testers fall away
             </h3>
-            <p style={{ margin: "0 0 18px", font: "400 13px/1.55 'Inter', sans-serif", color: "rgba(247,243,238,.55)" }}>
+            <p style={{ margin: "0 0 18px", font: "400 13px/1.55 'Inter', sans-serif", color: t.subtext }}>
               Each bar is testers still active on that day. The drop between two days is what to fix.
             </p>
 
@@ -337,7 +364,7 @@ export default function BetaAnalytics() {
                   <span
                     style={{
                       font: "700 12px 'JetBrains Mono', monospace",
-                      color: d.pct >= 70 ? "#5FC48E" : d.pct >= 50 ? "#C9943A" : "#D98A3E",
+                      color: d.pct >= 70 ? (isDark ? "#5FC48E" : "#1A7A4A") : d.pct >= 50 ? "#C9943A" : (isDark ? "#D98A3E" : "#B5651D"),
                     }}
                   >
                     {d.v}
@@ -351,7 +378,7 @@ export default function BetaAnalytics() {
                       transition: "height 0.3s ease",
                     }}
                   />
-                  <span style={{ font: "500 10.5px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.5)" }}>
+                  <span style={{ font: "500 10.5px 'JetBrains Mono', monospace", color: t.muted }}>
                     {d.d}
                   </span>
                 </div>
@@ -362,11 +389,11 @@ export default function BetaAnalytics() {
               style={{
                 padding: "13px 15px",
                 borderRadius: "13px",
-                background: "rgba(181,101,29,.14)",
+                background: isDark ? "rgba(181,101,29,.14)" : "rgba(181,101,29,.08)",
                 boxSizing: "border-box",
                 borderLeft: "3px solid #B5651D",
                 font: "400 12.5px/1.55 'Inter', sans-serif",
-                color: "rgba(247,243,238,.8)",
+                color: t.subtext,
               }}
             >
               The cliff is between day 5 and day 10 — four of fifteen stop there, and it matches the buffering complaint from Ghana and India. Fix video on mobile data before you run this programme again.
@@ -380,8 +407,10 @@ export default function BetaAnalytics() {
           {/* DO THIS TODAY: Exact Claude Reference (lines 340-352) */}
           <div
             style={{
-              background: "#0D2B45",
+              background: t.cardBg,
               borderRadius: "20px",
+              boxShadow: t.cardShadow,
+              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
               borderLeft: "4px solid #B5651D",
               padding: "20px",
               boxSizing: "border-box",
@@ -403,7 +432,7 @@ export default function BetaAnalytics() {
                     gap: "12px",
                     padding: "12px 0",
                     cursor: "pointer",
-                    borderBottom: i < BETA_ACTIONS.length - 1 ? "1px solid rgba(247,243,238,.09)" : "none",
+                    borderBottom: i < BETA_ACTIONS.length - 1 ? `1px solid ${t.rowBorder}` : "none",
                     opacity: on ? 0.45 : 1,
                     transition: "opacity 0.15s ease",
                   }}
@@ -427,7 +456,8 @@ export default function BetaAnalytics() {
                             height: "20px",
                             borderRadius: "6px",
                             boxSizing: "border-box",
-                            border: "1.5px solid rgba(201,148,58,.6)",
+                            border: isDark ? "1.5px solid rgba(201,148,58,.6)" : "1.5px solid rgba(201,148,58,.8)",
+                            background: isDark ? "transparent" : "#FFF9F0",
                             flex: "none",
                             marginTop: "2px",
                           }
@@ -444,18 +474,18 @@ export default function BetaAnalytics() {
                     <div
                       style={{
                         font: "600 14px 'DM Sans', sans-serif",
-                        color: "#F7F3EE",
+                        color: t.text,
                         textDecoration: on ? "line-through" : "none",
                       }}
                     >
                       {a.t}
                     </div>
-                    <div style={{ font: "400 12px/1.45 'Inter', sans-serif", color: "rgba(247,243,238,.55)", marginTop: "3px" }}>
+                    <div style={{ font: "400 12px/1.45 'Inter', sans-serif", color: t.muted, marginTop: "3px" }}>
                       {a.note}
                     </div>
                   </div>
 
-                  <span style={{ font: "700 11.5px 'JetBrains Mono', monospace", color: "#5FC48E", flex: "none" }}>
+                  <span style={{ font: "700 11.5px 'JetBrains Mono', monospace", color: isDark ? "#5FC48E" : "#1A7A4A", flex: "none" }}>
                     {a.n}
                   </span>
                 </div>
@@ -466,8 +496,10 @@ export default function BetaAnalytics() {
           {/* AFTER DAY 21: Exact Claude Reference (lines 354-370) */}
           <div
             style={{
-              background: "#0D2B45",
+              background: t.cardBg,
               borderRadius: "20px",
+              boxShadow: t.cardShadow,
+              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
               padding: "20px",
               boxSizing: "border-box",
             }}
@@ -475,23 +507,23 @@ export default function BetaAnalytics() {
             <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "5px" }}>
               AFTER DAY 21
             </div>
-            <h4 style={{ margin: "0 0 6px", font: "600 18px 'Clash Display', 'DM Sans', sans-serif", color: "#F7F3EE" }}>
+            <h4 style={{ margin: "0 0 6px", font: "600 18px 'Clash Display', 'DM Sans', sans-serif", color: t.text }}>
               The re-marketing sequence
             </h4>
-            <p style={{ margin: "0 0 16px", font: "400 12.5px/1.55 'Inter', sans-serif", color: "rgba(247,243,238,.6)" }}>
+            <p style={{ margin: "0 0 16px", font: "400 12.5px/1.55 'Inter', sans-serif", color: t.subtext }}>
               They tried Gold free and told you what was wrong. You fix it, then you go back and say so. That second message is the one that sells.
             </p>
 
             {SEQUENCE.map((q) => (
-              <div key={q.when} style={{ display: "flex", gap: "12px", padding: "12px 0", borderTop: "1px solid rgba(247,243,238,.1)" }}>
+              <div key={q.when} style={{ display: "flex", gap: "12px", padding: "12px 0", borderTop: `1px solid ${t.rowBorder}` }}>
                 <span style={{ width: "52px", flex: "none", font: "700 11px 'JetBrains Mono', monospace", color: "#C9943A" }}>
                   {q.when}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ font: "600 13.5px/1.35 'DM Sans', sans-serif", color: "#F7F3EE" }}>
+                  <div style={{ font: "600 13.5px/1.35 'DM Sans', sans-serif", color: t.text }}>
                     {q.t}
                   </div>
-                  <div style={{ font: "400 11.5px/1.45 'Inter', sans-serif", color: "rgba(247,243,238,.5)", marginTop: "3px" }}>
+                  <div style={{ font: "400 11.5px/1.45 'Inter', sans-serif", color: t.muted, marginTop: "3px" }}>
                     {q.note}
                   </div>
                 </div>
@@ -500,7 +532,7 @@ export default function BetaAnalytics() {
                     font: "700 9.5px 'DM Sans', sans-serif",
                     letterSpacing: ".11em",
                     flex: "none",
-                    color: q.tone === "good" ? "#5FC48E" : q.tone === "warn" ? "#C9943A" : "#D98A3E",
+                    color: q.tone === "good" ? (isDark ? "#5FC48E" : "#1A7A4A") : q.tone === "warn" ? "#C9943A" : (isDark ? "#D98A3E" : "#B5651D"),
                   }}
                 >
                   {q.state}
@@ -531,8 +563,10 @@ export default function BetaAnalytics() {
           {/* TESTERS: Exact Claude Reference (lines 371-388) */}
           <div
             style={{
-              background: "#0D2B45",
+              background: t.cardBg,
               borderRadius: "20px",
+              boxShadow: t.cardShadow,
+              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
               padding: "20px",
               boxSizing: "border-box",
             }}
@@ -541,20 +575,20 @@ export default function BetaAnalytics() {
               <span style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A" }}>
                 TESTERS
               </span>
-              <span style={{ font: "700 11px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.45)" }}>
+              <span style={{ font: "700 11px 'JetBrains Mono', monospace", color: t.muted }}>
                 15 ENROLLED · 6 COUNTRIES
               </span>
             </div>
 
-            {TESTERS.map((t, idx) => (
+            {TESTERS.map((tItem, idx) => (
               <div
-                key={t.i}
+                key={tItem.i}
                 style={{
                   display: "flex",
                   alignItems: "center",
                   gap: "11px",
                   padding: "11px 0",
-                  borderBottom: idx < TESTERS.length - 1 ? "1px solid rgba(247,243,238,.09)" : "none",
+                  borderBottom: idx < TESTERS.length - 1 ? `1px solid ${t.rowBorder}` : "none",
                 }}
               >
                 <div
@@ -562,7 +596,7 @@ export default function BetaAnalytics() {
                     width: "32px",
                     height: "32px",
                     borderRadius: "99px",
-                    background: "rgba(247,243,238,.12)",
+                    background: isDark ? "rgba(247,243,238,.12)" : "rgba(13,43,69,.08)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -570,15 +604,15 @@ export default function BetaAnalytics() {
                   }}
                 >
                   <span style={{ font: "700 11.5px 'DM Sans', sans-serif", color: "#C9943A" }}>
-                    {t.i}
+                    {tItem.i}
                   </span>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ font: "600 13.5px 'DM Sans', sans-serif", color: "#F7F3EE" }}>
-                    {t.n}
+                  <div style={{ font: "600 13.5px 'DM Sans', sans-serif", color: t.text }}>
+                    {tItem.n}
                   </div>
-                  <div style={{ font: "400 11px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.45)", marginTop: "2px" }}>
-                    {t.meta}
+                  <div style={{ font: "400 11px 'JetBrains Mono', monospace", color: t.muted, marginTop: "2px" }}>
+                    {tItem.meta}
                   </div>
                 </div>
                 <span
@@ -586,10 +620,10 @@ export default function BetaAnalytics() {
                     font: "700 9.5px 'DM Sans', sans-serif",
                     letterSpacing: ".11em",
                     flex: "none",
-                    color: t.tone === "good" ? "#5FC48E" : t.tone === "warn" ? "#C9943A" : "#D98A3E",
+                    color: tItem.tone === "good" ? (isDark ? "#5FC48E" : "#1A7A4A") : tItem.tone === "warn" ? "#C9943A" : (isDark ? "#D98A3E" : "#B5651D"),
                   }}
                 >
-                  {t.state}
+                  {tItem.state}
                 </span>
               </div>
             ))}

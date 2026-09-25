@@ -85,6 +85,7 @@ export default function ClaudeAdminTable({
   pageSecondary = "Export CSV",
   onPrimary,
   onSecondary,
+  extraHeaderActions,
   pageStats = [],
   pageAdvice,
   pageAdviceDone,
@@ -103,6 +104,23 @@ export default function ClaudeAdminTable({
   const [adviceAcknowledged, setAdviceAcknowledged] = useState(false);
   const { openDrawer, showToast } = useAdminDrawer();
   const { isDark } = useTheme();
+
+  const t = {
+    text: isDark ? "#F7F3EE" : "#0D2B45",
+    subtext: isDark ? "rgba(247, 243, 238, 0.65)" : "rgba(13, 43, 69, 0.72)",
+    muted: isDark ? "rgba(247, 243, 238, 0.45)" : "rgba(13, 43, 69, 0.52)",
+    cardBg: isDark ? "#0D2B45" : "#FFFFFF",
+    cardBorder: isDark ? "rgba(247, 243, 238, 0.1)" : "rgba(13, 43, 69, 0.08)",
+    cardShadow: isDark ? "none" : "0 4px 20px rgba(13, 43, 69, 0.04)",
+    subtleBg: isDark ? "rgba(247, 243, 238, 0.04)" : "#F5EFEB",
+    tableHeaderBg: isDark ? "rgba(247, 243, 238, 0.04)" : "#F2EDE4",
+    borderSubtle: isDark ? "rgba(247, 243, 238, 0.08)" : "rgba(13, 43, 69, 0.08)",
+    borderMedium: isDark ? "rgba(247, 243, 238, 0.12)" : "rgba(13, 43, 69, 0.12)",
+    filterBorder: isDark ? "rgba(247, 243, 238, 0.2)" : "rgba(13, 43, 69, 0.16)",
+    filterInactiveText: isDark ? "rgba(247, 243, 238, 0.65)" : "rgba(13, 43, 69, 0.7)",
+    secondaryBtnBorder: isDark ? "rgba(247, 243, 238, 0.22)" : "rgba(13, 43, 69, 0.18)",
+    secondaryBtnText: isDark ? "#F7F3EE" : "#0D2B45",
+  };
 
   // Normalize rows to standard format { a, b, c, d, e, tone, id, raw }
   const normalizedRows = useMemo(() => {
@@ -345,7 +363,7 @@ export default function ClaudeAdminTable({
   }, [cols]);
 
   return (
-    <div style={{ fontFamily: "'DM Sans', system-ui, sans-serif", color: "#F7F3EE" }} className="animate-in fade-in duration-200">
+    <div style={{ fontFamily: "'DM Sans', system-ui, sans-serif", color: t.text }} className="animate-in fade-in duration-200">
       {/* Page Header: Title, Subtitle, and Primary/Secondary Action Buttons (lines 395-405) */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "26px", flexWrap: "wrap", marginBottom: "20px" }}>
         <div>
@@ -354,35 +372,39 @@ export default function ClaudeAdminTable({
               {pageKicker}
             </div>
           )}
-          <h1 style={{ margin: "0 0 8px", font: "600 34px/1.06 'Clash Display', 'DM Sans', sans-serif", color: "#F7F3EE", letterSpacing: "-.015em" }}>
+          <h1 style={{ margin: "0 0 8px", font: "600 34px/1.06 'Clash Display', 'DM Sans', sans-serif", color: t.text, letterSpacing: "-.015em" }}>
             {pageTitle}
           </h1>
           {pageSub && (
-            <p style={{ margin: 0, maxWidth: "600px", font: "400 14.5px/1.6 'Inter', sans-serif", color: "rgba(247,243,238,.6)", textWrap: "pretty" }}>
+            <p style={{ margin: 0, maxWidth: "600px", font: "400 14.5px/1.6 'Inter', sans-serif", color: t.subtext, textWrap: "pretty" }}>
               {pageSub}
             </p>
           )}
         </div>
 
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          <div
-            onClick={handleSecondaryClick}
-            style={{
-              height: "44px",
-              padding: "0 18px",
-              borderRadius: "12px",
-              boxSizing: "border-box",
-              border: "1.5px solid rgba(247,243,238,.22)",
-              color: "#F7F3EE",
-              font: "700 13.5px 'DM Sans', sans-serif",
-              display: "flex",
-              alignItems: "center",
-              cursor: "pointer",
-              userSelect: "none",
-            }}
-          >
-            {pageSecondary}
-          </div>
+          {extraHeaderActions}
+          {pageSecondary && (
+            <div
+              onClick={handleSecondaryClick}
+              style={{
+                height: "44px",
+                padding: "0 18px",
+                borderRadius: "12px",
+                boxSizing: "border-box",
+                border: `1.5px solid ${t.secondaryBtnBorder}`,
+                color: t.secondaryBtnText,
+                font: "700 13.5px 'DM Sans', sans-serif",
+                display: "flex",
+                alignItems: "center",
+                cursor: "pointer",
+                userSelect: "none",
+                background: isDark ? "transparent" : "#FFFFFF",
+              }}
+            >
+              {pageSecondary}
+            </div>
+          )}
           <div
             onClick={handlePrimaryClick}
             style={{
@@ -419,20 +441,22 @@ export default function ClaudeAdminTable({
                 style={{
                   flex: "1 1 200px",
                   minWidth: "190px",
-                  background: "#0D2B45",
+                  background: t.cardBg,
                   borderRadius: "18px",
                   borderLeft: "4px solid #C9943A",
+                  border: `1px solid ${t.cardBorder}`,
+                  boxShadow: t.cardShadow,
                   padding: "17px 18px",
                   boxSizing: "border-box",
                 }}
               >
-                <div style={{ font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: ".14em", color: "rgba(247,243,238,.5)", marginBottom: "8px" }}>
+                <div style={{ font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: ".14em", color: t.muted, marginBottom: "8px" }}>
                   {label}
                 </div>
-                <div style={{ font: "700 27px/1 'JetBrains Mono', monospace", color: "#F7F3EE" }}>
+                <div style={{ font: "700 27px/1 'JetBrains Mono', monospace", color: t.text }}>
                   {val}
                 </div>
-                <div style={{ font: "400 12px/1.45 'Inter', sans-serif", color: "rgba(247,243,238,.55)", marginTop: "7px" }}>
+                <div style={{ font: "400 12px/1.45 'Inter', sans-serif", color: t.subtext, marginTop: "7px" }}>
                   {note}
                 </div>
               </div>
@@ -445,9 +469,11 @@ export default function ClaudeAdminTable({
       {pageAdvice && (
         <div
           style={{
-            background: "#0D2B45",
+            background: t.cardBg,
             borderRadius: "20px",
             borderLeft: "4px solid #B5651D",
+            border: `1px solid ${t.cardBorder}`,
+            boxShadow: t.cardShadow,
             padding: "18px 20px",
             marginBottom: "18px",
             display: "flex",
@@ -461,7 +487,7 @@ export default function ClaudeAdminTable({
             <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".14em", color: "#C9943A", marginBottom: "5px" }}>
               WHAT TO DO ON THIS PAGE
             </div>
-            <div style={{ font: "400 14px/1.55 'Inter', sans-serif", color: "rgba(247,243,238,.8)", textWrap: "pretty" }}>
+            <div style={{ font: "400 14px/1.55 'Inter', sans-serif", color: isDark ? "rgba(247,243,238,.8)" : "rgba(13,43,69,.8)", textWrap: "pretty" }}>
               {pageAdvice}
             </div>
           </div>
@@ -495,7 +521,7 @@ export default function ClaudeAdminTable({
             <span style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".15em", color: "#C9943A" }}>
               MOST JOINED THIS WEEK · WHAT MEMBERS SEE ON THE CHALLENGE SCREEN
             </span>
-            <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.45)" }}>
+            <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: t.muted }}>
               mirrors the mobile rail
             </span>
           </div>
@@ -506,19 +532,21 @@ export default function ClaudeAdminTable({
                 style={{
                   width: "210px",
                   flex: "none",
-                  background: "#0D2B45",
+                  background: t.cardBg,
                   borderRadius: "16px",
                   borderLeft: "3px solid #B5651D",
+                  border: `1px solid ${t.cardBorder}`,
+                  boxShadow: t.cardShadow,
                   padding: "15px 16px",
                   boxSizing: "border-box",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "8px", marginBottom: "7px" }}>
-                  <span style={{ font: "700 20px 'JetBrains Mono', monospace", color: "#F7F3EE" }}>{c.d}</span>
+                  <span style={{ font: "700 20px 'JetBrains Mono', monospace", color: t.text }}>{c.d}</span>
                   <span style={{ font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: ".1em", color: "#C9943A" }}>{c.type}</span>
                 </div>
-                <div style={{ font: "600 15px/1.3 'DM Sans', sans-serif", color: "#F7F3EE" }}>{c.n}</div>
-                <div style={{ font: "400 11.5px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.5)", marginTop: "5px" }}>{c.joined}</div>
+                <div style={{ font: "600 15px/1.3 'DM Sans', sans-serif", color: t.text }}>{c.n}</div>
+                <div style={{ font: "400 11.5px 'JetBrains Mono', monospace", color: t.muted, marginTop: "5px" }}>{c.joined}</div>
                 <div style={{ display: "flex", gap: "7px", marginTop: "12px" }}>
                   <div
                     onClick={() => (c.onEdit ? c.onEdit() : openDrawer("challenge"))}
@@ -585,7 +613,7 @@ export default function ClaudeAdminTable({
                   font: `${on ? "700" : "500"} 12.5px 'DM Sans', sans-serif`,
                   ...(on
                     ? { background: "#C9943A", color: "#0D0D0D" }
-                    : { boxSizing: "border-box", border: "1px solid rgba(247,243,238,.2)", color: "rgba(247,243,238,.65)" }),
+                    : { boxSizing: "border-box", border: `1px solid ${t.filterBorder}`, color: t.filterInactiveText, background: isDark ? "transparent" : "#FAF7F2" }),
                   userSelect: "none",
                 }}
               >
@@ -602,8 +630,10 @@ export default function ClaudeAdminTable({
       {/* Canonical Table: Exact 1:1 Grid Layout (lines 455-477 & 1556-1558 & 1933-1948) */}
       <div
         style={{
-          background: "#0D2B45",
+          background: t.cardBg,
           borderRadius: "20px",
+          border: `1px solid ${t.cardBorder}`,
+          boxShadow: t.cardShadow,
           overflow: "hidden",
         }}
       >
@@ -615,8 +645,8 @@ export default function ClaudeAdminTable({
             gap: "12px",
             alignItems: "start",
             padding: "13px 20px",
-            borderBottom: "1px solid rgba(247,243,238,.12)",
-            background: "rgba(247,243,238,.04)",
+            borderBottom: `1px solid ${t.borderMedium}`,
+            background: t.tableHeaderBg,
           }}
         >
           {headerCols.map((name, i) => (
@@ -626,7 +656,7 @@ export default function ClaudeAdminTable({
                 minWidth: 0,
                 font: "500 9.5px 'DM Sans', sans-serif",
                 letterSpacing: ".13em",
-                color: "rgba(247,243,238,.5)",
+                color: t.muted,
                 textAlign: i === 3 ? "right" : "left",
               }}
             >
@@ -640,7 +670,7 @@ export default function ClaudeAdminTable({
         {isLoading ? (
           <div style={{ padding: "40px 20px", textAlign: "center" }}>
             <div className="w-7 h-7 border-2 border-[#C9943A] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <div style={{ font: "400 12px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.5)" }}>
+            <div style={{ font: "400 12px 'JetBrains Mono', monospace", color: t.muted }}>
               Loading records...
             </div>
           </div>
@@ -650,7 +680,7 @@ export default function ClaudeAdminTable({
               padding: "34px 20px",
               textAlign: "center",
               font: "400 13.5px 'Inter', sans-serif",
-              color: "rgba(247,243,238,.5)",
+              color: t.muted,
             }}
           >
             Nothing matches this filter. Good news, usually.
@@ -659,7 +689,7 @@ export default function ClaudeAdminTable({
           <div>
             {filteredRows.map((r, i, arr) => {
               const selected = selectedId === r.id;
-              const ink = r.tone === "good" ? "#5FC48E" : r.tone === "warn" ? "#C9943A" : "#D98A3E";
+              const ink = r.tone === "good" ? "#1A7A4A" : r.tone === "warn" ? "#C9943A" : "#B5651D";
               return (
                 <div
                   key={r.id}
@@ -674,23 +704,23 @@ export default function ClaudeAdminTable({
                     alignItems: "start",
                     padding: "15px 20px",
                     cursor: "pointer",
-                    borderBottom: i < arr.length - 1 ? "1px solid rgba(247,243,238,.08)" : "none",
+                    borderBottom: i < arr.length - 1 ? `1px solid ${t.borderSubtle}` : "none",
                     ...(selected
-                      ? { background: "rgba(201,148,58,.13)", boxShadow: "inset 3px 0 0 #C9943A" }
+                      ? { background: isDark ? "rgba(201,148,58,.13)" : "rgba(201,148,58,.16)", boxShadow: "inset 3px 0 0 #C9943A" }
                       : {}),
                     transition: "background 0.12s ease",
                   }}
                 >
                   {/* Column 0: r.a & r.b */}
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ font: "600 14.5px/1.3 'DM Sans', sans-serif", color: "#F7F3EE", overflowWrap: "break-word" }}>
+                    <div style={{ font: "600 14.5px/1.3 'DM Sans', sans-serif", color: t.text, overflowWrap: "break-word" }}>
                       {r.a}
                     </div>
                     {r.b && (
                       <div
                         style={{
                           font: "500 11.5px/1.35 'JetBrains Mono', monospace",
-                          color: "rgba(247,243,238,.5)",
+                          color: t.muted,
                           marginTop: "4px",
                           overflowWrap: "break-word",
                         }}
@@ -705,7 +735,7 @@ export default function ClaudeAdminTable({
                     style={{
                       minWidth: 0,
                       font: "500 13px/1.35 'DM Sans', sans-serif",
-                      color: "rgba(247,243,238,.8)",
+                      color: t.subtext,
                       overflowWrap: "break-word",
                     }}
                   >
@@ -717,7 +747,7 @@ export default function ClaudeAdminTable({
                     style={{
                       minWidth: 0,
                       font: "500 12px/1.35 'JetBrains Mono', monospace",
-                      color: "rgba(247,243,238,.6)",
+                      color: t.subtext,
                       overflowWrap: "break-word",
                     }}
                   >
@@ -757,6 +787,7 @@ export default function ClaudeAdminTable({
                         cursor: "pointer",
                         whiteSpace: "nowrap",
                         userSelect: "none",
+                        background: isDark ? "transparent" : "#FAF7F2",
                       }}
                     >
                       Edit
@@ -777,6 +808,7 @@ export default function ClaudeAdminTable({
                         cursor: "pointer",
                         flex: "none",
                         userSelect: "none",
+                        background: isDark ? "transparent" : "#FAF7F2",
                       }}
                     >
                       ×
