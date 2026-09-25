@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import {
   IoSunnyOutline,
@@ -83,7 +83,7 @@ export default function TopBar({ toggleSidebar, isSidebarCollapsed, toggleSideba
 
   return (
     <header
-      className={`sticky top-0 z-30 shrink-0 h-16 border-b transition-colors duration-250 backdrop-blur-md px-4 sm:px-6 lg:px-8 flex items-center justify-between ${
+      className={`sticky top-0 z-30 shrink-0 h-16 border-b transition-colors duration-150 backdrop-blur-md px-4 sm:px-6 lg:px-8 flex items-center justify-between ${
         isDark
           ? "bg-[#0A0A0A]/85 border-[#F7F3EE]/10 text-[#F7F3EE]"
           : "bg-[#FFFFFF]/90 border-[rgba(13,43,69,0.08)] text-[#0D2B45] shadow-[0_2px_12px_rgba(13,43,69,0.03)]"
@@ -110,7 +110,7 @@ export default function TopBar({ toggleSidebar, isSidebarCollapsed, toggleSideba
           <button
             type="button"
             onClick={toggleSidebarCollapse}
-            className={`hidden lg:flex items-center justify-center h-9 w-9 rounded-xl border transition-all cursor-pointer ${
+            className={`hidden lg:flex items-center justify-center h-9 w-9 rounded-xl border transition-colors duration-150 cursor-pointer ${
               isDark
                 ? "text-[#F7F3EE]/70 hover:text-[#C9943A] bg-[#0D0D0D] border-[#F7F3EE]/15 hover:border-[#C9943A]/50"
                 : "text-[#0D2B45]/70 hover:text-[#C9943A] bg-[#F7F3EE] border-[rgba(13,43,69,0.12)] hover:border-[#C9943A]"
@@ -146,24 +146,24 @@ export default function TopBar({ toggleSidebar, isSidebarCollapsed, toggleSideba
       </div>
 
       {/* Right side: Luxury Theme Switcher + Notifications + Profile */}
-      <div className="flex items-center gap-2.5 sm:gap-4">
+      <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
         {/* Luxury Theme Mode Switcher Pill */}
         <button
           type="button"
           onClick={toggleTheme}
           aria-label={`Switch to ${isDark ? "White" : "Dark"} Mode`}
-          className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border transition-all duration-200 cursor-pointer select-none group shadow-sm ${
+          className={`relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border transition-colors duration-150 cursor-pointer select-none group shadow-sm shrink-0 ${
             isDark
               ? "bg-[#0D0D0D] border-[#F7F3EE]/15 hover:border-[#C9943A]/50 text-[#F7F3EE]"
               : "bg-[#F7F3EE] border-[rgba(13,43,69,0.12)] hover:border-[#C9943A] text-[#0D2B45]"
           }`}
         >
-          {/* Animated Icons Container */}
-          <div className="flex items-center gap-1 text-xs">
+          {/* Icons Container */}
+          <div className="flex items-center gap-1 text-xs shrink-0">
             <div
-              className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+              className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors duration-150 shrink-0 ${
                 !isDark
-                  ? "bg-[#C9943A] text-[#0D0D0D] shadow-sm scale-105"
+                  ? "bg-[#C9943A] text-[#0D0D0D] shadow-sm"
                   : "text-[#F7F3EE]/40 hover:text-[#F7F3EE]"
               }`}
             >
@@ -171,9 +171,9 @@ export default function TopBar({ toggleSidebar, isSidebarCollapsed, toggleSideba
             </div>
 
             <div
-              className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+              className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors duration-150 shrink-0 ${
                 isDark
-                  ? "bg-[#C9943A] text-[#0D0D0D] shadow-sm scale-105"
+                  ? "bg-[#C9943A] text-[#0D0D0D] shadow-sm"
                   : "text-[#0D2B45]/40 hover:text-[#0D2B45]"
               }`}
             >
@@ -181,7 +181,8 @@ export default function TopBar({ toggleSidebar, isSidebarCollapsed, toggleSideba
             </div>
           </div>
 
-          <span className="hidden sm:inline-block text-[11px] font-medium font-dmsans tracking-wide pr-1">
+          {/* Fixed-width label prevents horizontal layout shifts */}
+          <span className="hidden sm:inline-block w-9 text-center text-[11px] font-medium font-dmsans tracking-wide shrink-0">
             {isDark ? "Dark" : "Light"}
           </span>
         </button>
@@ -190,7 +191,7 @@ export default function TopBar({ toggleSidebar, isSidebarCollapsed, toggleSideba
         <Link
           to="/notifications"
           aria-label="View notifications"
-          className={`relative p-2 rounded-full border transition-all ${
+          className={`relative p-2 rounded-full border transition-colors duration-150 shrink-0 ${
             isDark
               ? "border-[#F7F3EE]/15 text-[#F7F3EE]/80 hover:text-[#F7F3EE] hover:bg-[#F7F3EE]/5"
               : "border-[rgba(13,43,69,0.12)] text-[#0D2B45]/80 hover:text-[#0D2B45] hover:bg-[rgba(13,43,69,0.05)]"
@@ -207,18 +208,22 @@ export default function TopBar({ toggleSidebar, isSidebarCollapsed, toggleSideba
         {/* Profile Avatar Chip */}
         <div
           onClick={() => navigate("/profile")}
-          className={`flex items-center gap-2 pl-1 sm:pl-2 pr-2 py-1 rounded-full border cursor-pointer transition-all ${
+          className={`flex items-center gap-2 pl-1 sm:pl-2 pr-2.5 py-1 rounded-full border cursor-pointer select-none transition-colors duration-150 shrink-0 ${
             isDark
-              ? "border-[#F7F3EE]/10 bg-[#0D0D0D] hover:border-[#C9943A]/40"
-              : "border-[rgba(13,43,69,0.1)] bg-[#F7F3EE] hover:border-[#C9943A]"
+              ? "border-[#F7F3EE]/15 bg-[#0D0D0D] text-[#F7F3EE] hover:border-[#C9943A]/50"
+              : "border-[rgba(13,43,69,0.12)] bg-[#FAF7F2] text-[#0D2B45] hover:border-[#C9943A]"
           }`}
         >
           <div className="w-7 h-7 rounded-full bg-[#C9943A] flex items-center justify-center shrink-0">
-            <span className="font-bold text-[11px] text-[#0D0D0D] font-dmsans">
+            <span className="font-bold text-[11px] text-[#0D0D0D] font-dmsans leading-none">
               {initials}
             </span>
           </div>
-          <span className="hidden md:inline-block text-xs font-semibold font-dmsans pr-1">
+          <span
+            className={`hidden md:inline-block text-xs font-semibold font-dmsans pr-0.5 transition-colors duration-150 ${
+              isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
+            }`}
+          >
             Admin
           </span>
         </div>

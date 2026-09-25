@@ -59,7 +59,7 @@ function MainLayoutContent() {
 
   return (
     <div
-      className={`min-h-screen flex items-stretch font-dmsans transition-colors duration-250 ${
+      className={`min-h-screen flex items-stretch font-dmsans transition-colors duration-150 ${
         isDark
           ? "bg-[#0D0D0D] text-[#F7F3EE] selection:bg-[#C9943A]/30 selection:text-[#F7F3EE]"
           : "bg-[#F7F3EE] text-[#0D2B45] selection:bg-[#C9943A]/20 selection:text-[#0D2B45]"
