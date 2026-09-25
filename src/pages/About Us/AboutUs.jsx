@@ -5,6 +5,7 @@ import "react-quill/dist/quill.snow.css";
 import { IoChevronBack } from "react-icons/io5";
 import { Spin, message } from "antd";
 import { adminApiRequest } from "../../../services/auth.service";
+import RequirementAuditBoundary from "../../components/audit/RequirementAuditBoundary";
 
 
 export default function AboutUs() {
@@ -72,6 +73,11 @@ export default function AboutUs() {
   }
 
   return (
+    <RequirementAuditBoundary
+      auditId="ADMIN-EXTRA-006"
+      status="extra"
+      label="NEW FEATURE - ABOUT US EDITOR NOT IN REQUIREMENT"
+    >
     <div className="p-5">
       <div className="bg-blue-600 px-5 py-3 rounded-md mb-3 flex items-center gap-3">
         <button
@@ -109,5 +115,6 @@ export default function AboutUs() {
         </button>
       </div>
     </div>
+    </RequirementAuditBoundary>
   );
 }

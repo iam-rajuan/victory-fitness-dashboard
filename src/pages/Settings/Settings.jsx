@@ -5,7 +5,17 @@ import { useAdminDrawer } from "../../context/AdminDrawerContext";
 const BASE_ROWS = [
   { a: "Privacy policy", b: "Published", c: "All markets", d: "4 months ago", e: "Out of date", tone: "bad", drawer: "settingDoc", id: "st1" },
   { a: "Terms & conditions", b: "Published", c: "All markets", d: "4 months ago", e: "Out of date", tone: "warn", drawer: "settingDoc", id: "st2" },
-  { a: "About us", b: "Published", c: "All markets", d: "2 months ago", e: "Current", tone: "good", drawer: "settingText", id: "st3" },
+  {
+    a: "About us",
+    b: "Published",
+    c: "All markets",
+    d: "2 months ago",
+    e: "Current",
+    tone: "good",
+    drawer: "settingText",
+    id: "st3",
+    audit: { auditId: "ADMIN-EXTRA-005", status: "extra", label: "NEW FEATURE - ABOUT US MANAGEMENT NOT IN REQUIREMENT" },
+  },
   { a: "Data region", b: "EU · Frankfurt", c: "All markets", d: "At launch", e: "Current", tone: "good", drawer: "settingData", id: "st4" },
   { a: "Right to export and delete", b: "Self-serve in app", c: "All markets", d: "1 month ago", e: "Current", tone: "good", drawer: "settingData", id: "st5" },
   { a: "Admin accounts", b: "1 account", c: "Platform", d: "At launch", e: "Add per person", tone: "warn", drawer: "settingAccess", id: "st6" },

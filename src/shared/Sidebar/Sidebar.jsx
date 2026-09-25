@@ -26,6 +26,7 @@ import {
 } from "react-icons/hi2";
 import { logoutAdmin, getUserData } from "../../../services/auth.service";
 import { useTheme } from "../../context/ThemeContext";
+import RequirementAuditBoundary from "../../components/audit/RequirementAuditBoundary";
 
 const NAV_GROUPS = [
   {
@@ -37,13 +38,28 @@ const NAV_GROUPS = [
       { to: "/challenges", label: "Challenges", icon: HiOutlineTrophy },
       { to: "/masterclasses", label: "Masterclasses", icon: HiOutlineAcademicCap },
       { to: "/subscriptions", label: "Subscriptions", icon: HiOutlineCreditCard },
-      { to: "/beta-analytics", label: "21-Day Gold Beta", icon: HiOutlineSparkles, badge: "12" },
+      {
+        to: "/beta-analytics",
+        label: "21-Day Gold Beta",
+        icon: HiOutlineSparkles,
+        badge: "12",
+        audit: {
+          auditId: "ADMIN-MISMATCH-001",
+          status: "mismatch",
+          label: "MISMATCH - DOCUMENT REQUIRES 5-DAY GOLD TRIAL",
+        },
+      },
       { to: "/trial-analytics", label: "5-Day Gold Trial", icon: HiOutlineClock, badge: "5" },
       { to: "/all-subscribers", label: "All Subscribers", icon: HiOutlineUserGroup },
       { to: "/community", label: "Community", icon: HiOutlineChatBubbleLeftRight, badge: "3" },
       { to: "/applications", label: "Applications", icon: HiOutlineDocumentText, badge: "2" },
       { to: "/support-inbox", label: "Help & Support", icon: HiOutlineLifebuoy, badge: "3" },
-      { to: "/quotes", label: "Quotes", icon: HiOutlineChatBubbleBottomCenterText },
+      {
+        to: "/quotes",
+        label: "Quotes",
+        icon: HiOutlineChatBubbleBottomCenterText,
+        audit: { auditId: "ADMIN-EXTRA-001", status: "extra" },
+      },
     ],
   },
   {
@@ -58,17 +74,22 @@ const NAV_GROUPS = [
   {
     label: "ADMINISTRATION",
     items: [
-      { to: "/faq", label: "FAQ", icon: HiOutlineQuestionMarkCircle },
+      {
+        to: "/faq",
+        label: "FAQ",
+        icon: HiOutlineQuestionMarkCircle,
+        audit: { auditId: "ADMIN-EXTRA-003", status: "extra", label: "NEW FEATURE - FAQ MANAGEMENT NOT IN REQUIREMENT" },
+      },
       { to: "/settings", label: "Settings", icon: HiOutlineCog6Tooth },
     ],
   },
 ];
 
-function NavItem({ to, label, icon: Icon, badge, exact, isActive, matchesPrefix, onClick, isDark, isCollapsed }) {
+function NavItem({ to, label, icon: Icon, badge, exact, audit, isActive, matchesPrefix, onClick, isDark, isCollapsed }) {
   const active = exact ? isActive(to) : matchesPrefix(to);
 
   if (isCollapsed) {
-    return (
+    const link = (
       <Link to={to} onClick={onClick} className="block select-none" title={badge ? `${label} (${badge})` : label}>
         <div
           className={`relative flex items-center justify-center h-10 w-10 mx-auto rounded-xl transition-all duration-200 cursor-pointer ${
@@ -88,9 +109,15 @@ function NavItem({ to, label, icon: Icon, badge, exact, isActive, matchesPrefix,
         </div>
       </Link>
     );
+
+    return audit ? (
+      <RequirementAuditBoundary auditId={audit.auditId} status={audit.status} label={audit.label}>
+        {link}
+      </RequirementAuditBoundary>
+    ) : link;
   }
 
-  return (
+  const link = (
     <Link to={to} onClick={onClick} className="block select-none">
       <div
         className={`group flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all duration-150 cursor-pointer ${
@@ -132,6 +159,12 @@ function NavItem({ to, label, icon: Icon, badge, exact, isActive, matchesPrefix,
       </div>
     </Link>
   );
+
+  return audit ? (
+    <RequirementAuditBoundary auditId={audit.auditId} status={audit.status} label={audit.label}>
+      {link}
+    </RequirementAuditBoundary>
+  ) : link;
 }
 
 const Sidebar = ({
@@ -282,6 +315,7 @@ const Sidebar = ({
                 icon={item.icon}
                 badge={item.badge}
                 exact={item.exact}
+                audit={item.audit}
                 isActive={isActive}
                 matchesPrefix={matchesPrefix}
                 onClick={handleLinkClick}

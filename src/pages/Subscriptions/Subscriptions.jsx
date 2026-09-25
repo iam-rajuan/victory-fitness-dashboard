@@ -8,10 +8,49 @@ const BASE_ROWS = [
   { a: "Victory Gold", b: "€299", c: "€36", d: "34", e: "62%", tone: "good", id: "s2" },
   { a: "Victory Platinum", b: "€399", c: "€48", d: "9", e: "17%", tone: "good", id: "s3" },
   { a: "Victory Inner Circle", b: "Application", c: "—", d: "4", e: "3%", tone: "good", id: "s4" },
-  { a: "21-Day Gold Beta", b: "€0", c: "—", d: "15", e: "0%", tone: "warn", id: "s5" },
+  {
+    a: "21-Day Gold Beta",
+    b: "€0",
+    c: "—",
+    d: "15",
+    e: "0%",
+    tone: "warn",
+    id: "s5",
+    audit: {
+      auditId: "ADMIN-MISMATCH-002",
+      status: "mismatch",
+      label: "MISMATCH - DOCUMENT REQUIRES 5-DAY GOLD TRIAL",
+    },
+  },
   { a: "5-Day trial · Gold", b: "€0", c: "—", d: "12 running", e: "0%", tone: "warn", id: "s6" },
-  { a: "5-Day trial · Silver", b: "€0", c: "—", d: "4 running", e: "0%", tone: "warn", id: "s7" },
-  { a: "5-Day trial · Platinum", b: "€0", c: "—", d: "3 running", e: "0%", tone: "warn", id: "s8" },
+  {
+    a: "5-Day trial · Silver",
+    b: "€0",
+    c: "—",
+    d: "4 running",
+    e: "0%",
+    tone: "warn",
+    id: "s7",
+    audit: {
+      auditId: "ADMIN-MISMATCH-003",
+      status: "mismatch",
+      label: "MISMATCH - DOCUMENT SPECIFIES GOLD TRIAL ONLY",
+    },
+  },
+  {
+    a: "5-Day trial · Platinum",
+    b: "€0",
+    c: "—",
+    d: "3 running",
+    e: "0%",
+    tone: "warn",
+    id: "s8",
+    audit: {
+      auditId: "ADMIN-MISMATCH-004",
+      status: "mismatch",
+      label: "MISMATCH - DOCUMENT SPECIFIES GOLD TRIAL ONLY",
+    },
+  },
 ];
 
 export default function Subscriptions() {

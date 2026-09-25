@@ -7,8 +7,26 @@ const BASE_ROWS = [
   { a: "Meal photo analysis", b: "100%", c: "All", d: "4 days ago", e: "On", tone: "good", id: "ff2" },
   { a: "MoMo checkout v2", b: "25%", c: "Ghana", d: "Today", e: "Testing", tone: "warn", id: "ff3" },
   { a: "UPI autopay", b: "60%", c: "India", d: "2 days ago", e: "Testing", tone: "warn", id: "ff4" },
-  { a: "Wearable sync", b: "100%", c: "All", d: "11 days ago", e: "On", tone: "good", id: "ff5" },
-  { a: "Duo second partner", b: "0%", c: "All", d: "Never", e: "Off", tone: "bad", id: "ff6" },
+  {
+    a: "Wearable sync",
+    b: "100%",
+    c: "All",
+    d: "11 days ago",
+    e: "On",
+    tone: "good",
+    id: "ff5",
+    audit: { auditId: "ADMIN-EXTRA-007", status: "extra", label: "NEW FEATURE - WEARABLE SYNC FLAG NOT IN REQUIREMENT" },
+  },
+  {
+    a: "Duo second partner",
+    b: "0%",
+    c: "All",
+    d: "Never",
+    e: "Off",
+    tone: "bad",
+    id: "ff6",
+    audit: { auditId: "ADMIN-EXTRA-008", status: "extra", label: "NEW FEATURE - SECOND ACCOUNTABILITY PARTNER NOT IN REQUIREMENT" },
+  },
 ];
 
 export default function FeatureFlags() {

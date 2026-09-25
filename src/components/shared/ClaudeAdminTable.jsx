@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { useTheme } from "../../context/ThemeContext";
+import RequirementAuditBoundary from "../audit/RequirementAuditBoundary";
 
 const ALIAS = {
   "Ending ≤48h": ["day 5"],
@@ -690,9 +691,9 @@ export default function ClaudeAdminTable({
             {filteredRows.map((r, i, arr) => {
               const selected = selectedId === r.id;
               const ink = r.tone === "good" ? "#1A7A4A" : r.tone === "warn" ? "#C9943A" : "#B5651D";
-              return (
+              const rowAudit = r.raw?.audit;
+              const rowElement = (
                 <div
-                  key={r.id}
                   onClick={() => {
                     setSelectedId(selected ? null : r.id);
                     if (onRowClick) onRowClick(r.raw || r);
@@ -816,6 +817,22 @@ export default function ClaudeAdminTable({
                   </div>
                 </div>
               );
+
+              if (rowAudit) {
+                return (
+                  <RequirementAuditBoundary
+                    key={r.id}
+                    auditId={rowAudit.auditId}
+                    status={rowAudit.status}
+                    label={rowAudit.label}
+                    className="my-1"
+                  >
+                    {rowElement}
+                  </RequirementAuditBoundary>
+                );
+              }
+
+              return <div key={r.id}>{rowElement}</div>;
             })}
           </div>
         )}

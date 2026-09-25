@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { useTheme } from "../../context/ThemeContext";
+import RequirementAuditBoundary from "../../components/audit/RequirementAuditBoundary";
 
 const BETA_HERO = [
   { k: "CAPACITY", v: "300", tone: "default" },
@@ -139,7 +140,12 @@ export default function BetaAnalytics() {
   const fbCount = `${FEEDBACK.reduce((a, x) => a + x.c, 0)} responses · 5 themes`;
 
   return (
-    <div className={`animate-in fade-in duration-200 font-dmsans ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
+    <RequirementAuditBoundary
+      auditId="ADMIN-MISMATCH-005"
+      status="mismatch"
+      label="MISMATCH - DOCUMENT REQUIRES 5-DAY GOLD TRIAL"
+    >
+      <div className={`animate-in fade-in duration-200 font-dmsans ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
       {/* Hero Banner: Exact Claude Reference (lines 258-278) */}
       <div
         style={{
@@ -650,6 +656,7 @@ export default function BetaAnalytics() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </RequirementAuditBoundary>
   );
 }
