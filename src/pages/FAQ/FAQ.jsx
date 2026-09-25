@@ -4,12 +4,12 @@ import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { listAdminFaqs } from "../../../services/admin-content.service";
 
 const BASE_ROWS = [
-  { a: "How do I cancel my subscription?", b: "Self-serve in mobile profile", c: "Payment", d: "88 views · EN · DE", e: "Live", tone: "good", id: "f1" },
-  { a: "Why was my card declined?", b: "SEPA and 3D Secure instructions", c: "Payment", d: "64 views · EN · DE", e: "Live", tone: "good", id: "f2" },
-  { a: "How does the accountability duo work?", b: "Invite link and tick synchronization", c: "Account", d: "52 views · EN · DE", e: "Live", tone: "good", id: "f3" },
-  { a: "Can I train without equipment?", b: "Bodyweight filter guidance", c: "Training", d: "41 views · EN only", e: "Needs German", tone: "warn", id: "f4" },
-  { a: "How do I change my protein target?", b: "Weight multiplier settings", c: "Nutrition", d: "— · missing", e: "Not written", tone: "bad", id: "f5" },
-  { a: "What happens when my trial ends?", b: "Entitlement and renewal explanation", c: "Payment", d: "— · missing", e: "Not written", tone: "bad", id: "f6" },
+  { a: "How do I cancel my subscription?", b: "Payment", c: "88", d: "EN · DE", e: "Live", tone: "good", id: "f1" },
+  { a: "Why was my card declined?", b: "Payment", c: "64", d: "EN · DE", e: "Live", tone: "good", id: "f2" },
+  { a: "How does the accountability duo work?", b: "Account", c: "52", d: "EN · DE", e: "Live", tone: "good", id: "f3" },
+  { a: "Can I train without equipment?", b: "Training", c: "41", d: "EN only", e: "Needs German", tone: "warn", id: "f4" },
+  { a: "How do I change my protein target?", b: "Nutrition", c: "—", d: "—", e: "Not written", tone: "bad", id: "f5" },
+  { a: "What happens when my trial ends?", b: "Payment", c: "—", d: "—", e: "Not written", tone: "bad", id: "f6" },
 ];
 
 export default function FAQ() {
@@ -26,9 +26,9 @@ export default function FAQ() {
             list.map((f) => ({
               id: f._id || f.id,
               a: f.question || "FAQ Question",
-              b: f.answer ? f.answer.slice(0, 60) + "..." : "Help answer",
-              c: f.category || "General",
-              d: `${f.viewsCount || 40} views · EN · DE`,
+              b: f.category || "General",
+              c: String(f.viewsCount || 40),
+              d: "EN · DE",
               e: "Live",
               tone: "good",
               rawData: f,
@@ -51,12 +51,12 @@ export default function FAQ() {
       pageTitle="FAQ"
       pageSub="What members read before they write to support. Every question answered here is a support message that never arrives."
       pagePrimary="+ Add question"
-      pageSecondary="Write FAQ entry"
+      pageSecondary="Reorder"
       onPrimary={() => openDrawer("faq")}
-      onSecondary={() => openDrawer("faq")}
+      onSecondary={() => showToast("Reorder FAQ entries mode active")}
       pageStats={[
-        { k: "ENTRIES", v: String(rows.length), note: "Six categories" },
-        { k: "VIEWS, 7 DAYS", v: "412", note: "Payment is most read" },
+        { k: "ENTRIES", v: "18", note: "Six categories" },
+        { k: "VIEWS, 7 DAYS", v: "412", note: "Payment is the most read" },
         { k: "MISSING", v: "3", note: "Asked in support, not covered" },
         { k: "LANGUAGES", v: "2", note: "English and German" },
       ]}
@@ -64,12 +64,12 @@ export default function FAQ() {
       pageAdviceDone="Write that entry"
       onAdvice={() => openDrawer("faq", { QUESTION: "How do I change my protein target?" })}
       filters={["All", "Payment", "Training", "Nutrition", "Account", "Missing"]}
-      cols={["QUESTION", "CATEGORY", "VIEWS & LANGUAGES", "STATUS", "ACTIONS"]}
+      cols={["QUESTION", "CATEGORY", "VIEWS", "LANGUAGES", "STATUS"]}
       rows={rows}
       isLoading={loading}
-      onEditRow={(row) => openDrawer("faq", { QUESTION: row.a, CATEGORY: row.c })}
+      onEditRow={(row) => openDrawer("faq", { QUESTION: row.a, CATEGORY: row.b })}
       onDeleteRow={handleDelete}
-      onRowClick={(row) => openDrawer("faq", { QUESTION: row.a, CATEGORY: row.c })}
+      onRowClick={(row) => openDrawer("faq", { QUESTION: row.a, CATEGORY: row.b })}
     />
   );
 }

@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
-import { useTheme } from "../../context/ThemeContext";
-import { fetchRevenue, fetchUserStats } from "../../../services/analytics.service";
 
 const SCOPE_CONFIG = {
   today: {
-    headline: "Five things to move today",
-    subhead: "Trial decisions, at-risk beta testers and an Inner Circle call. Everything here has a revenue impact you can count.",
+    headline: "Three things before lunch",
+    subhead: "Ordered by money at stake, not by when it arrived. Tick one and the next moves up. Everything below the fold is context, not work.",
+    queueKicker: "TODAY · IN ORDER OF VALUE",
+    queueTitle: "Your action queue",
     pulse: [
       { k: "MRR", v: "€4,180", delta: "+8.2%", dir: "up", note: "Gold is 62% of it. Platinum is the gap." },
       { k: "TRIAL → PAID", v: "34%", delta: "+4 pts", dir: "up", note: "Above the 30% floor. Gold trials convert best." },
@@ -16,16 +16,83 @@ const SCOPE_CONFIG = {
       { k: "AT RISK", v: "9", delta: "—", dir: "flat", note: "No feature activity in 7 days." },
     ],
     actions: [
-      { id: "t1", tag: "REVENUE", tagTone: "gold", when: "before 12:00", t: "4 Gold trials end today — send the day-5 message", why: "All four used the AI coach more than 20 times. That is the group that converts. The message is written; it needs your name on it.", cta: "Review and send", impact: "+€1,196 if all convert", effort: "3 min", drawer: "support", target: "trials" },
-      { id: "t2", tag: "CHURN", tagTone: "copper", when: "today", t: "9 beta testers have never opened a feature", why: "Enrolled, never activated. Day 21 comes either way. One WhatsApp with a single 15-minute workout link recovers most of them.", cta: "Send activation nudge", impact: "9 testers at risk", effort: "2 min", drawer: "message", target: "messaging" },
-      { id: "t3", tag: "MARKETING", tagTone: "gold", when: "today", t: "Post the Clean Eating Fortnight announcement", why: "Your last challenge announcement drove 62 cheers and 18 replies — the best organic day this month. Monday's start needs today's post.", cta: "Open broadcast composer", impact: "~180 joins expected", effort: "5 min", drawer: "broadcast", target: "community" },
-      { id: "t4", tag: "INNER CIRCLE", tagTone: "copper", when: "this afternoon", t: "2 applications waiting on your call", why: "Both answered all five questions in full. Average time to reply right now is four days; the promise on the screen says three.", cta: "Read and book calls", impact: "€798 / year each", effort: "12 min", drawer: "application", target: "applications" },
-      { id: "t5", tag: "CONTENT", tagTone: "muted", when: "if time", t: "23 Vimeo workouts still sitting in draft", why: "Imported but never published, so nobody can see them. Publishing the six shortest ones widens the 15-minute filter, which is the most-used one.", cta: "Open workout library", impact: "library 170 → 193", effort: "8 min", drawer: "workout", target: "workouts" },
+      {
+        id: "t1",
+        tag: "REVENUE",
+        tagTone: "gold",
+        when: "before 12:00",
+        t: "4 Gold trials end today — send the day-5 message",
+        why: "All four used the AI coach more than 20 times. That is the group that converts. The message is written; it needs your name on it.",
+        cta: "Review and send",
+        impact: "+€1,196 if all convert",
+        effort: "3 min",
+        target: "5-Day Gold Trial",
+        drawer: "message",
+        route: "/trial-analytics",
+      },
+      {
+        id: "t2",
+        tag: "CHURN",
+        tagTone: "copper",
+        when: "today",
+        t: "9 beta testers have never opened a feature",
+        why: "Enrolled, never activated. Day 21 comes either way. One WhatsApp with a single 15-minute workout link recovers most of them.",
+        cta: "Send activation nudge",
+        impact: "9 testers at risk",
+        effort: "2 min",
+        target: "All Users",
+        drawer: "message",
+        route: "/beta-analytics",
+      },
+      {
+        id: "t3",
+        tag: "MARKETING",
+        tagTone: "gold",
+        when: "today",
+        t: "Post the Clean Eating Fortnight announcement",
+        why: "Your last challenge announcement drove 62 cheers and 18 replies — the best organic day this month. Monday's start needs today's post.",
+        cta: "Open broadcast composer",
+        impact: "~180 joins expected",
+        effort: "5 min",
+        target: "Community",
+        drawer: "broadcast",
+        route: "/community",
+      },
+      {
+        id: "t4",
+        tag: "INNER CIRCLE",
+        tagTone: "copper",
+        when: "this afternoon",
+        t: "2 applications waiting on your call",
+        why: "Both answered all five questions in full. Average time to reply right now is four days; the promise on the screen says three.",
+        cta: "Read and book calls",
+        impact: "€798 / year each",
+        effort: "12 min",
+        target: "Applications",
+        drawer: "application",
+        route: "/applications",
+      },
+      {
+        id: "t5",
+        tag: "CONTENT",
+        tagTone: "muted",
+        when: "if time",
+        t: "23 Vimeo workouts still sitting in draft",
+        why: "Imported but never published, so nobody can see them. Publishing the six shortest ones widens the 15-minute filter, which is the most-used one.",
+        cta: "Open workout library",
+        impact: "library 170 → 193",
+        effort: "8 min",
+        target: "Workouts",
+        drawer: "workout",
+        route: "/workouts",
+      },
     ],
   },
   week: {
-    headline: "The week at a glance",
-    subhead: "Trial-to-paid is holding at 34%. Focus is moving Ghana from zero revenue to paying.",
+    headline: "Five moves this week",
+    subhead: "The week's work, ordered by what it is worth. Two of these unblock revenue that is already sitting there.",
+    queueKicker: "THIS WEEK · IN ORDER OF VALUE",
+    queueTitle: "What moves the number",
     pulse: [
       { k: "MRR", v: "€4,180", delta: "+€318", dir: "up", note: "Six new Gold, one Platinum, no cancellations." },
       { k: "TRIAL → PAID", v: "34%", delta: "+4 pts", dir: "up", note: "24 trials started, 8 converted, 7 undecided." },
@@ -34,16 +101,83 @@ const SCOPE_CONFIG = {
       { k: "CHURNED", v: "2", delta: "−1", dir: "up", note: "Both Silver, both never set a duo." },
     ],
     actions: [
-      { id: "w1", tag: "REVENUE", tagTone: "gold", when: "Mon–Wed", t: "Recover the 7 trials that ended without a decision", why: "They tapped “decide later”. Their history is warm and still intact. A three-touch sequence on day 3, 7 and 14 is already drafted.", cta: "Start the sequence", impact: "+€2,093 potential", effort: "10 min", drawer: "pricing", target: "trials" },
-      { id: "w2", tag: "MARKETING", tagTone: "gold", when: "Tue", t: "Ghana is 41% of signups and 0% of revenue", why: "MoMo is live but nobody has completed a payment. Either the flow breaks or the price reads wrong in cedis. Worth one test transaction.", cta: "Run a test payment", impact: "unblocks a whole market", effort: "15 min", drawer: "flag", target: "payments" },
-      { id: "w3", tag: "PRODUCT", tagTone: "copper", when: "Wed", t: "Habit users retain at half the rate of everyone else", why: "That inverts what the engine is for. Either the fields are being set and ignored, or the sample is too small to mean anything. Check before building more.", cta: "Open habit analytics", impact: "protects the Gold pitch", effort: "20 min", drawer: "flag", target: "analytics" },
-      { id: "w4", tag: "COMMUNITY", tagTone: "muted", when: "Thu", t: "Seed the Silver feed — it has 1 post against Gold's 13", why: "A Silver member paying €199 opens the quietest room in the app. Three seeded posts a week is enough to make it feel inhabited.", cta: "Schedule three posts", impact: "Silver churn risk", effort: "10 min", drawer: "broadcast", target: "community" },
-      { id: "w5", tag: "REVENUE", tagTone: "gold", when: "Fri", t: "Review the week and set next week's one number", why: "Trial-to-paid is the only metric that moves everything else right now. Pick the target Friday, work it Monday.", cta: "Open weekly review", impact: "sets the agenda", effort: "15 min", drawer: "pricing", target: "subscriptions" },
+      {
+        id: "w1",
+        tag: "REVENUE",
+        tagTone: "gold",
+        when: "Mon–Wed",
+        t: "Recover the 7 trials that ended without a decision",
+        why: "They tapped “decide later”. Their history is warm and still intact. A three-touch sequence on day 3, 7 and 14 is already drafted.",
+        cta: "Start the sequence",
+        impact: "+€2,093 potential",
+        effort: "10 min",
+        target: "5-Day Gold Trial",
+        drawer: "pricing",
+        route: "/trial-analytics",
+      },
+      {
+        id: "w2",
+        tag: "MARKETING",
+        tagTone: "gold",
+        when: "Tue",
+        t: "Ghana is 41% of signups and 0% of revenue",
+        why: "MoMo is live but nobody has completed a payment. Either the flow breaks or the price reads wrong in cedis. Worth one test transaction.",
+        cta: "Run a test payment",
+        impact: "unblocks a whole market",
+        effort: "15 min",
+        target: "Payments",
+        drawer: "flag",
+        route: "/payments",
+      },
+      {
+        id: "w3",
+        tag: "PRODUCT",
+        tagTone: "copper",
+        when: "Wed",
+        t: "Habit users retain at half the rate of everyone else",
+        why: "That inverts what the engine is for. Either the fields are being set and ignored, or the sample is too small to mean anything. Check before building more.",
+        cta: "Open habit analytics",
+        impact: "protects the Gold pitch",
+        effort: "20 min",
+        target: "All Users",
+        drawer: "flag",
+        route: "/user-details",
+      },
+      {
+        id: "w4",
+        tag: "COMMUNITY",
+        tagTone: "muted",
+        when: "Thu",
+        t: "Seed the Silver feed — it has 1 post against Gold's 13",
+        why: "A Silver member paying €199 opens the quietest room in the app. Three seeded posts a week is enough to make it feel inhabited.",
+        cta: "Schedule three posts",
+        impact: "Silver churn risk",
+        effort: "10 min",
+        target: "Community",
+        drawer: "broadcast",
+        route: "/community",
+      },
+      {
+        id: "w5",
+        tag: "REVENUE",
+        tagTone: "gold",
+        when: "Fri",
+        t: "Review the week and set next week's one number",
+        why: "Trial-to-paid is the only metric that moves everything else right now. Pick the target Friday, work it Monday.",
+        cta: "Open weekly review",
+        impact: "sets the agenda",
+        effort: "15 min",
+        target: "Subscriptions",
+        drawer: "pricing",
+        route: "/subscriptions",
+      },
     ],
   },
   month: {
-    headline: "Close September above €4,500 MRR",
-    subhead: "You are €320 short of target with nineteen days to run. Seven trial conversions covers it.",
+    headline: "September, and what closes it",
+    subhead: "Nineteen days left. These five decide whether September closes above target — the first one is €320 away.",
+    queueKicker: "THIS MONTH · IN ORDER OF VALUE",
+    queueTitle: "What closes the month",
     pulse: [
       { k: "MRR", v: "€4,180", delta: "+24%", dir: "up", note: "September so far. August closed at €3,370." },
       { k: "NEW PAYING", v: "18", delta: "+6", dir: "up", note: "Best month since launch. Eleven came from trials." },
@@ -52,16 +186,83 @@ const SCOPE_CONFIG = {
       { k: "CAC PAYBACK", v: "4.2 mo", delta: "−1.1 mo", dir: "up", note: "Germany only. No spend in other markets yet." },
     ],
     actions: [
-      { id: "m1", tag: "REVENUE", tagTone: "gold", when: "by 30 Sep", t: "Close September above €4,500 MRR", why: "You are €320 short with 19 days left. Seven trial conversions covers it, and eight trials are already running.", cta: "Open the trial list", impact: "+€320 needed", effort: "ongoing", drawer: "pricing", target: "trials" },
-      { id: "m2", tag: "MARKET", tagTone: "copper", when: "this month", t: "Decide whether Ghana stays a market", why: "128 registered, zero revenue, a month of trying. Either the payment flow gets fixed this month or you stop spending attention there.", cta: "Review Ghana", impact: "128 users at stake", effort: "1 hr", drawer: "flag", target: "payments" },
-      { id: "m3", tag: "REVENUE", tagTone: "gold", when: "this month", t: "Raise Platinum above 20% of revenue", why: "Platinum is 17% with nine members. It is the only tier with a human coach, and also your least-marketed feature.", cta: "Plan a Platinum push", impact: "+€399 / yr each", effort: "2 hr", drawer: "pricing", target: "subscriptions" },
-      { id: "m4", tag: "PRODUCT", tagTone: "copper", when: "from 22 Sep", t: "Run the second beta cohort", why: "The first fifteen gave you five clear themes. Fix three, then invite the next fifty with the fixes named.", cta: "Open the beta", impact: "50 testers", effort: "3 hr", drawer: "message", target: "beta" },
-      { id: "m5", tag: "CONTENT", tagTone: "muted", when: "any time", t: "Publish the 23 draft workouts", why: "They have been invisible all month. The library is your main Silver justification.", cta: "Open the library", impact: "170 → 193", effort: "1 hr", drawer: "vimeo", target: "workouts" },
+      {
+        id: "m1",
+        tag: "REVENUE",
+        tagTone: "gold",
+        when: "by 30 Sep",
+        t: "Close September above €4,500 MRR",
+        why: "You are €320 short with 19 days left. Seven trial conversions covers it, and eight trials are already running.",
+        cta: "Open the trial list",
+        impact: "+€320 needed",
+        effort: "ongoing",
+        target: "5-Day Gold Trial",
+        drawer: "pricing",
+        route: "/trial-analytics",
+      },
+      {
+        id: "m2",
+        tag: "MARKET",
+        tagTone: "copper",
+        when: "this month",
+        t: "Decide whether Ghana stays a market",
+        why: "128 registered, zero revenue, a month of trying. Either the payment flow gets fixed this month or you stop spending attention there.",
+        cta: "Review Ghana",
+        impact: "128 users at stake",
+        effort: "1 hr",
+        target: "Payments",
+        drawer: "flag",
+        route: "/payments",
+      },
+      {
+        id: "m3",
+        tag: "REVENUE",
+        tagTone: "gold",
+        when: "this month",
+        t: "Raise Platinum above 20% of revenue",
+        why: "Platinum is 17% with nine members. It is the only tier with a human coach, and also your least-marketed feature.",
+        cta: "Plan a Platinum push",
+        impact: "+€399 / yr each",
+        effort: "2 hr",
+        target: "Subscriptions",
+        drawer: "pricing",
+        route: "/subscriptions",
+      },
+      {
+        id: "m4",
+        tag: "PRODUCT",
+        tagTone: "copper",
+        when: "from 22 Sep",
+        t: "Run the second beta cohort",
+        why: "The first fifteen gave you five clear themes. Fix three, then invite the next fifty with the fixes named.",
+        cta: "Open the beta",
+        impact: "50 testers",
+        effort: "3 hr",
+        target: "21-Day Gold Beta",
+        drawer: "message",
+        route: "/beta-analytics",
+      },
+      {
+        id: "m5",
+        tag: "CONTENT",
+        tagTone: "muted",
+        when: "any time",
+        t: "Publish the 23 draft workouts",
+        why: "They have been invisible all month. The library is your main Silver justification.",
+        cta: "Open the library",
+        impact: "170 → 193",
+        effort: "1 hr",
+        target: "Workouts",
+        drawer: "vimeo",
+        route: "/workouts",
+      },
     ],
   },
   year: {
-    headline: "Year in review · 2026",
-    subhead: "Annual recurring revenue at €50,160, up 312% on last year. Germany is 78% of it.",
+    headline: "The year, in five decisions",
+    subhead: "Growth against last year, and the handful of calls that decide whether this one repeats. Health measures sit below, next to the numbers they explain.",
+    queueKicker: "THIS YEAR · IN ORDER OF VALUE",
+    queueTitle: "The calls that matter",
     pulse: [
       { k: "ARR", v: "€50,160", delta: "+312%", dir: "up", note: "Run-rate on September. Last year: €12,180." },
       { k: "PAYING MEMBERS", v: "68", delta: "+47", dir: "up", note: "Twenty-one a year ago. Gold did not exist then." },
@@ -70,40 +271,138 @@ const SCOPE_CONFIG = {
       { k: "RUNWAY", v: "14 mo", delta: "+3 mo", dir: "up", note: "At current burn, no new hires." },
     ],
     actions: [
-      { id: "y1", tag: "HEALTH", tagTone: "gold", when: "all year", t: "Hold net revenue retention above 100%", why: "At 108% your existing members grow revenue without a single new signup. It is the first number an investor asks about.", cta: "See the cohort view", impact: "108% · healthy", effort: "quarterly", drawer: "pricing", target: "analytics" },
-      { id: "y2", tag: "MARKET", tagTone: "copper", when: "by Q1", t: "Get a second market earning properly", why: "Germany is 78% of revenue. One market failing would take three quarters of the business with it.", cta: "Compare markets", impact: "de-risks the year", effort: "ongoing", drawer: "flag", target: "payments" },
-      { id: "y3", tag: "HEALTH", tagTone: "copper", when: "by Q1", t: "Bring cost per acquisition back under €31", why: "It rose 23% while revenue grew 312% — acceptable so far, but it is the one metric moving the wrong way.", cta: "Open acquisition", impact: "€38 → €31", effort: "ongoing", drawer: "pricing", target: "analytics" },
-      { id: "y4", tag: "PRODUCT", tagTone: "gold", when: "before Q2", t: "Decide the Inner Circle ceiling", why: "Four members, unlimited coaching, all of it your own time. Past ten this stops scaling and you know it.", cta: "Review Inner Circle", impact: "protects your calendar", effort: "1 hr", drawer: "application", target: "applications" },
-      { id: "y5", tag: "HEALTH", tagTone: "muted", when: "standing", t: "Protect the 14-month runway", why: "Three months better than last year. Every hire decision is measured against this number.", cta: "Open the ledger", impact: "14 months", effort: "standing", drawer: "settingData", target: "settings" },
+      {
+        id: "y1",
+        tag: "HEALTH",
+        tagTone: "gold",
+        when: "all year",
+        t: "Hold net revenue retention above 100%",
+        why: "At 108% your existing members grow revenue without a single new signup. It is the first number an investor asks about.",
+        cta: "See the cohort view",
+        impact: "108% · healthy",
+        effort: "quarterly",
+        target: "All Users",
+        drawer: "pricing",
+        route: "/user-details",
+      },
+      {
+        id: "y2",
+        tag: "MARKET",
+        tagTone: "copper",
+        when: "by Q1",
+        t: "Get a second market earning properly",
+        why: "Germany is 78% of revenue. One market failing would take three quarters of the business with it.",
+        cta: "Compare markets",
+        impact: "de-risks the year",
+        effort: "ongoing",
+        target: "Payments",
+        drawer: "flag",
+        route: "/payments",
+      },
+      {
+        id: "y3",
+        tag: "HEALTH",
+        tagTone: "copper",
+        when: "by Q1",
+        t: "Bring cost per acquisition back under €31",
+        why: "It rose 23% while revenue grew 312% — acceptable so far, but it is the one metric moving the wrong way.",
+        cta: "Open acquisition",
+        impact: "€38 → €31",
+        effort: "ongoing",
+        target: "All Users",
+        drawer: "pricing",
+        route: "/user-details",
+      },
+      {
+        id: "y4",
+        tag: "PRODUCT",
+        tagTone: "gold",
+        when: "before Q2",
+        t: "Decide the Inner Circle ceiling",
+        why: "Four members, unlimited coaching, all of it your own time. Past ten this stops scaling and you know it.",
+        cta: "Review Inner Circle",
+        impact: "protects your calendar",
+        effort: "1 hr",
+        target: "Applications",
+        drawer: "application",
+        route: "/applications",
+      },
+      {
+        id: "y5",
+        tag: "HEALTH",
+        tagTone: "muted",
+        when: "standing",
+        t: "Protect the 14-month runway",
+        why: "Three months better than last year. Every hire decision is measured against this number.",
+        cta: "Open the ledger",
+        impact: "14 months",
+        effort: "standing",
+        target: "Settings",
+        drawer: "settingData",
+        route: "/settings",
+      },
     ],
   },
 };
 
 const YEAR_ROWS = [
-  { k: "Revenue", now: "€50,160", then: "€12,180", delta: "+312%", deltaStyle: "text-[#5FC48E]" },
-  { k: "Paying members", now: "68", then: "21", delta: "+224%", deltaStyle: "text-[#5FC48E]" },
-  { k: "Registered users", now: "312", then: "96", delta: "+225%", deltaStyle: "text-[#5FC48E]" },
-  { k: "Markets earning revenue", now: "3", then: "1", delta: "+2", deltaStyle: "text-[#5FC48E]" },
-  { k: "Workout library", now: "170", then: "48", delta: "+254%", deltaStyle: "text-[#5FC48E]" },
-  { k: "Revenue per member", now: "€61", then: "€48", delta: "+27%", deltaStyle: "text-[#5FC48E]" },
-  { k: "Churn rate", now: "2.9%", then: "5.4%", delta: "−2.5 pts", deltaStyle: "text-[#5FC48E]" },
-  { k: "Cost per acquisition", now: "€38", then: "€31", delta: "+23%", deltaStyle: "text-[#D98A3E]" },
+  { k: "Revenue", now: "€50,160", then: "€12,180", delta: "+312%", tone: "good" },
+  { k: "Paying members", now: "68", then: "21", delta: "+224%", tone: "good" },
+  { k: "Registered users", now: "312", then: "96", delta: "+225%", tone: "good" },
+  { k: "Markets earning revenue", now: "3", then: "1", delta: "+2", tone: "good" },
+  { k: "Workout library", now: "170", then: "48", delta: "+254%", tone: "good" },
+  { k: "Revenue per member", now: "€61", then: "€48", delta: "+27%", tone: "good" },
+  { k: "Churn rate", now: "2.9%", then: "5.4%", delta: "−2.5 pts", tone: "good" },
+  { k: "Cost per acquisition", now: "€38", then: "€31", delta: "+23%", tone: "warn" },
 ];
 
 const WEEK_ITEMS = [
-  { d: "MON", date: "14 Sep", t: "Clean Eating Fortnight opens", note: "Announcement already drafted", owner: "You", active: true },
-  { d: "TUE", date: "15 Sep", t: "MoMo test payment, Ghana", note: "Blocks an entire market", owner: "Dev", active: true },
-  { d: "WED", date: "16 Sep", t: "Habit retention deep-dive", note: "Before building more habit features", owner: "You", active: false },
-  { d: "THU", date: "17 Sep", t: "Two Inner Circle calls", note: "19:00 and 20:00 CET", owner: "You", active: false },
-  { d: "FRI", date: "18 Sep", t: "Weekly review, set one number", note: "30 minutes, no more", owner: "You", active: false },
-  { d: "SAT", date: "19 Sep", t: "Nothing scheduled", note: "Highest posting day — leave it to the members", owner: "—", active: false },
-  { d: "SUN", date: "20 Sep", t: "Monday digest goes out 08:00", note: "Automatic, Platinum and Inner Circle", owner: "Auto", active: false },
+  { d: "MON", date: "14 Sep", t: "Clean Eating Fortnight opens", note: "Announcement already drafted", owner: "You", hot: true },
+  { d: "TUE", date: "15 Sep", t: "MoMo test payment, Ghana", note: "Blocks an entire market", owner: "Dev", hot: true },
+  { d: "WED", date: "16 Sep", t: "Habit retention deep-dive", note: "Before building more habit features", owner: "You", hot: false },
+  { d: "THU", date: "17 Sep", t: "Two Inner Circle calls", note: "19:00 and 20:00 CET", owner: "You", hot: false },
+  { d: "FRI", date: "18 Sep", t: "Weekly review, set one number", note: "30 minutes, no more", owner: "You", hot: false },
+  { d: "SAT", date: "19 Sep", t: "Nothing scheduled", note: "Highest posting day — leave it to the members", owner: "—", hot: false },
+  { d: "SUN", date: "20 Sep", t: "Monday digest goes out 08:00", note: "Automatic, Platinum and Inner Circle", owner: "Auto", hot: false },
 ];
 
 const MARKETS = [
-  { n: "Germany", rev: "€3,240", pct: 78, users: "142 users", conv: "41% convert", barColor: "#1A7A4A", verdict: "Your paying market. Conversion is strong and support load is low. This is where ad spend returns.", action: "Scale the German ads", drawer: "pricing" },
-  { n: "Ghana", rev: "GH₵0", pct: 4, users: "128 users", conv: "0% convert", barColor: "#B5651D", verdict: "Second-biggest audience, zero revenue. MoMo has never completed a payment. Fix the flow before spending another cedi on reach.", action: "Test the MoMo flow", drawer: "flag" },
-  { n: "India", rev: "₹4,480", pct: 18, users: "42 users", conv: "12% convert", barColor: "#C9943A", verdict: "Small but paying. UPI works. Price sensitivity shows — most pick monthly over yearly.", action: "Trial a monthly-first offer", drawer: "pricing" },
+  {
+    n: "Germany",
+    rev: "€3,240",
+    pct: 78,
+    users: "142 users",
+    conv: "41% convert",
+    tone: "#1A7A4A",
+    ink: "#5FC48E",
+    verdict: "Your paying market. Conversion is strong and support load is low. This is where ad spend returns.",
+    action: "Scale the German ads",
+    drawer: "pricing",
+  },
+  {
+    n: "Ghana",
+    rev: "GH₵0",
+    pct: 4,
+    users: "128 users",
+    conv: "0% convert",
+    tone: "#B5651D",
+    ink: "#D98A3E",
+    verdict: "Second-biggest audience, zero revenue. MoMo has never completed a payment. Fix the flow before spending another cedi on reach.",
+    action: "Test the MoMo flow",
+    drawer: "flag",
+  },
+  {
+    n: "India",
+    rev: "₹4,480",
+    pct: 18,
+    users: "42 users",
+    conv: "12% convert",
+    tone: "#C9943A",
+    ink: "#C9943A",
+    verdict: "Small but paying. UPI works. Price sensitivity shows — most pick monthly over yearly.",
+    action: "Trial a monthly-first offer",
+    drawer: "pricing",
+  },
 ];
 
 const INBOX_ITEMS = [
@@ -128,167 +427,209 @@ const COHORTS = [
   { w: "01 Sep", v: 47, pct: "47%" },
 ];
 
+const MARKET_RULES = [
+  { k: "Detected, then confirmed", v: "IP and phone locale set it at register, shown as a chip the user can correct. Never a silent guess.", tone: "good" },
+  { k: "It sets three things", v: "Display currency, the payment methods offered, and the clock reminders run on.", tone: "good" },
+  { k: "Named markets", v: "Germany €, Ghana GH₵, India ₹, UK £, US $ — each with local rails: SEPA, MoMo, UPI, Bacs, cards.", tone: "good" },
+  { k: "Everywhere else", v: "Euro pricing on card or PayPal. Nothing is blocked — someone in Kenya or Brazil can pay, just not yet in their own currency.", tone: "warn" },
+  { k: "Promotion rule", v: "A fallback country earns its own currency and local rails once it passes 50 paying members. Nigeria is closest, at 31.", tone: "warn" },
+];
+
+const getTarget = (t, cta) => {
+  const c = `${t} ${cta}`.toLowerCase();
+  if (/trial/.test(c)) return "5-Day Gold Trial";
+  if (/beta/.test(c)) return "21-Day Gold Beta";
+  if (/broadcast|community|seed|post/.test(c)) return "Community";
+  if (/application|inner circle|call/.test(c)) return "Applications";
+  if (/librar|workout/.test(c)) return "Workouts";
+  if (/challenge/.test(c)) return "Challenges";
+  if (/ghana|market|payment|momo|acquisition/.test(c)) return "Payments";
+  if (/platinum|pricing|price|subscriptions|ledger/.test(c)) return "Subscriptions";
+  if (/habit|analytics|cohort|weekly review|agenda/.test(c)) return "All Users";
+  if (/nudge|message/.test(c)) return "All Users";
+  return "All Users";
+};
+
+const TARGET_ROUTES = {
+  "5-Day Gold Trial": "/trial-analytics",
+  "21-Day Gold Beta": "/beta-analytics",
+  "Community": "/community",
+  "Applications": "/applications",
+  "Workouts": "/workouts",
+  "Challenges": "/challenges",
+  "Payments": "/payments",
+  "Subscriptions": "/subscriptions",
+  "All Users": "/user-details",
+};
+
 export default function DashboardPage() {
   const [scope, setScope] = useState("today");
   const [market, setMarket] = useState("All");
-  const [completedActions, setCompletedActions] = useState({});
+  const [doneList, setDoneList] = useState([]);
   const { openDrawer, showToast } = useAdminDrawer();
-  const { isDark } = useTheme();
   const navigate = useNavigate();
 
-  const currentScopeData = SCOPE_CONFIG[scope];
-  const actions = currentScopeData.actions;
+  const currentScopeData = SCOPE_CONFIG[scope] || SCOPE_CONFIG.today;
+  const actions = currentScopeData.actions || [];
 
-  const toggleDone = (id, title) => {
-    setCompletedActions((prev) => {
-      const next = !prev[id];
-      if (next) {
+  const isWeek = scope === "week";
+  const queueKicker =
+    (scope === "year" ? "THIS YEAR" : scope === "month" ? "THIS MONTH" : isWeek ? "THIS WEEK" : "TODAY") +
+    " · IN ORDER OF VALUE";
+  const queueTitle =
+    scope === "year"
+      ? "The calls that matter"
+      : scope === "month"
+      ? "What closes the month"
+      : isWeek
+      ? "What moves the number"
+      : "Your action queue";
+
+  const doneCount = actions.filter((_, i) => doneList.includes(`${scope}${i}`)).length;
+  const inboxCount = INBOX_ITEMS.reduce((a, r) => a + Number(r.c || 0), 0) + " open";
+
+  const toggleDone = (scopeKey, index, title) => {
+    const key = `${scopeKey}${index}`;
+    setDoneList((prev) => {
+      const isNowDone = !prev.includes(key);
+      if (isNowDone) {
         showToast(`✓ Marked done: ${title}`);
+        return [...prev, key];
       }
-      return { ...prev, [id]: next };
+      return prev.filter((x) => x !== key);
     });
   };
 
-  const doneCount = actions.filter((a) => completedActions[a.id]).length;
+  const getToneColor = (tone) => {
+    if (tone === "gold") return "#C9943A";
+    if (tone === "copper") return "#D98A3E";
+    return "rgba(247, 243, 238, 0.55)";
+  };
+
+  const handleActionOpen = (a) => {
+    const target = getTarget(a.t, a.cta);
+    const targetRoute = TARGET_ROUTES[target] || a.route;
+    if (targetRoute) {
+      navigate(targetRoute);
+    } else if (a.drawer) {
+      openDrawer(a.drawer);
+    }
+  };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Scope & Market Switcher Header */}
-      <div className="flex items-start justify-between gap-6 flex-wrap pb-2">
+    <div className="animate-in fade-in duration-200 font-dmsans text-[#F7F3EE]">
+      {/* Top Header Row */}
+      <div className="flex items-start justify-between gap-6 flex-wrap mb-2">
         <div>
-          <div className="text-[10px] font-medium tracking-[0.18em] text-[#B5651D] mb-2 uppercase font-dmsans">
-            VICTORY FITNESS · LIVE EXECUTIVE VIEW
+          <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: "0.18em", color: "#B5651D", marginBottom: "8px" }}>
+            FRIDAY, 11 SEPTEMBER · 09:17
           </div>
-          <h1
-            className={`text-3xl sm:text-4xl font-semibold tracking-tight font-clash leading-tight mb-2 transition-colors ${
-              isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
-            }`}
-          >
+          <h1 style={{ margin: "0 0 8px", font: "600 36px/1.06 'Clash Display', 'DM Sans', sans-serif", color: "#F7F3EE", letterSpacing: "-0.015em" }}>
             {currentScopeData.headline}
           </h1>
-          <p
-            className={`max-w-2xl text-sm sm:text-[14.5px] font-inter leading-relaxed transition-colors ${
-              isDark ? "text-[#F7F3EE]/60" : "text-[#0D2B45]/70"
-            }`}
-          >
+          <p style={{ margin: 0, maxWidth: "620px", font: "400 14.5px/1.6 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.6)", textWrap: "pretty" }}>
             {currentScopeData.subhead}
           </p>
         </div>
 
-        {/* Scope and Market Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div
-            className={`flex border rounded-xl p-1 transition-all ${
-              isDark
-                ? "border-[#F7F3EE]/15 bg-[#0A0A0A]"
-                : "border-[rgba(13,43,69,0.12)] bg-white shadow-xs"
-            }`}
-          >
-            {["today", "week", "month", "year"].map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setScope(s)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
-                  scope === s
-                    ? "bg-[#C9943A] text-[#0D0D0D] shadow-xs"
-                    : isDark
-                    ? "text-[#F7F3EE]/60 hover:text-[#F7F3EE]"
-                    : "text-[#0D2B45]/60 hover:text-[#0D2B45]"
-                }`}
-              >
-                {s}
-              </button>
-            ))}
+        {/* Filter Segment Pills */}
+        <div className="flex gap-2.5 items-center flex-wrap">
+          {/* Scope Tabs */}
+          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", border: "1px solid rgba(247, 243, 238, 0.16)", borderRadius: "12px", padding: "4px" }}>
+            {[
+              ["today", "Today"],
+              ["week", "This week"],
+              ["month", "Month"],
+              ["year", "Year"],
+            ].map(([k, n]) => {
+              const on = scope === k;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setScope(k)}
+                  style={{
+                    padding: "9px 14px",
+                    borderRadius: "9px",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    font: `${on ? "700" : "500"} 12.5px 'DM Sans', sans-serif`,
+                    backgroundColor: on ? "#C9943A" : "transparent",
+                    color: on ? "#0D0D0D" : "rgba(247, 243, 238, 0.6)",
+                    border: "none",
+                    outline: "none",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  {n}
+                </button>
+              );
+            })}
           </div>
 
-          <div
-            className={`flex border rounded-xl p-1 transition-all ${
-              isDark
-                ? "border-[#F7F3EE]/15 bg-[#0A0A0A]"
-                : "border-[rgba(13,43,69,0.12)] bg-white shadow-xs"
-            }`}
-          >
-            {["All", "Germany", "Ghana", "India", "Rest of world"].map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMarket(m)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  market === m
-                    ? isDark
-                      ? "bg-[#F7F3EE]/20 text-[#F7F3EE]"
-                      : "bg-[rgba(13,43,69,0.1)] text-[#0D2B45]"
-                    : isDark
-                    ? "text-[#F7F3EE]/50 hover:text-[#F7F3EE]"
-                    : "text-[#0D2B45]/50 hover:text-[#0D2B45]"
-                }`}
-              >
-                {m}
-              </button>
-            ))}
+          {/* Market Tabs */}
+          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", border: "1px solid rgba(247, 243, 238, 0.16)", borderRadius: "12px", padding: "4px" }}>
+            {["All", "Germany", "Ghana", "India", "Rest of world"].map((m) => {
+              const on = market === m;
+              return (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMarket(m)}
+                  style={{
+                    padding: "9px 14px",
+                    borderRadius: "9px",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                    font: `${on ? "700" : "500"} 12.5px 'DM Sans', sans-serif`,
+                    backgroundColor: on ? "#C9943A" : "transparent",
+                    color: on ? "#0D0D0D" : "rgba(247, 243, 238, 0.6)",
+                    border: "none",
+                    outline: "none",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  {m}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
 
       {/* Pulse Metrics Row (5 Cards) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+      <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", marginBottom: "26px" }}>
         {currentScopeData.pulse.map((p) => {
-          const isUp = p.dir === "up";
-          const isDown = p.dir === "down";
-          const pulseBorderColor = isDown
-            ? "#B5651D"
-            : p.dir === "flat"
-            ? isDark
-              ? "rgba(247,243,238,0.25)"
-              : "rgba(13,43,69,0.2)"
-            : "#1A7A4A";
+          const dirBorder =
+            p.dir === "down" ? "#B5651D" : p.dir === "flat" ? "rgba(247, 243, 238, 0.25)" : "#1A7A4A";
+          const deltaColor =
+            p.dir === "down" ? "#D98A3E" : p.dir === "flat" ? "rgba(247, 243, 238, 0.55)" : "#5FC48E";
+
           return (
             <div
               key={p.k}
-              style={{ borderLeftWidth: 4, borderLeftColor: pulseBorderColor, borderLeftStyle: "solid" }}
-              className={`rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-all ${
-                isDark
-                  ? "bg-[#0D2B45] border border-[#F7F3EE]/10 text-[#F7F3EE]"
-                  : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)] text-[#0D2B45]"
-              }`}
+              style={{
+                flex: "1 1 180px",
+                minWidth: "170px",
+                backgroundColor: "#0D2B45",
+                borderRadius: "18px",
+                borderLeft: `4px solid ${dirBorder}`,
+                padding: "17px 18px",
+                boxSizing: "border-box",
+              }}
             >
-              <div className="flex items-baseline justify-between gap-2 mb-2">
-                <span
-                  className={`text-[9.5px] font-semibold tracking-[0.14em] uppercase font-dmsans ${
-                    isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
-                  }`}
-                >
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", marginBottom: "9px" }}>
+                <span style={{ font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: "0.14em", color: "rgba(247, 243, 238, 0.5)", textTransform: "uppercase" }}>
                   {p.k}
                 </span>
-                <span
-                  className={`text-xs font-mono font-bold ${
-                    isUp
-                      ? isDark
-                        ? "text-[#5FC48E]"
-                        : "text-[#1A7A4A]"
-                      : isDown
-                      ? "text-[#D98A3E]"
-                      : isDark
-                      ? "text-[#F7F3EE]/50"
-                      : "text-[#0D2B45]/50"
-                  }`}
-                >
+                <span style={{ font: "700 11.5px 'JetBrains Mono', monospace", color: deltaColor }}>
                   {p.delta}
                 </span>
               </div>
-              <div
-                className={`text-2xl sm:text-3xl font-bold font-mono tracking-tight ${
-                  isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
-                }`}
-              >
+              <div style={{ font: "700 30px/1 'JetBrains Mono', monospace", color: "#F7F3EE", letterSpacing: "-0.02em" }}>
                 {p.v}
               </div>
-              <div
-                className={`mt-2 text-[11.5px] font-inter leading-tight ${
-                  isDark ? "text-[#F7F3EE]/55" : "text-[#0D2B45]/60"
-                }`}
-              >
+              <div style={{ font: "400 12px/1.45 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.55)", marginTop: "7px" }}>
                 {p.note}
               </div>
             </div>
@@ -296,213 +637,272 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {/* Main Grid: Left Stage (Action Queue + Agenda/YoY) & Right Rail */}
-      <div className="flex flex-col xl:flex-row gap-6 items-start">
-        {/* Left Stage */}
-        <div className="flex-1 min-w-0 w-full space-y-5">
-          {/* Action Queue */}
-          <div
-            className={`rounded-2xl p-5 sm:p-6 transition-all ${
-              isDark
-                ? "bg-[#0D2B45] border border-[#F7F3EE]/10"
-                : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_20px_rgba(13,43,69,0.04)]"
-            }`}
-          >
-            <div
-              className={`flex items-baseline justify-between gap-3 mb-4 pb-3 border-b transition-colors ${
-                isDark ? "border-[#F7F3EE]/10" : "border-[rgba(13,43,69,0.08)]"
-              }`}
-            >
-              <div>
-                <div className="text-[10px] font-semibold tracking-[0.17em] text-[#B5651D] uppercase mb-1">
-                  QUEUE · PRIORITY ORDER
-                </div>
-                <h2
-                  className={`text-xl sm:text-2xl font-semibold font-clash ${
-                    isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
-                  }`}
-                >
-                  Do these in order
-                </h2>
+      {/* Two Column Layout: Action Queue on Left (620px), Context Rail on Right (340px) */}
+      <div style={{ display: "flex", gap: "20px", alignItems: "flex-start", flexWrap: "wrap" }}>
+        
+        {/* Left Column: Exactly Matching Claude Reference (flex: 1 1 620px; min-width: 0) */}
+        <div style={{ flex: "1 1 620px", minWidth: 0 }}>
+          {/* Action Queue Header */}
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "12px", marginBottom: "12px" }}>
+            <div>
+              <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".17em", color: "#B5651D", marginBottom: "5px" }}>
+                {queueKicker}
               </div>
-              <span className="text-xs font-mono font-bold text-[#C9943A]">
-                {doneCount} of {actions.length} done
-              </span>
+              <h2 style={{ margin: 0, font: "600 24px 'Clash Display', 'DM Sans', sans-serif", color: "#F7F3EE" }}>
+                {queueTitle}
+              </h2>
             </div>
+            <span style={{ font: "700 12.5px 'JetBrains Mono', monospace", color: "#C9943A" }}>
+              {doneCount} of {actions.length} done
+            </span>
+          </div>
 
-            <div className="space-y-4">
-              {actions.map((a) => {
-                const isDone = completedActions[a.id];
-                const actionBorderColor = isDone
-                  ? "#1A7A4A"
-                  : a.tagTone === "gold"
-                  ? "#C9943A"
-                  : a.tagTone === "copper"
-                  ? "#B5651D"
-                  : isDark
-                  ? "rgba(247,243,238,0.4)"
-                  : "rgba(13,43,69,0.3)";
-                return (
+          {/* Action Cards List - Direct unnested items */}
+          {actions.map((a, index) => {
+            const key = `${scope}${index}`;
+            const isDone = doneList.includes(key);
+            const target = getTarget(a.t, a.cta);
+            const toneColor = getToneColor(a.tagTone);
+
+            return (
+              <div
+                key={key}
+                style={{
+                  background: "#0D2B45",
+                  borderRadius: "18px",
+                  padding: "18px 20px",
+                  marginBottom: "10px",
+                  opacity: isDone ? 0.5 : 1,
+                  borderLeft: isDone ? "4px solid #1A7A4A" : `4px solid ${toneColor}`,
+                  boxSizing: "border-box",
+                  transition: "opacity 0.15s ease, border-color 0.15s ease",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
+                  {/* Exact 22x22 Checkbox with 7px Radius */}
                   <div
-                    key={a.id}
-                    style={{ borderLeftWidth: 4, borderLeftColor: actionBorderColor, borderLeftStyle: "solid" }}
-                    className={`p-4 sm:p-4.5 rounded-xl border transition-all ${
+                    onClick={() => toggleDone(scope, index, a.t)}
+                    style={
                       isDone
-                        ? isDark
-                          ? "bg-[#0A0A0A]/40 border-[#F7F3EE]/5 opacity-60"
-                          : "bg-[#F7F3EE]/50 border-[rgba(13,43,69,0.06)] opacity-60"
-                        : isDark
-                        ? "bg-[#0A0A0A]/80 border-[#F7F3EE]/10 hover:border-[#C9943A]/40"
-                        : "bg-[#FAF7F2] border-[rgba(13,43,69,0.08)] hover:border-[#C9943A]/40 shadow-xs"
-                    }`}
+                        ? {
+                            width: "22px",
+                            height: "22px",
+                            borderRadius: "7px",
+                            background: "#1A7A4A",
+                            flex: "none",
+                            marginTop: "3px",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }
+                        : {
+                            width: "22px",
+                            height: "22px",
+                            borderRadius: "7px",
+                            boxSizing: "border-box",
+                            border: "1.5px solid rgba(201,148,58,.6)",
+                            flex: "none",
+                            marginTop: "3px",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }
+                    }
+                    title={isDone ? "Undo" : "Mark done"}
                   >
-                    <div className="flex items-start gap-3.5">
-                      {/* Interactive Round Checkbox */}
-                      <button
-                        type="button"
-                        onClick={() => toggleDone(a.id, a.t)}
-                        className={`w-5 h-5 rounded-full border-2 mt-0.5 shrink-0 transition-colors flex items-center justify-center cursor-pointer ${
+                    {isDone && (
+                      <span style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: "11.5px", lineHeight: "1" }}>
+                        ✓
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {/* Tag & When Header */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "9px", flexWrap: "wrap", marginBottom: "6px" }}>
+                      <span style={{ font: "700 9.5px 'DM Sans', sans-serif", letterSpacing: ".12em", color: toneColor }}>
+                        {a.tag}
+                      </span>
+                      <span style={{ font: "500 11px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.45)" }}>
+                        {a.when}
+                      </span>
+                    </div>
+
+                    {/* Action Title */}
+                    <div
+                      style={{
+                        font: `600 ${isDone ? "17" : "19"}px/1.25 'Clash Display', 'DM Sans', sans-serif`,
+                        color: "#F7F3EE",
+                        textDecoration: isDone ? "line-through" : "none",
+                      }}
+                    >
+                      {a.t}
+                    </div>
+
+                    {/* Why Copy */}
+                    <p
+                      style={{
+                        margin: "7px 0 0",
+                        font: "400 13.5px/1.55 'Inter', sans-serif",
+                        color: "rgba(247,243,238,.65)",
+                        textWrap: "pretty",
+                      }}
+                    >
+                      {a.why}
+                    </p>
+
+                    {/* Action Footer Bar */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "13px", flexWrap: "wrap" }}>
+                      {/* Primary CTA Button */}
+                      <div
+                        onClick={() => handleActionOpen(a)}
+                        style={
                           isDone
-                            ? "bg-[#5FC48E] border-[#5FC48E]"
-                            : "border-[#C9943A] hover:bg-[#C9943A]/20"
-                        }`}
-                        aria-label="Toggle task completed"
+                            ? {
+                                height: "38px",
+                                padding: "0 16px",
+                                borderRadius: "11px",
+                                boxSizing: "border-box",
+                                border: "1.5px solid rgba(247,243,238,.22)",
+                                color: "rgba(247,243,238,.6)",
+                                font: "700 13px 'DM Sans', sans-serif",
+                                display: "flex",
+                                alignItems: "center",
+                                cursor: "pointer",
+                                userSelect: "none",
+                                whiteSpace: "nowrap",
+                              }
+                            : {
+                                height: "38px",
+                                padding: "0 16px",
+                                borderRadius: "11px",
+                                background: "#C9943A",
+                                color: "#0D0D0D",
+                                font: "700 13px 'DM Sans', sans-serif",
+                                display: "flex",
+                                alignItems: "center",
+                                cursor: "pointer",
+                                userSelect: "none",
+                                whiteSpace: "nowrap",
+                              }
+                        }
                       >
-                        {isDone && <span className="text-[#0D0D0D] font-bold text-xs">✓</span>}
-                      </button>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                          <span
-                            className={`text-[9.5px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
-                              a.tagTone === "gold"
-                                ? "bg-[#C9943A] text-[#0D0D0D]"
-                                : a.tagTone === "copper"
-                                ? "bg-[#B5651D] text-[#F7F3EE]"
-                                : isDark ? "bg-[#F7F3EE]/15 text-[#F7F3EE]/70" : "bg-[rgba(13,43,69,0.08)] text-[#0D2B45]/75"
-                            }`}
-                          >
-                            {a.tag}
-                          </span>
-                          <span className={`text-[11px] font-mono ${isDark ? "text-[#F7F3EE]/45" : "text-[#0D2B45]/55"}`}>
-                            {a.when}
-                          </span>
-                        </div>
-
-                        <div
-                          className={`text-sm sm:text-[15px] font-semibold font-dmsans leading-snug ${
-                            isDark
-                              ? isDone ? "line-through text-[#F7F3EE]/50" : "text-[#F7F3EE]"
-                              : isDone ? "line-through text-[#0D2B45]/50" : "text-[#0D2B45]"
-                          }`}
-                        >
-                          {a.t}
-                        </div>
-
-                        <p
-                          className={`mt-1 text-xs sm:text-[13.5px] font-inter leading-relaxed ${
-                            isDark ? "text-[#F7F3EE]/65" : "text-[#0D2B45]/70"
-                          }`}
-                        >
-                          {a.why}
-                        </p>
-
-                        <div className="flex items-center gap-2.5 mt-3 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => openDrawer(a.drawer)}
-                            className="h-8 px-3 rounded-lg bg-[#C9943A] hover:bg-[#d8a24a] text-[#0D0D0D] font-bold text-xs flex items-center gap-1 transition-all cursor-pointer"
-                          >
-                            <span>{a.cta}</span>
-                            <span>→</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => toggleDone(a.id, a.t)}
-                            className={`h-8 px-3 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
-                              isDark
-                                ? "border-[#F7F3EE]/20 hover:border-[#F7F3EE]/40 text-[#F7F3EE]/70 hover:text-[#F7F3EE]"
-                                : "border-[rgba(13,43,69,0.18)] hover:border-[rgba(13,43,69,0.35)] text-[#0D2B45]/75 hover:text-[#0D2B45] bg-white shadow-xs"
-                            }`}
-                          >
-                            {isDone ? "Undo" : "Done"}
-                          </button>
-                          <span className="text-xs font-mono font-bold text-[#5FC48E]">
-                            {a.impact}
-                          </span>
-                          <span className={`text-xs font-inter ${isDark ? "text-[#F7F3EE]/40" : "text-[#0D2B45]/55"}`}>
-                            {a.effort}
-                          </span>
-                          <span className={`text-[11px] font-mono ml-auto ${isDark ? "text-[#F7F3EE]/35" : "text-[#0D2B45]/45"}`}>
-                            opens {a.target}
-                          </span>
-                        </div>
+                        {a.cta} →
                       </div>
+
+                      {/* Secondary Mark done / Undo Button */}
+                      <div
+                        onClick={() => toggleDone(scope, index, a.t)}
+                        style={{
+                          height: "38px",
+                          padding: "0 13px",
+                          borderRadius: "11px",
+                          boxSizing: "border-box",
+                          border: "1.5px solid rgba(247,243,238,.2)",
+                          color: "rgba(247,243,238,.7)",
+                          font: "700 12.5px 'DM Sans', sans-serif",
+                          display: "flex",
+                          alignItems: "center",
+                          cursor: "pointer",
+                          whiteSpace: "nowrap",
+                          userSelect: "none",
+                        }}
+                      >
+                        {isDone ? "Undo" : "Mark done"}
+                      </div>
+
+                      {/* Impact Stat */}
+                      {!isDone && a.impact && (
+                        <span style={{ font: "700 12.5px 'JetBrains Mono', monospace", color: "#5FC48E" }}>
+                          {a.impact}
+                        </span>
+                      )}
+
+                      {/* Effort Estimate */}
+                      {!isDone && a.effort && (
+                        <span style={{ font: "400 12px 'Inter', sans-serif", color: "rgba(247,243,238,.4)" }}>
+                          {a.effort}
+                        </span>
+                      )}
+
+                      {/* Opens Target Hint */}
+                      <span style={{ font: "500 11px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.38)" }}>
+                        opens {target}
+                      </span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
+                </div>
+              </div>
+            );
+          })}
 
           {/* Conditional: The Week Ahead (Scope: Today or Week) */}
           {(scope === "today" || scope === "week") && (
             <div
-              style={{ borderLeftWidth: 4, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
-              className={`rounded-2xl p-5 sm:p-6 transition-all ${
-                isDark
-                  ? "bg-[#0D2B45] border border-[#F7F3EE]/10"
-                  : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)]"
-              }`}
+              style={{
+                marginTop: "20px",
+                backgroundColor: "#0D2B45",
+                borderRadius: "20px",
+                borderLeft: "4px solid #B5651D",
+                padding: "22px",
+                boxSizing: "border-box",
+              }}
             >
-              <div
-                className={`flex items-baseline justify-between gap-3 mb-4 pb-2 border-b transition-colors ${
-                  isDark ? "border-[#F7F3EE]/10" : "border-[rgba(13,43,69,0.08)]"
-                }`}
-              >
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "12px", marginBottom: "16px" }}>
                 <div>
-                  <div className="text-[10px] font-semibold tracking-[0.16em] text-[#C9943A] uppercase mb-1">
+                  <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: "0.16em", color: "#C9943A", marginBottom: "5px" }}>
                     THE WEEK AHEAD
                   </div>
-                  <h3
-                    className={`text-xl font-semibold font-clash ${
-                      isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
-                    }`}
-                  >
+                  <h3 style={{ margin: 0, font: "600 20px 'Clash Display', 'DM Sans', sans-serif", color: "#F7F3EE" }}>
                     Seven days, planned
                   </h3>
                 </div>
-                <span
-                  className={`text-xs font-mono ${
-                    isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
-                  }`}
-                >
-                  auto-scheduled from active data
+                <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.5)" }}>
+                  auto-scheduled from your data
                 </span>
               </div>
 
-              <div className="space-y-2">
-                {WEEK_ITEMS.map((w) => (
+              <div>
+                {WEEK_ITEMS.map((w, idx) => (
                   <div
-                    key={w.d + w.date}
-                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[#0A0A0A]/40 transition-colors"
+                    key={w.d}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "14px",
+                      padding: "12px 0",
+                      borderBottom: idx < WEEK_ITEMS.length - 1 ? "1px solid rgba(247, 243, 238, 0.09)" : "none",
+                    }}
                   >
-                    <div className="w-16 shrink-0">
-                      <div className={`text-xs font-bold ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>{w.d}</div>
-                      <div className={`text-[10px] font-mono ${isDark ? "text-[#F7F3EE]/40" : "text-[#0D2B45]/45"}`}>{w.date}</div>
+                    <div style={{ width: "74px", flex: "none" }}>
+                      <div style={{ font: "700 12px 'JetBrains Mono', monospace", color: w.hot ? "#C9943A" : "rgba(247, 243, 238, 0.6)" }}>
+                        {w.d}
+                      </div>
+                      <div style={{ font: "400 10.5px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.4)", marginTop: "2px" }}>
+                        {w.date}
+                      </div>
                     </div>
                     <div
-                      className={`w-1.5 h-7 rounded-full shrink-0 ${
-                        w.active ? "bg-[#C9943A]" : isDark ? "bg-[#F7F3EE]/20" : "bg-[rgba(13,43,69,0.15)]"
-                      }`}
+                      style={{
+                        width: "3px",
+                        alignSelf: "stretch",
+                        borderRadius: "99px",
+                        backgroundColor: w.hot ? "#C9943A" : "rgba(247, 243, 238, 0.16)",
+                      }}
                     />
-                    <div className="flex-1 min-w-0">
-                      <div className={`text-xs sm:text-sm font-semibold truncate ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ font: w.hot ? "600 14.5px 'DM Sans', sans-serif" : "500 14.5px 'DM Sans', sans-serif", color: w.hot ? "#F7F3EE" : "rgba(247, 243, 238, 0.75)" }}>
                         {w.t}
                       </div>
-                      <div className={`text-[11px] truncate ${isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/60"}`}>{w.note}</div>
+                      <div style={{ font: "400 12px 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.5)", marginTop: "2px" }}>
+                        {w.note}
+                      </div>
                     </div>
-                    <span className={`text-xs font-mono shrink-0 ${isDark ? "text-[#F7F3EE]/45" : "text-[#0D2B45]/50"}`}>{w.owner}</span>
+                    <span style={{ font: "500 11px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.45)" }}>
+                      {w.owner}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -512,74 +912,90 @@ export default function DashboardPage() {
           {/* Conditional: YoY Table (Scope: Month or Year) */}
           {(scope === "month" || scope === "year") && (
             <div
-              style={{ borderLeftWidth: 4, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
-              className={`rounded-2xl p-5 sm:p-6 transition-all ${
-                isDark
-                  ? "bg-[#0D2B45] border border-[#F7F3EE]/10"
-                  : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)]"
-              }`}
+              style={{
+                marginTop: "20px",
+                backgroundColor: "#0D2B45",
+                borderRadius: "20px",
+                borderLeft: "4px solid #B5651D",
+                padding: "22px",
+                boxSizing: "border-box",
+              }}
             >
-              <div
-                className={`flex items-baseline justify-between gap-3 mb-4 pb-2 border-b transition-colors ${
-                  isDark ? "border-[#F7F3EE]/10" : "border-[rgba(13,43,69,0.08)]"
-                }`}
-              >
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "12px", marginBottom: "16px" }}>
                 <div>
-                  <div className="text-[10px] font-semibold tracking-[0.16em] text-[#C9943A] uppercase mb-1">
+                  <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: "0.16em", color: "#C9943A", marginBottom: "5px" }}>
                     COMPANY HEALTH · AGAINST LAST YEAR
                   </div>
-                  <h3
-                    className={`text-xl font-semibold font-clash ${
-                      isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
-                    }`}
-                  >
+                  <h3 style={{ margin: 0, font: "600 20px 'Clash Display', 'DM Sans', sans-serif", color: "#F7F3EE" }}>
                     Where you were, where you are
                   </h3>
                 </div>
-                <span
-                  className={`text-xs font-mono ${
-                    isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
-                  }`}
-                >
+                <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.5)" }}>
                   Sep 2025 → Sep 2026
                 </span>
               </div>
 
-              <div className="overflow-x-auto">
-                <div className="min-w-[480px]">
-                  <div className={`flex text-[10px] font-semibold tracking-wider pb-2 border-b uppercase ${
-                    isDark ? "text-[#F7F3EE]/50 border-[#F7F3EE]/10" : "text-[#0D2B45]/55 border-[rgba(13,43,69,0.08)]"
-                  }`}>
-                    <span className="flex-2">Measure</span>
-                    <span className="flex-1 text-right">Now</span>
-                    <span className="flex-1 text-right">Last Year</span>
-                    <span className="flex-1 text-right text-[#C9943A]">Change</span>
-                  </div>
-                  {YEAR_ROWS.map((y) => (
-                    <div
-                      key={y.k}
-                      className={`flex items-center text-xs sm:text-sm py-2.5 border-b ${
-                        isDark ? "border-[#F7F3EE]/5" : "border-[rgba(13,43,69,0.06)]"
-                      }`}
+              <div style={{ display: "flex", gap: "10px", padding: "0 0 10px", borderBottom: "1px solid rgba(247, 243, 238, 0.12)" }}>
+                <span style={{ flex: 2, font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: "0.13em", color: "rgba(247, 243, 238, 0.5)", textTransform: "uppercase" }}>
+                  MEASURE
+                </span>
+                <span style={{ flex: 1, textAlign: "right", font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: "0.13em", color: "rgba(247, 243, 238, 0.5)", textTransform: "uppercase" }}>
+                  NOW
+                </span>
+                <span style={{ flex: 1, textAlign: "right", font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: "0.13em", color: "rgba(247, 243, 238, 0.5)", textTransform: "uppercase" }}>
+                  LAST YEAR
+                </span>
+                <span style={{ flex: 1, textAlign: "right", font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: "0.13em", color: "#C9943A", textTransform: "uppercase" }}>
+                  CHANGE
+                </span>
+              </div>
+
+              <div>
+                {YEAR_ROWS.map((y, idx) => (
+                  <div
+                    key={y.k}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                      padding: "11px 0",
+                      borderBottom: idx < YEAR_ROWS.length - 1 ? "1px solid rgba(247, 243, 238, 0.08)" : "none",
+                    }}
+                  >
+                    <span style={{ flex: 2, minWidth: 0, font: "600 14px 'DM Sans', sans-serif", color: "#F7F3EE" }}>
+                      {y.k}
+                    </span>
+                    <span style={{ flex: 1, textAlign: "right", font: "700 13.5px 'JetBrains Mono', monospace", color: "#F7F3EE" }}>
+                      {y.now}
+                    </span>
+                    <span style={{ flex: 1, textAlign: "right", font: "500 13px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.5)" }}>
+                      {y.then}
+                    </span>
+                    <span
+                      style={{
+                        flex: 1,
+                        textAlign: "right",
+                        font: "700 13px 'JetBrains Mono', monospace",
+                        color: y.tone === "good" ? "#5FC48E" : "#D98A3E",
+                      }}
                     >
-                      <span className={`flex-2 font-semibold ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>{y.k}</span>
-                      <span className={`flex-1 text-right font-mono font-bold ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
-                        {y.now}
-                      </span>
-                      <span className={`flex-1 text-right font-mono ${isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"}`}>
-                        {y.then}
-                      </span>
-                      <span className={`flex-1 text-right font-mono font-bold ${y.deltaStyle}`}>
-                        {y.delta}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                      {y.delta}
+                    </span>
+                  </div>
+                ))}
               </div>
 
               <div
-                style={{ borderLeftWidth: 3, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
-                className={`mt-4 p-3.5 rounded-xl border border-[#B5651D]/30 text-xs leading-relaxed font-inter ${isDark ? "bg-[#B5651D]/15 text-[#F7F3EE]/85" : "bg-[#B5651D]/10 text-[#0D2B45]"}`}
+                style={{
+                  marginTop: "16px",
+                  padding: "13px 15px",
+                  borderRadius: "13px",
+                  backgroundColor: "rgba(181, 101, 29, 0.14)",
+                  boxSizing: "border-box",
+                  borderLeft: "3px solid #B5651D",
+                  font: "400 12.5px/1.55 'Inter', sans-serif",
+                  color: "rgba(247, 243, 238, 0.8)",
+                }}
               >
                 Every measure improved except cost per acquisition, which rose 23% while revenue grew 312% — you bought growth, and it was worth it. Watch it if the gap narrows.
               </div>
@@ -587,51 +1003,64 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Right Rail */}
-        <div className="w-full xl:w-[360px] shrink-0 space-y-5">
+        {/* Right Stage Rail: Exact Claude Reference (flex: 1 1 340px; min-width: 300px; display: flex; flex-direction: column; gap: 16px) */}
+        <div style={{ flex: "1 1 340px", minWidth: "300px", display: "flex", flexDirection: "column", gap: "16px" }}>
+          
           {/* Where The Money Is */}
           <div
-            style={{ borderLeftWidth: 4, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
-            className={`rounded-2xl p-5 transition-all ${
-              isDark
-                ? "bg-[#0D2B45] border border-[#F7F3EE]/10 text-[#F7F3EE]"
-                : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)] text-[#0D2B45]"
-            }`}
+            style={{
+              backgroundColor: "#0D2B45",
+              borderRadius: "20px",
+              borderLeft: "4px solid #B5651D",
+              padding: "20px",
+              boxSizing: "border-box",
+            }}
           >
-            <div className="text-[10px] font-semibold tracking-[0.16em] text-[#C9943A] uppercase mb-3">
+            <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "14px" }}>
               WHERE THE MONEY IS
             </div>
-            <div className="space-y-4">
-              {MARKETS.map((m) => (
-                <div key={m.n} className={`pt-2 first:pt-0 border-t first:border-0 ${
-                  isDark ? "border-[#F7F3EE]/10" : "border-[rgba(13,43,69,0.08)]"
-                }`}>
-                  <div className="flex items-baseline justify-between mb-1.5">
-                    <span className={`font-semibold text-sm ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>{m.n}</span>
-                    <span className="font-mono font-bold text-sm text-[#C9943A]">{m.rev}</span>
+            <div>
+              {MARKETS.map((m, idx) => (
+                <div
+                  key={m.n}
+                  style={{
+                    padding: "16px 0",
+                    borderBottom: idx < MARKETS.length - 1 ? "1px solid rgba(247, 243, 238, 0.1)" : "none",
+                    paddingBottom: idx === MARKETS.length - 1 ? 0 : "16px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", marginBottom: "7px" }}>
+                    <span style={{ font: "600 15.5px 'DM Sans', sans-serif", color: "#F7F3EE" }}>{m.n}</span>
+                    <span style={{ font: "700 14px 'JetBrains Mono', monospace", color: "#C9943A" }}>{m.rev}</span>
                   </div>
-                  <div className={`h-1.5 rounded-full overflow-hidden mb-2 ${isDark ? "bg-[#F7F3EE]/10" : "bg-[rgba(13,43,69,0.08)]"}`}>
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${m.pct}%`, backgroundColor: m.barColor }}
-                    />
+                  <div style={{ height: "6px", borderRadius: "99px", backgroundColor: "rgba(247, 243, 238, 0.12)", overflow: "hidden", marginBottom: "9px" }}>
+                    <div style={{ width: `${m.pct}%`, height: "100%", backgroundColor: m.tone }} />
                   </div>
-                  <div className={`flex items-center gap-3 text-[11px] font-mono mb-1.5 ${isDark ? "text-[#F7F3EE]/60" : "text-[#0D2B45]/60"}`}>
-                    <span>{m.users}</span>
-                    <span>·</span>
-                    <span>{m.conv}</span>
+                  <div style={{ display: "flex", gap: "14px", marginBottom: "9px" }}>
+                    <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.6)" }}>{m.users}</span>
+                    <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.6)" }}>{m.conv}</span>
                   </div>
-                  <p className={`text-xs font-inter leading-relaxed mb-2.5 ${isDark ? "text-[#F7F3EE]/70" : "text-[#0D2B45]/75"}`}>
+                  <p style={{ margin: "0 0 10px", font: "400 12.5px/1.5 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.68)", textWrap: "pretty" }}>
                     {m.verdict}
                   </p>
-                  <button
-                    type="button"
+                  <div
                     onClick={() => openDrawer(m.drawer)}
-                    className="text-xs font-bold text-[#C9943A] hover:underline cursor-pointer flex items-center gap-1"
+                    style={{
+                      height: "40px",
+                      borderRadius: "11px",
+                      boxSizing: "border-box",
+                      border: `1.5px solid ${m.ink}`,
+                      color: m.ink,
+                      font: "700 13px 'DM Sans', sans-serif",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      userSelect: "none",
+                    }}
                   >
-                    <span>{m.action}</span>
-                    <span>→</span>
-                  </button>
+                    {m.action}
+                  </div>
                 </div>
               ))}
             </div>
@@ -639,50 +1068,59 @@ export default function DashboardPage() {
 
           {/* Needs You / Inbox */}
           <div
-            className={`rounded-2xl p-5 transition-all ${
-              isDark
-                ? "bg-[#0D2B45]"
-                : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)] text-[#0D2B45]"
-            }`}
+            style={{
+              backgroundColor: "#0D2B45",
+              borderRadius: "20px",
+              padding: "20px",
+              boxSizing: "border-box",
+            }}
           >
-            <div className="flex items-baseline justify-between gap-2 mb-3">
-              <span className="text-[10px] font-semibold tracking-[0.16em] text-[#C9943A] uppercase">
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", marginBottom: "14px" }}>
+              <span style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A" }}>
                 NEEDS YOU
               </span>
-              <span className={`text-xs font-mono ${isDark ? "text-[#F7F3EE]/45" : "text-[#0D2B45]/55"}`}>5 open</span>
+              <span style={{ font: "700 11.5px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.45)" }}>
+                {inboxCount}
+              </span>
             </div>
-            <div className="space-y-1.5">
-              {INBOX_ITEMS.map((item) => (
+            <div>
+              {INBOX_ITEMS.map((item, idx) => (
                 <div
                   key={item.t}
                   onClick={() => navigate(item.route)}
-                  className={`flex items-center gap-3 p-2.5 rounded-xl transition-colors cursor-pointer ${
-                    isDark ? "hover:bg-[#0A0A0A]/40" : "hover:bg-[#FAF7F2]"
-                  }`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    padding: "12px 0",
+                    cursor: "pointer",
+                    borderBottom: idx < INBOX_ITEMS.length - 1 ? "1px solid rgba(247, 243, 238, 0.09)" : "none",
+                  }}
                 >
                   <div
-                    className={`w-2 h-2 rounded-full shrink-0 ${
-                      item.tone === "gold"
-                        ? "bg-[#C9943A]"
-                        : item.tone === "copper"
-                        ? "bg-[#B5651D]"
-                        : isDark ? "bg-[#F7F3EE]/30" : "bg-[rgba(13,43,69,0.25)]"
-                    }`}
+                    style={{
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "99px",
+                      flex: "none",
+                      backgroundColor:
+                        item.c === "0" ? "rgba(247, 243, 238, 0.2)" : item.tone === "gold" ? "#C9943A" : "#D98A3E",
+                    }}
                   />
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-xs sm:text-sm font-semibold truncate ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ font: "600 14px 'DM Sans', sans-serif", color: "#F7F3EE", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {item.t}
                     </div>
-                    <div className={`text-[11px] truncate ${isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"}`}>{item.note}</div>
+                    <div style={{ font: "400 11.5px 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.5)", marginTop: "2px" }}>
+                      {item.note}
+                    </div>
                   </div>
                   <span
-                    className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${
-                      item.tone === "gold"
-                        ? "bg-[#C9943A]/20 text-[#C9943A]"
-                        : item.tone === "copper"
-                        ? "bg-[#B5651D]/20 text-[#D98A3E]"
-                        : isDark ? "bg-[#F7F3EE]/10 text-[#F7F3EE]/40" : "bg-[rgba(13,43,69,0.08)] text-[#0D2B45]/55"
-                    }`}
+                    style={{
+                      font: "700 13px 'JetBrains Mono', monospace",
+                      flex: "none",
+                      color: item.c === "0" ? "rgba(247, 243, 238, 0.35)" : "#F7F3EE",
+                    }}
                   >
                     {item.c}
                   </span>
@@ -693,77 +1131,147 @@ export default function DashboardPage() {
 
           {/* Push Something, Now / Levers */}
           <div
-            className={`rounded-2xl p-5 transition-all ${
-              isDark
-                ? "bg-[#0D2B45]"
-                : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)] text-[#0D2B45]"
-            }`}
+            style={{
+              backgroundColor: "#0D2B45",
+              borderRadius: "20px",
+              padding: "20px",
+              boxSizing: "border-box",
+            }}
           >
-            <div className="text-[10px] font-semibold tracking-[0.16em] text-[#C9943A] uppercase mb-3">
+            <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "14px" }}>
               PUSH SOMETHING, NOW
             </div>
-            <div className="space-y-2">
+            <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
               {LEVER_ITEMS.map((lever) => (
                 <div
                   key={lever.t}
                   onClick={() => openDrawer(lever.drawer)}
-                  className={`p-3 rounded-xl flex items-center justify-between gap-3 cursor-pointer transition-all ${
-                    isDark
-                      ? "bg-[#0A0A0A]/60 border border-[#F7F3EE]/5 hover:border-[#C9943A]/40"
-                      : "bg-[#FAF7F2] border border-[rgba(13,43,69,0.08)] hover:border-[#C9943A]/40 shadow-xs"
-                  }`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    backgroundColor: "rgba(247, 243, 238, 0.05)",
+                    borderRadius: "13px",
+                    padding: "13px 15px",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className={`text-xs sm:text-sm font-semibold ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ font: "600 14px 'DM Sans', sans-serif", color: "#F7F3EE" }}>
                       {lever.t}
                     </div>
-                    <div className={`text-[11px] mt-0.5 leading-snug ${isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/60"}`}>
+                    <div style={{ font: "400 11.5px/1.45 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.5)", marginTop: "3px" }}>
                       {lever.note}
                     </div>
                   </div>
-                  <span className="text-base font-bold text-[#C9943A] shrink-0">›</span>
+                  <span style={{ font: "700 15px 'DM Sans', sans-serif", color: "#C9943A", flex: "none" }}>›</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Retention Gate */}
+          {/* Country and Currency: Exact Claude Reference (lines 224-236) */}
           <div
-            style={{ borderLeftWidth: 3, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
-            className={`rounded-2xl p-5 transition-all ${
-              isDark
-                ? "bg-[#0D2B45] border border-[#F7F3EE]/10 text-[#F7F3EE]"
-                : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)] text-[#0D2B45]"
-            }`}
+            style={{
+              backgroundColor: "#0D2B45",
+              borderRadius: "20px",
+              borderLeft: "4px solid #B5651D",
+              padding: "20px",
+              boxSizing: "border-box",
+            }}
           >
-            <div className="text-[10px] font-semibold tracking-[0.16em] text-[#C9943A] uppercase mb-1">
+            <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "6px" }}>
+              COUNTRY AND CURRENCY
+            </div>
+            <div style={{ font: "400 12.5px/1.5 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.6)", marginBottom: "14px" }}>
+              How someone registering from outside your three target markets is handled.
+            </div>
+            <div>
+              {MARKET_RULES.map((m) => (
+                <div
+                  key={m.k}
+                  style={{
+                    display: "flex",
+                    gap: "11px",
+                    padding: "10px 0",
+                    borderTop: "1px solid rgba(247, 243, 238, 0.09)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "99px",
+                      flex: "none",
+                      marginTop: "6px",
+                      backgroundColor: m.tone === "good" ? "#1A7A4A" : "#B5651D",
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ font: "600 13.5px 'DM Sans', sans-serif", color: "#F7F3EE" }}>
+                      {m.k}
+                    </div>
+                    <div style={{ font: "400 12px/1.5 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.6)", marginTop: "3px" }}>
+                      {m.v}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Retention Gate: Exact Claude Reference (lines 238-249) */}
+          <div
+            style={{
+              backgroundColor: "#0D2B45",
+              borderRadius: "20px",
+              padding: "20px",
+              boxSizing: "border-box",
+            }}
+          >
+            <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "6px" }}>
               RETENTION GATE
             </div>
-            <div className={`text-xs font-inter mb-3 leading-snug ${isDark ? "text-[#F7F3EE]/60" : "text-[#0D2B45]/70"}`}>
+            <div style={{ font: "400 12.5px/1.5 'Inter', sans-serif", color: "rgba(247, 243, 238, 0.6)", marginBottom: "16px" }}>
               Day-7 above 45% for four straight weeks is the signal to spend on ads. Not before.
             </div>
-            <div className="space-y-2 mb-3">
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "14px" }}>
               {COHORTS.map((c) => (
-                <div key={c.w} className="flex items-center gap-2 text-xs">
-                  <span className={`w-14 shrink-0 font-mono ${isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/60"}`}>{c.w}</span>
-                  <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${isDark ? "bg-[#F7F3EE]/10" : "bg-[rgba(13,43,69,0.08)]"}`}>
+                <div key={c.w} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ width: "52px", flex: "none", font: "500 11px 'JetBrains Mono', monospace", color: "rgba(247, 243, 238, 0.55)" }}>
+                    {c.w}
+                  </span>
+                  <div style={{ flex: 1, height: "6px", borderRadius: "99px", backgroundColor: "rgba(247, 243, 238, 0.12)", overflow: "hidden" }}>
                     <div
-                      className={`h-full rounded-full ${
-                        c.v >= 45 ? "bg-[#5FC48E]" : "bg-[#D98A3E]"
-                      }`}
-                      style={{ width: `${c.v}%` }}
+                      style={{
+                        width: `${c.v}%`,
+                        height: "100%",
+                        backgroundColor: c.v >= 45 ? "#1A7A4A" : "#B5651D",
+                      }}
                     />
                   </div>
-                  <span className={`w-10 text-right font-mono font-bold ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
+                  <span style={{ width: "44px", textAlign: "right", flex: "none", font: "700 12px 'JetBrains Mono', monospace", color: c.v >= 45 ? "#5FC48E" : "#D98A3E" }}>
                     {c.pct}
                   </span>
                 </div>
               ))}
             </div>
-            <div className="p-2.5 rounded-xl bg-[#1A7A4A]/20 border border-[#1A7A4A]/30 text-xs font-mono text-[#5FC48E]">
-              GATE PASS · 3 OF 4 WEEKS OVER 45%
+            <div
+              style={{
+                padding: "13px 15px",
+                borderRadius: "13px",
+                backgroundColor: "rgba(181, 101, 29, 0.14)",
+                boxSizing: "border-box",
+                borderLeft: "3px solid #B5651D",
+                font: "400 12.5px/1.55 'Inter', sans-serif",
+                color: "rgba(247, 243, 238, 0.8)",
+              }}
+            >
+              Two of four weeks above the line. Hold ad spend one more week — if 08 Sep lands above 45%, scale Germany first.
             </div>
           </div>
+
         </div>
       </div>
     </div>

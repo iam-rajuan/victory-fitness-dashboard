@@ -4,12 +4,12 @@ import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { listAdminSupportMessages } from "../../../services/admin-support.service";
 
 const BASE_ROWS = [
-  { a: "Kofi Mensah", b: "MoMo payment did not go through", c: "Trial · Gold", d: "Waiting 31 hr · Ghana", e: "Open", tone: "bad", id: "sp1" },
-  { a: "Lena Meyer", b: "Cannot change my protein target", c: "Silver", d: "Waiting 6 hr · Germany", e: "Open", tone: "warn", id: "sp2" },
-  { a: "Arjun Rao", b: "Video keeps buffering on mobile data", c: "Gold", d: "Waiting 3 hr · India", e: "Open", tone: "warn", id: "sp3" },
-  { a: "Michael Krause", b: "How do I swap my duo partner?", c: "Gold", d: "Updated 1 hr ago · Germany", e: "In progress", tone: "good", id: "sp4" },
-  { a: "Anna Reinhardt", b: "Invoice for my company tax declaration", c: "Silver", d: "Resolved yesterday", e: "Resolved", tone: "good", id: "sp5" },
-  { a: "James Hill", b: "Beta access credentials not activating", c: "Beta", d: "Resolved 2 days ago", e: "Resolved", tone: "good", id: "sp6" },
+  { a: "Kofi Mensah", b: "MoMo payment did not go through", c: "Trial · Gold", d: "31 hr", e: "Open", tone: "bad", id: "sp1" },
+  { a: "Lena Meyer", b: "Cannot change my protein target", c: "Silver", d: "6 hr", e: "Open", tone: "warn", id: "sp2" },
+  { a: "Arjun Rao", b: "Video keeps buffering on mobile", c: "Gold", d: "3 hr", e: "Open", tone: "warn", id: "sp3" },
+  { a: "Michael Krause", b: "How do I swap my duo partner?", c: "Gold", d: "—", e: "In progress", tone: "good", id: "sp4" },
+  { a: "Anna Reinhardt", b: "Invoice for my company", c: "Silver", d: "—", e: "Resolved", tone: "good", id: "sp5" },
+  { a: "James Hill", b: "Beta access not working", c: "Beta", d: "—", e: "Resolved", tone: "good", id: "sp6" },
 ];
 
 export default function SupportInbox() {
@@ -27,10 +27,10 @@ export default function SupportInbox() {
               id: s._id || s.id,
               a: s.userName || s.memberName || "Member",
               b: s.subject || s.title || "Support inquiry",
-              c: s.userTier || "Gold",
-              d: s.createdAt ? `Logged ${s.createdAt}` : "Recent",
+              c: s.userTier || "Trial · Gold",
+              d: s.waitingTime || "3 hr",
               e: s.status || "Open",
-              tone: s.status === "OPEN" ? "bad" : s.status === "RESOLVED" ? "good" : "warn",
+              tone: s.status === "OPEN" || s.status === "Open" ? "bad" : s.status === "RESOLVED" || s.status === "Resolved" ? "good" : "warn",
               rawData: s,
             }))
           );
@@ -59,7 +59,7 @@ export default function SupportInbox() {
       pageAdviceDone="Open the oldest"
       onAdvice={() => openDrawer("support", { MEMBER: "Kofi Mensah" })}
       filters={["All", "Open", "In progress", "Resolved", "Payment", "Technical"]}
-      cols={["MEMBER", "SUBJECT & TIER", "WAITING / LOGGED", "STATUS", "ACTIONS"]}
+      cols={["MEMBER", "SUBJECT", "TIER", "WAITING", "STATUS"]}
       rows={rows}
       isLoading={loading}
       onEditRow={(row) => openDrawer("support", { MEMBER: row.a })}

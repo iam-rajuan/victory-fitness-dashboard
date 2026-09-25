@@ -4,14 +4,14 @@ import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { listAdminWorkouts, deleteAdminWorkout } from "../../../services/admin-workouts.service";
 
 const BASE_ROWS = [
-  { a: "Awakening Flow", b: "Full mobility session · Bodyweight", c: "Mobility", d: "12 min · 412 starts", e: "Published", tone: "good", id: "w1" },
-  { a: "Muscle Start", b: "Compound foundation · Dumbbells", c: "Strength", d: "38 min · 288 starts", e: "Published", tone: "good", id: "w2" },
-  { a: "Recovery Reset", b: "Joint relief & spine release", c: "Recovery", d: "20 min · 196 starts", e: "Published", tone: "good", id: "w3" },
-  { a: "Push and Pull", b: "Upper body hypertrophy", c: "Strength", d: "45 min · 0 starts", e: "Draft", tone: "warn", id: "w4" },
-  { a: "Rambo Timer", b: "High intensity interval workout", c: "Conditioning", d: "25 min · 0 starts", e: "Draft", tone: "warn", id: "w5" },
-  { a: "Victory Core", b: "Isometric hollow holds & planks", c: "Core", d: "15 min · 0 starts", e: "Draft", tone: "warn", id: "w6" },
-  { a: "Langhantel Basis", b: "Barbell cleans and overhead press", c: "Strength", d: "40 min · 0 starts", e: "Draft · untagged", tone: "bad", id: "w7" },
-  { a: "The Anchor", b: "Deep hip flexor & lower back flow", c: "Mobility", d: "18 min · 0 starts", e: "Draft", tone: "warn", id: "w8" },
+  { a: "Awakening Flow", b: "Mobility", c: "12 min", d: "412", e: "Published", tone: "good", id: "w1" },
+  { a: "Muscle Start", b: "Strength", c: "38 min", d: "288", e: "Published", tone: "good", id: "w2" },
+  { a: "Recovery Reset", b: "Recovery", c: "20 min", d: "196", e: "Published", tone: "good", id: "w3" },
+  { a: "Push and Pull", b: "Strength", c: "45 min", d: "0", e: "Draft", tone: "warn", id: "w4" },
+  { a: "Rambo Timer", b: "Conditioning", c: "25 min", d: "0", e: "Draft", tone: "warn", id: "w5" },
+  { a: "Victory Core", b: "Core", c: "15 min", d: "0", e: "Draft", tone: "warn", id: "w6" },
+  { a: "Langhantel Basis", b: "Strength", c: "40 min", d: "0", e: "Draft · untagged", tone: "bad", id: "w7" },
+  { a: "The Anchor", b: "Mobility", c: "18 min", d: "0", e: "Draft", tone: "warn", id: "w8" },
 ];
 
 export default function Workouts() {
@@ -21,8 +21,8 @@ export default function Workouts() {
   const [stats, setStats] = useState([
     { k: "TOTAL", v: "170", note: "147 published, 23 draft" },
     { k: "MOST STARTED", v: "Awakening", note: "412 starts this month" },
-    { k: "AVG COMPLETION", v: "68%", note: "Drops below 20% past 45m" },
-    { k: "UNTAGGED", v: "31", note: "No purpose or kit set" },
+    { k: "AVG COMPLETION", v: "68%", note: "Drops below 20% past 45 min" },
+    { k: "UNTAGGED", v: "31", note: "No purpose or equipment set" },
   ]);
 
   useEffect(() => {
@@ -35,9 +35,9 @@ export default function Workouts() {
           const mapped = list.map((w) => ({
             id: w._id || w.id,
             a: w.title || "Untitled Workout",
-            b: w.coachNote || w.subtitle || w.description || "Video workout",
-            c: w.purpose || w.category || "General",
-            d: `${w.duration || w.lengthMinutes || "20"} min · ${w.viewsCount || 0} starts`,
+            b: w.purpose || w.category || "Mobility",
+            c: `${w.duration || w.lengthMinutes || "20"} min`,
+            d: String(w.viewsCount || w.starts || "0"),
             e: w.isPublished ? "Published" : "Draft",
             tone: w.isPublished ? "good" : "warn",
             rawData: w,
@@ -46,9 +46,9 @@ export default function Workouts() {
           const publishedCount = list.filter((w) => w.isPublished).length;
           setStats([
             { k: "TOTAL", v: String(list.length), note: `${publishedCount} published, ${list.length - publishedCount} draft` },
-            { k: "MOST STARTED", v: list[0]?.title || "Awakening", note: "Top watched workout" },
-            { k: "AVG COMPLETION", v: "68%", note: "Optimal under 30 min" },
-            { k: "UNTAGGED", v: String(list.filter((w) => !w.purpose).length), note: "Needs categorization" },
+            { k: "MOST STARTED", v: list[0]?.title || "Awakening", note: "412 starts this month" },
+            { k: "AVG COMPLETION", v: "68%", note: "Drops below 20% past 45 min" },
+            { k: "UNTAGGED", v: String(list.filter((w) => !w.purpose).length), note: "No purpose or equipment set" },
           ]);
         }
       })
@@ -88,12 +88,12 @@ export default function Workouts() {
       pageAdviceDone="Publish the short ones"
       onAdvice={() => openDrawer("workout")}
       filters={["All", "Published", "Draft", "Untagged", "Under 20 min", "No equipment"]}
-      cols={["WORKOUT", "PURPOSE", "LENGTH & STARTS", "STATUS", "ACTIONS"]}
+      cols={["WORKOUT", "PURPOSE", "LENGTH", "STARTS", "STATUS"]}
       rows={rows}
       isLoading={loading}
-      onEditRow={(row) => openDrawer("workout", { TITLE: row.a, PURPOSE: row.c })}
+      onEditRow={(row) => openDrawer("workout", { TITLE: row.a, PURPOSE: row.b })}
       onDeleteRow={handleDelete}
-      onRowClick={(row) => openDrawer("workout", { TITLE: row.a, PURPOSE: row.c })}
+      onRowClick={(row) => openDrawer("workout", { TITLE: row.a, PURPOSE: row.b })}
     />
   );
 }

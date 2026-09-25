@@ -181,13 +181,22 @@ export default function ClaudeApplicationDrawer({ isOpen, onClose, payload }) {
       const obstacle = payload.rawData?.obstacle || "Past injuries and scheduling inconsistency.";
       const commitment = payload.rawData?.commitment || "5 hours per week";
       const investment = payload.rawData?.investment || "Full focus on sustainable progress";
+      const submittedAnswers = Array.isArray(payload.rawData?.question_answers)
+        ? payload.rawData.question_answers
+            .filter((item) => item?.question || item?.answer)
+            .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+            .map((item, idx) => ({
+              q: `${item.order || idx + 1} · ${String(item.question || "Question").toUpperCase()}`,
+              a: item.answer || "No answer provided.",
+            }))
+        : [];
 
       return {
         name,
         kicker: `INNER CIRCLE APPLICATION · ${name.toUpperCase()}`,
         title: "Read, then decide",
         sub: `Applicant's five answers as written, nothing summarised. Waiting on your call decision.`,
-        answers: [
+        answers: submittedAnswers.length ? submittedAnswers : [
           { q: "1 · WHAT ARE YOU TRAINING FOR IN THE NEXT TWELVE MONTHS?", a: goal },
           { q: "2 · WHAT HAVE YOU ALREADY TRIED, AND WHERE DID IT STOP WORKING?", a: obstacle },
           { q: "3 · HOW MANY HOURS A WEEK CAN YOU GENUINELY COMMIT?", a: commitment },
@@ -278,6 +287,10 @@ export default function ClaudeApplicationDrawer({ isOpen, onClose, payload }) {
         await updateAdminApplication(applicationId, {
           status: statusMap[verdict] || "REVIEWING",
           admin_notes: `Verdict: ${verdict} | Slot: ${selectedSlot} | Message: ${message}`,
+          admin_verdict: verdict,
+          call_slot: selectedSlot,
+          admin_reply: message,
+          notify_applicant: true,
         }).catch(() => null);
       }
 
@@ -306,6 +319,9 @@ export default function ClaudeApplicationDrawer({ isOpen, onClose, payload }) {
         await updateAdminApplication(applicationId, {
           status: "REJECTED",
           admin_notes: `Declined kindly with Platinum referral.`,
+          admin_verdict: "Decline kindly",
+          admin_reply: message,
+          notify_applicant: true,
         }).catch(() => null);
       }
       showToast(`✓ Application declined kindly. Respectful offer sent to ${profile.name}.`);

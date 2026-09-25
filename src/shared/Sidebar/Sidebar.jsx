@@ -37,10 +37,10 @@ const NAV_GROUPS = [
       { to: "/challenges", label: "Challenges", icon: HiOutlineTrophy },
       { to: "/masterclasses", label: "Masterclasses", icon: HiOutlineAcademicCap },
       { to: "/subscriptions", label: "Subscriptions", icon: HiOutlineCreditCard },
-      { to: "/beta-analytics", label: "21-Day Gold Beta", icon: HiOutlineSparkles, badge: "15" },
-      { to: "/trial-analytics", label: "5-Day Gold Trial", icon: HiOutlineClock, badge: "19" },
+      { to: "/beta-analytics", label: "21-Day Gold Beta", icon: HiOutlineSparkles, badge: "12" },
+      { to: "/trial-analytics", label: "5-Day Gold Trial", icon: HiOutlineClock, badge: "5" },
       { to: "/all-subscribers", label: "All Subscribers", icon: HiOutlineUserGroup },
-      { to: "/community", label: "Community", icon: HiOutlineChatBubbleLeftRight },
+      { to: "/community", label: "Community", icon: HiOutlineChatBubbleLeftRight, badge: "3" },
       { to: "/applications", label: "Applications", icon: HiOutlineDocumentText, badge: "2" },
       { to: "/support-inbox", label: "Help & Support", icon: HiOutlineLifebuoy, badge: "3" },
       { to: "/quotes", label: "Quotes", icon: HiOutlineChatBubbleBottomCenterText },
@@ -49,7 +49,7 @@ const NAV_GROUPS = [
   {
     label: "INSIGHTS",
     items: [
-      { to: "/payments", label: "Payments", icon: HiOutlineBanknotes },
+      { to: "/payments", label: "Payments", icon: HiOutlineBanknotes, badge: "2" },
       { to: "/audit-logs", label: "Audit Logs", icon: HiOutlineShieldCheck },
       { to: "/feature-flags", label: "Feature Flags", icon: HiOutlineFlag },
       { to: "/notifications", label: "Notification Templates", icon: HiOutlineBell },
@@ -165,7 +165,9 @@ const Sidebar = ({
         const next = !prev;
         try {
           localStorage.setItem("vf_sidebar_collapsed", String(next));
-        } catch {}
+        } catch {
+          /* ignore */
+        }
         return next;
       });
     }

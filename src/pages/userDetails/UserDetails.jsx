@@ -4,14 +4,14 @@ import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { getUserManagementOverview, deleteAdminUser } from "../../../services/admin-users.service";
 
 const BASE_ROWS = [
-  { a: "Michael Krause", b: "michael@krause.de", c: "GOLD", d: "Germany", e: "Healthy", tone: "good", id: "u1" },
-  { a: "Anna Reinhardt", b: "anna.r@gmx.de", c: "SILVER", d: "Germany", e: "Healthy", tone: "good", id: "u2" },
-  { a: "Kofi Mensah", b: "kofi@mensah.gh", c: "TRIAL · GOLD", d: "Ghana", e: "Ends in 2 days", tone: "warn", id: "u3" },
-  { a: "Arjun Rao", b: "arjun.rao@tech.in", c: "GOLD", d: "India", e: "Healthy", tone: "good", id: "u4" },
-  { a: "Dominik Schulz", b: "d.schulz@berlin.de", c: "PLATINUM", d: "Germany", e: "Healthy", tone: "good", id: "u5" },
-  { a: "Lena Meyer", b: "lena@meyer.de", c: "SILVER", d: "Germany", e: "Going quiet", tone: "warn", id: "u6" },
-  { a: "Thomas Bauer", b: "t.bauer@wien.at", c: "TRIAL · SILVER", d: "Austria", e: "Never activated", tone: "bad", id: "u7" },
-  { a: "James Hill", b: "j.hill@london.uk", c: "BETA", d: "United Kingdom", e: "Never activated", tone: "bad", id: "u8" },
+  { a: "Michael Krause", b: "GOLD", c: "Germany", d: "2 hours ago", e: "Healthy", tone: "good", id: "u1" },
+  { a: "Anna Reinhardt", b: "SILVER", c: "Germany", d: "Today", e: "Healthy", tone: "good", id: "u2" },
+  { a: "Kofi Mensah", b: "TRIAL · GOLD", c: "Ghana", d: "Today", e: "Ends in 2 days", tone: "warn", id: "u3" },
+  { a: "Arjun Rao", b: "GOLD", c: "India", d: "Yesterday", e: "Healthy", tone: "good", id: "u4" },
+  { a: "Dominik Schulz", b: "PLATINUM", c: "Germany", d: "Today", e: "Healthy", tone: "good", id: "u5" },
+  { a: "Lena Meyer", b: "SILVER", c: "Germany", d: "6 days ago", e: "Going quiet", tone: "warn", id: "u6" },
+  { a: "Thomas Bauer", b: "TRIAL · SILVER", c: "Austria", d: "9 days ago", e: "Never activated", tone: "bad", id: "u7" },
+  { a: "James Hill", b: "BETA", c: "United Kingdom", d: "Never", e: "Never activated", tone: "bad", id: "u8" },
 ];
 
 export default function UserDetails() {
@@ -22,7 +22,7 @@ export default function UserDetails() {
     { k: "TOTAL", v: "312", note: "+34 this week" },
     { k: "PAYING", v: "68", note: "22% of registered" },
     { k: "ACTIVE 7 DAYS", v: "214", note: "69% of registered" },
-    { k: "NEVER ACTIVE", v: "9", note: "Registered, never opened" },
+    { k: "NEVER ACTIVE", v: "9", note: "Registered, never opened a feature" },
   ]);
 
   useEffect(() => {
@@ -34,9 +34,9 @@ export default function UserDetails() {
           const mapped = data.users.map((u) => ({
             id: u._id || u.id,
             a: u.fullName || u.name || "Member",
-            b: u.email || "",
-            c: (u.subscriptionTier || u.tier || "FREE").toUpperCase(),
-            d: u.country || "Germany",
+            b: (u.subscriptionTier || u.tier || "FREE").toUpperCase(),
+            c: u.country || "Germany",
+            d: u.lastActive ? new Date(u.lastActive).toLocaleDateString() : "Today",
             e: u.status === "ACTIVE" ? "Healthy" : u.status || "Healthy",
             tone: u.status === "ACTIVE" ? "good" : "warn",
             rawData: u,
@@ -46,9 +46,9 @@ export default function UserDetails() {
         if (data.totalUsers) {
           setStats([
             { k: "TOTAL", v: String(data.totalUsers || 312), note: "+34 this week" },
-            { k: "PAYING", v: String(data.activeUsers || 68), note: "Paying members" },
-            { k: "ACTIVE 7 DAYS", v: String(Math.round((data.totalUsers || 312) * 0.69)), note: "69% active" },
-            { k: "NEVER ACTIVE", v: "9", note: "Registered, never opened" },
+            { k: "PAYING", v: String(data.activeUsers || 68), note: "22% of registered" },
+            { k: "ACTIVE 7 DAYS", v: String(Math.round((data.totalUsers || 312) * 0.69)), note: "69% of registered" },
+            { k: "NEVER ACTIVE", v: "9", note: "Registered, never opened a feature" },
           ]);
         }
       })
@@ -87,7 +87,7 @@ export default function UserDetails() {
       pageAdviceDone="Message the 9"
       onAdvice={() => openDrawer("message")}
       filters={["All", "Paying", "On trial", "Beta testers", "At risk", "Never active"]}
-      cols={["NAME", "TIER", "MARKET", "STATUS", "ACTIONS"]}
+      cols={["NAME", "TIER", "MARKET", "LAST ACTIVE", "STATUS"]}
       rows={rows}
       isLoading={loading}
       onEditRow={(row) => openDrawer("message", { WHO: row.a })}

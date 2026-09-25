@@ -50,7 +50,9 @@ function MainLayoutContent() {
       const next = !prev;
       try {
         localStorage.setItem("vf_sidebar_collapsed", String(next));
-      } catch {}
+      } catch {
+        /* ignore */
+      }
       return next;
     });
   };

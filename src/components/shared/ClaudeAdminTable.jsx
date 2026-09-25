@@ -2,9 +2,84 @@ import { useState, useMemo } from "react";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { useTheme } from "../../context/ThemeContext";
 
+const ALIAS = {
+  "Ending ≤48h": ["day 5"],
+  Undecided: ["watch"],
+  "At risk": ["quiet", "declined", "risk", "never"],
+  "Never active": ["never"],
+  "Renewing soon": ["sep"],
+  Lapsed: ["declined"],
+  Untagged: ["untagged"],
+  "Under 20 min": ["12 min", "15 min", "18 min"],
+  "No equipment": ["mobility", "core"],
+  Flagged: ["flag"],
+  "All tiers": [],
+  "Beta testers": ["beta"],
+  "On trial": ["trial"],
+  Paying: ["gold", "silver", "platinum"],
+  Succeeded: ["succeeded"],
+  Failed: ["declined", "never completed"],
+  Refunded: ["refund"],
+  Draft: ["draft"],
+  Published: ["published"],
+  Yearly: ["yearly"],
+  Monthly: ["monthly"],
+  Live: ["live"],
+};
+
+const PAGE_MATCH = {
+  "Audit Logs|Broadcasts": (r) => /broadcast/i.test(r.c || ""),
+  "Audit Logs|Pricing": (r) => /price|refund/i.test(r.c || ""),
+  "Audit Logs|Content": (r) => /workout|challenge|masterclass|quote/i.test(r.c || ""),
+  "Audit Logs|Members": (r) => /member|tier/i.test(r.c || ""),
+  "Audit Logs|Destructive": (r) => /deleted|refunded|price changed/i.test(r.c || ""),
+  "Feature Flags|On": (r) => (r.e || "").trim() === "On",
+  "Feature Flags|Off": (r) => (r.e || "").trim() === "Off",
+  "Feature Flags|Partial": (r) => {
+    const v = parseInt(r.b || "0", 10);
+    return v > 0 && v < 100;
+  },
+  "Feature Flags|Market-scoped": (r) => (r.c || "").trim() !== "All",
+  "Feature Flags|Stale": (r) => (r.e || "").trim() === "Stale",
+  "FAQ|Missing": (r) => (r.e || "").trim() === "Not written",
+  "FAQ|Payment": (r) => (r.b || "").trim() === "Payment",
+  "FAQ|Training": (r) => (r.b || "").trim() === "Training",
+  "FAQ|Nutrition": (r) => (r.b || "").trim() === "Nutrition",
+  "FAQ|Account": (r) => (r.b || "").trim() === "Account",
+  "Settings|Legal": (r) => /policy|Terms|About/i.test(r.a || ""),
+  "Settings|Data": (r) => /Data|export|delete/i.test(r.a || ""),
+  "Settings|Access": (r) => /Admin/i.test(r.a || ""),
+  "Notification Templates|Push": (r) => /Push/.test(r.b || ""),
+  "Notification Templates|WhatsApp": (r) => /WhatsApp/.test(r.b || ""),
+  "Notification Templates|Email": (r) => /Email/.test(r.b || ""),
+  "Notification Templates|Approved": (r) => (r.e || "").trim() === "Approved",
+  "Notification Templates|Member-facing": (r) => !/digest|receipt/i.test(r.a || ""),
+  "Notification Templates|Unapproved": (r) => (r.e || "").trim() === "Unapproved",
+  "Quotes|Live": (r) => (r.e || "").trim() === "Live",
+  "Quotes|Unused": (r) => (r.e || "").trim() === "Unused",
+  "Quotes|By Victor": (r) => /Victor/.test(r.b || ""),
+  "Help & Support|Open": (r) => (r.e || "").trim() === "Open",
+  "Help & Support|In progress": (r) => (r.e || "").trim() === "In progress",
+  "Help & Support|Resolved": (r) => (r.e || "").trim() === "Resolved",
+  "Help & Support|Payment": (r) => /payment|invoice|MoMo|card/i.test(r.b || ""),
+  "Help & Support|Technical": (r) => /buffer|access|not working|change/i.test(r.b || ""),
+  "Applications|Waiting": (r) => (r.e || "").trim() === "Waiting",
+  "Applications|Call booked": (r) => (r.e || "").trim() === "Call booked",
+  "Applications|Accepted": (r) => (r.e || "").trim() === "Accepted",
+  "Applications|Declined": (r) => /Declined/.test(r.e || ""),
+};
+
+const COL_MATCH = {
+  "3 day": [2, "3"],
+  "5 day": [2, "5"],
+  "7 day": [2, "7"],
+  "14 day": [2, "14"],
+  "21 day": [2, "21"],
+};
+
 export default function ClaudeAdminTable({
   pageKicker,
-  pageTitle,
+  pageTitle = "Page",
   pageSub,
   pagePrimary = "+ Add new",
   pageSecondary = "Export CSV",
@@ -23,243 +98,466 @@ export default function ClaudeAdminTable({
   onRowClick,
   isLoading = false,
 }) {
-  const [activeFilter, setActiveFilter] = useState(filters[0] || "All");
-  const [adviceDone, setAdviceDone] = useState(false);
-  const { showToast } = useAdminDrawer();
+  const [activeFilterIdx, setActiveFilterIdx] = useState(0);
+  const [selectedId, setSelectedId] = useState(null);
+  const [adviceAcknowledged, setAdviceAcknowledged] = useState(false);
+  const { openDrawer, showToast } = useAdminDrawer();
   const { isDark } = useTheme();
 
-  // Filter rows based on active filter
-  const filteredRows = useMemo(() => {
-    if (!activeFilter || activeFilter === "All" || activeFilter === "All tiers") {
-      return rows;
-    }
-    const term = activeFilter.toLowerCase();
-    return rows.filter((r) => {
-      const matchA = r.a && r.a.toLowerCase().includes(term);
-      const matchB = r.b && r.b.toLowerCase().includes(term);
-      const matchC = r.c && r.c.toLowerCase().includes(term);
-      const matchD = r.d && r.d.toLowerCase().includes(term);
-      const matchE = r.e && r.e.toLowerCase().includes(term);
-      return matchA || matchB || matchC || matchD || matchE;
+  // Normalize rows to standard format { a, b, c, d, e, tone, id, raw }
+  const normalizedRows = useMemo(() => {
+    return (rows || []).map((r, i) => {
+      if (Array.isArray(r)) {
+        return {
+          id: `row-${i}-${r[0]}`,
+          a: r[0] || "",
+          b: r[1] || "",
+          c: r[2] || "",
+          d: r[3] || "",
+          e: r[4] || "",
+          tone: r[5] || "good",
+          raw: r,
+        };
+      }
+      return {
+        id: r.id || `row-${i}-${r.a}`,
+        a: r.a || "",
+        b: r.b || "",
+        c: r.c || "",
+        d: r.d || "",
+        e: r.e || "",
+        tone: r.tone || "good",
+        raw: r,
+      };
     });
-  }, [rows, activeFilter]);
+  }, [rows]);
+
+  const activeLabel = filters[activeFilterIdx] || "All";
+
+  // Filter matching adhering strictly to Admin Dashboard.dc.html logic
+  const filteredRows = useMemo(() => {
+    if (!activeLabel || activeLabel.startsWith("All")) {
+      return normalizedRows;
+    }
+    const navKey = `${pageTitle}|${activeLabel}`;
+    const pk = PAGE_MATCH[navKey];
+    if (pk) {
+      return normalizedRows.filter(pk);
+    }
+    if (COL_MATCH[activeLabel]) {
+      const [colIdx, targetVal] = COL_MATCH[activeLabel];
+      return normalizedRows.filter((r) => {
+        const val = colIdx === 2 ? r.c : colIdx === 1 ? r.b : colIdx === 3 ? r.d : r.a;
+        return String(val).trim() === targetVal;
+      });
+    }
+    if (activeLabel === "Monthly") {
+      return normalizedRows.filter((r) => r.c && r.c !== "—");
+    }
+    if (activeLabel === "Yearly") {
+      return normalizedRows.filter((r) => r.b && String(r.b).startsWith("€"));
+    }
+    const needles = (ALIAS[activeLabel] || [activeLabel.toLowerCase()]).map((x) => x.toLowerCase());
+    if (!needles.length) return normalizedRows;
+    const hit = normalizedRows.filter((r) => {
+      const hay = [r.a, r.b, r.c, r.d, r.e].join(" | ").toLowerCase();
+      return needles.some((n) => hay.includes(n));
+    });
+    return hit.length ? hit : [];
+  }, [normalizedRows, activeLabel, pageTitle]);
+
+  // Canonical row drawer resolver (lines 1539-1554)
+  const resolveRowDrawer = (row) => {
+    if (onEditRow) {
+      onEditRow(row);
+      return;
+    }
+    if (pageTitle === "Settings") {
+      const n = String(row.a);
+      if (/policy|Terms/i.test(n)) return openDrawer("settingDoc");
+      if (/About/i.test(n)) return openDrawer("settingText");
+      if (/Admin/i.test(n)) return openDrawer("settingAccess");
+      return openDrawer("settingData");
+    }
+    const navMap = {
+      Workouts: "workout",
+      "Workout library": "workout",
+      Masterclasses: "workout",
+      Challenges: "challenge",
+      Community: "broadcast",
+      Applications: "application",
+      "Help & Support": "support",
+      "Help & support": "support",
+      Quotes: "quote",
+      "Daily inspiration": "quote",
+      "Feature Flags": "flag",
+      "Feature flags": "flag",
+      "Notification Templates": "template",
+      "Notification templates": "template",
+      FAQ: "faq",
+      "Audit Logs": "audit",
+      "Audit log": "audit",
+      Subscriptions: "pricing",
+    };
+    const drawerKey = navMap[pageTitle] || "message";
+    openDrawer(drawerKey, { TITLE: row.a, WHO: row.a });
+  };
 
   const handleAdviceClick = () => {
     if (onAdvice) {
       onAdvice();
+      return;
+    }
+    const adviceDrawerMap = {
+      "All Users": "message",
+      "All users": "message",
+      "All Subscribers": "message",
+      "All subscribers": "message",
+      Community: "broadcast",
+      Workouts: "workout",
+      "Workout library": "workout",
+      Challenges: "challenge",
+      Masterclasses: "broadcast",
+      Applications: "application",
+      "Help & Support": "support",
+      "Help & support": "support",
+      Quotes: "quote",
+      "Daily inspiration": "quote",
+      "Feature Flags": "flag",
+      "Feature flags": "flag",
+      "Notification Templates": "template",
+      "Notification templates": "template",
+      FAQ: "faq",
+      Settings: "settingDoc",
+      "Audit Logs": "audit",
+      "Audit log": "audit",
+    };
+    const target = adviceDrawerMap[pageTitle];
+    if (target) {
+      openDrawer(target);
+      return;
+    }
+    setAdviceAcknowledged((prev) => !prev);
+    showToast("Action added to today's queue.");
+  };
+
+  const handlePrimaryClick = () => {
+    if (onPrimary) {
+      onPrimary();
+      return;
+    }
+    const primaryDrawerMap = {
+      Workouts: "workout",
+      "Workout library": "workout",
+      Challenges: "challenge",
+      Community: "broadcast",
+      "All Users": "message",
+      "All users": "message",
+      "All Subscribers": "message",
+      "All subscribers": "message",
+      Masterclasses: "workout",
+      Subscriptions: "pricing",
+      Applications: "application",
+      "Help & Support": "support",
+      "Help & support": "support",
+      Quotes: "quote",
+      "Daily inspiration": "quote",
+      "Feature Flags": "flag",
+      "Feature flags": "flag",
+      "Notification Templates": "newTemplate",
+      "Notification templates": "newTemplate",
+      FAQ: "faq",
+      Settings: "settingDoc",
+      "Audit Logs": "audit",
+      "Audit log": "audit",
+    };
+    const target = primaryDrawerMap[pageTitle];
+    if (target) {
+      openDrawer(target);
     } else {
-      setAdviceDone(true);
-      showToast("Action applied from advice banner.");
+      showToast(`${pagePrimary} — opened.`);
     }
   };
 
-  const handleExportCSV = () => {
+  const handleSecondaryClick = () => {
     if (onSecondary) {
       onSecondary();
       return;
     }
-    const headers = cols.join(",");
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      [headers, ...rows.map((r) => `"${r.a}","${r.b || ""}","${r.c || ""}","${r.d || ""}","${r.e || ""}"`)].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${pageTitle.toLowerCase().replace(/\s+/g, "_")}_export.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast(`Exported ${rows.length} records to CSV.`);
+    const secondaryDrawerMap = {
+      Workouts: "vimeo",
+      "Workout library": "vimeo",
+      Masterclasses: "vimeo",
+      Challenges: "challenge",
+      Subscriptions: "pricing",
+      Applications: "application",
+      "Help & Support": "support",
+      "Help & support": "support",
+      Quotes: "quote",
+      "Daily inspiration": "quote",
+      "Feature Flags": "flag",
+      "Feature flags": "flag",
+      "Notification Templates": "template",
+      "Notification templates": "template",
+      FAQ: "faq",
+      Settings: "settingText",
+      "Audit Logs": "audit",
+      "Audit log": "audit",
+    };
+    const target = secondaryDrawerMap[pageTitle];
+    if (target) {
+      openDrawer(target);
+    } else {
+      // Standard CSV Export fallback
+      const headers = [cols[0] || "Title", cols[1] || "Type", cols[2] || "Detail", cols[3] || "Activity", cols[4] || "Status"].join(",");
+      const csvContent =
+        "data:text/csv;charset=utf-8," +
+        [headers, ...normalizedRows.map((r) => `"${r.a}","${r.b}","${r.c}","${r.d}","${r.e}"`)].join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `${pageTitle.toLowerCase().replace(/\s+/g, "_")}_export.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast(`Exported ${normalizedRows.length} records to CSV.`);
+    }
   };
 
+  const handleDeleteClick = (row, e) => {
+    e.stopPropagation();
+    if (onDeleteRow) {
+      onDeleteRow(row.raw || row);
+    } else {
+      showToast(`Removed ${row.a}`);
+    }
+  };
+
+  // Header column calculation: [cols[0] + " · " + cols[1], cols[2], cols[3], cols[4]]
+  const headerCols = useMemo(() => {
+    if (!cols || !cols.length) return [];
+    return [
+      `${cols[0] || "ITEM"} · ${cols[1] || "SUBTITLE"}`,
+      cols[2] || "DETAIL",
+      cols[3] || "ACTIVITY",
+      cols[4] || "STATUS",
+    ];
+  }, [cols]);
+
   return (
-    <div className="space-y-5 animate-in fade-in duration-200 font-dmsans">
-      {/* Header with Title, Subtitle, and Primary/Secondary Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-5">
+    <div style={{ fontFamily: "'DM Sans', system-ui, sans-serif", color: "#F7F3EE" }} className="animate-in fade-in duration-200">
+      {/* Page Header: Title, Subtitle, and Primary/Secondary Action Buttons (lines 395-405) */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "26px", flexWrap: "wrap", marginBottom: "20px" }}>
         <div>
           {pageKicker && (
-            <div className="text-[10px] font-semibold tracking-[0.18em] text-[#B5651D] uppercase mb-1 font-dmsans">
+            <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".18em", color: "#B5651D", marginBottom: "8px", textTransform: "uppercase" }}>
               {pageKicker}
             </div>
           )}
-          <h1
-            className={`text-3xl sm:text-[34px] font-semibold font-clash tracking-tight leading-tight mb-2 transition-colors ${
-              isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
-            }`}
-          >
+          <h1 style={{ margin: "0 0 8px", font: "600 34px/1.06 'Clash Display', 'DM Sans', sans-serif", color: "#F7F3EE", letterSpacing: "-.015em" }}>
             {pageTitle}
           </h1>
           {pageSub && (
-            <p
-              className={`max-w-2xl text-xs sm:text-[14.5px] font-inter leading-relaxed transition-colors ${
-                isDark ? "text-[#F7F3EE]/60" : "text-[#0D2B45]/70"
-              }`}
-            >
+            <p style={{ margin: 0, maxWidth: "600px", font: "400 14.5px/1.6 'Inter', sans-serif", color: "rgba(247,243,238,.6)", textWrap: "pretty" }}>
               {pageSub}
             </p>
           )}
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className={`h-11 px-4 sm:px-5 rounded-xl border font-bold text-xs sm:text-[13.5px] transition-all cursor-pointer ${
-              isDark
-                ? "border-[#F7F3EE]/22 hover:border-[#F7F3EE]/40 text-[#F7F3EE] bg-transparent"
-                : "border-[rgba(13,43,69,0.18)] hover:border-[rgba(13,43,69,0.35)] text-[#0D2B45] bg-white shadow-xs"
-            }`}
+        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <div
+            onClick={handleSecondaryClick}
+            style={{
+              height: "44px",
+              padding: "0 18px",
+              borderRadius: "12px",
+              boxSizing: "border-box",
+              border: "1.5px solid rgba(247,243,238,.22)",
+              color: "#F7F3EE",
+              font: "700 13.5px 'DM Sans', sans-serif",
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+              userSelect: "none",
+            }}
           >
             {pageSecondary}
-          </button>
-          <button
-            type="button"
-            onClick={onPrimary}
-            className="h-11 px-4 sm:px-5 rounded-xl bg-[#C9943A] hover:bg-[#d8a24a] text-[#0D0D0D] font-bold text-xs sm:text-[13.5px] transition-all shadow-md active:scale-[0.99] cursor-pointer"
+          </div>
+          <div
+            onClick={handlePrimaryClick}
+            style={{
+              height: "44px",
+              padding: "0 18px",
+              borderRadius: "12px",
+              background: "#C9943A",
+              color: "#0D0D0D",
+              font: "700 13.5px 'DM Sans', sans-serif",
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+              userSelect: "none",
+              transition: "background 0.15s ease",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#d8a24a")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "#C9943A")}
           >
             {pagePrimary}
-          </button>
+          </div>
         </div>
       </div>
 
-      {/* 4 Key Stat Cards */}
+      {/* 4 Key Stat Cards (lines 407-415 & 1778-1780) */}
       {pageStats && pageStats.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {pageStats.map((stat, idx) => (
-            <div
-              key={stat.k || idx}
-              style={{ borderLeftWidth: 4, borderLeftColor: "#C9943A", borderLeftStyle: "solid" }}
-              className={`rounded-2xl p-4 sm:p-5 flex flex-col justify-between transition-all ${
-                isDark
-                  ? "bg-[#0D2B45] border border-[#F7F3EE]/10 text-[#F7F3EE]"
-                  : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)] text-[#0D2B45]"
-              }`}
-            >
+        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginBottom: "18px" }}>
+          {pageStats.map((p, idx) => {
+            const label = Array.isArray(p) ? p[0] : p.k;
+            const val = Array.isArray(p) ? p[1] : p.v;
+            const note = Array.isArray(p) ? p[2] : p.note;
+            return (
               <div
-                className={`text-[9.5px] font-semibold tracking-[0.14em] uppercase mb-2 ${
-                  isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
-                }`}
+                key={label || idx}
+                style={{
+                  flex: "1 1 200px",
+                  minWidth: "190px",
+                  background: "#0D2B45",
+                  borderRadius: "18px",
+                  borderLeft: "4px solid #C9943A",
+                  padding: "17px 18px",
+                  boxSizing: "border-box",
+                }}
               >
-                {stat.k}
+                <div style={{ font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: ".14em", color: "rgba(247,243,238,.5)", marginBottom: "8px" }}>
+                  {label}
+                </div>
+                <div style={{ font: "700 27px/1 'JetBrains Mono', monospace", color: "#F7F3EE" }}>
+                  {val}
+                </div>
+                <div style={{ font: "400 12px/1.45 'Inter', sans-serif", color: "rgba(247,243,238,.55)", marginTop: "7px" }}>
+                  {note}
+                </div>
               </div>
-              <div
-                className={`text-2xl sm:text-[27px] font-bold font-mono tracking-tight leading-none mb-2 ${
-                  isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
-                }`}
-              >
-                {stat.v}
-              </div>
-              <div
-                className={`text-xs font-inter leading-tight ${
-                  isDark ? "text-[#F7F3EE]/55" : "text-[#0D2B45]/60"
-                }`}
-              >
-                {stat.note}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* Actionable Advice Banner */}
+      {/* Actionable Advice Banner (lines 417-423 & 1911-1921) */}
       {pageAdvice && (
         <div
-          style={{ borderLeftWidth: 4, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
-          className={`rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
-            isDark
-              ? "bg-[#0D2B45] border border-[#F7F3EE]/10"
-              : "bg-white border border-[rgba(13,43,69,0.08)] shadow-[0_4px_16px_rgba(13,43,69,0.04)]"
-          }`}
+          style={{
+            background: "#0D2B45",
+            borderRadius: "20px",
+            borderLeft: "4px solid #B5651D",
+            padding: "18px 20px",
+            marginBottom: "18px",
+            display: "flex",
+            alignItems: "center",
+            gap: "14px",
+            flexWrap: "wrap",
+            boxSizing: "border-box",
+          }}
         >
-          <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-semibold tracking-[0.14em] text-[#C9943A] uppercase mb-1">
+          <div style={{ flex: "1 1 240px", minWidth: "240px" }}>
+            <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".14em", color: "#C9943A", marginBottom: "5px" }}>
               WHAT TO DO ON THIS PAGE
             </div>
-            <div
-              className={`text-xs sm:text-sm font-inter leading-relaxed ${
-                isDark ? "text-[#F7F3EE]/80" : "text-[#0D2B45]/85"
-              }`}
-            >
+            <div style={{ font: "400 14px/1.55 'Inter', sans-serif", color: "rgba(247,243,238,.8)", textWrap: "pretty" }}>
               {pageAdvice}
             </div>
           </div>
-          <button
-            type="button"
+          <div
             onClick={handleAdviceClick}
-            className="h-9 px-4 rounded-xl bg-[#C9943A] hover:bg-[#d8a24a] text-[#0D0D0D] font-bold text-xs shrink-0 cursor-pointer transition-all self-start sm:self-auto"
+            style={{
+              height: "44px",
+              padding: "0 18px",
+              borderRadius: "12px",
+              boxSizing: "border-box",
+              font: "700 13.5px 'DM Sans', sans-serif",
+              display: "flex",
+              alignItems: "center",
+              cursor: "pointer",
+              flex: "none",
+              userSelect: "none",
+              ...(adviceAcknowledged
+                ? { border: "1.5px solid rgba(95,196,142,.6)", color: "#5FC48E", background: "transparent" }
+                : { background: "#C9943A", color: "#0D0D0D", border: "1.5px solid #C9943A" }),
+            }}
           >
-            {pageAdviceDone || "Execute recommendation →"}
-          </button>
+            {adviceAcknowledged ? "Done — added to today's queue" : (pageAdviceDone || "Execute recommendation →")}
+          </div>
         </div>
       )}
 
-      {/* Mobile Mirror Rail (e.g. for Challenges) */}
+      {/* Mobile Mirror Rail (e.g. for Challenges, lines 425-448) */}
       {rail && rail.length > 0 && (
-        <div className="space-y-2.5">
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="text-[10px] font-semibold tracking-[0.15em] text-[#C9943A] uppercase">
-              MOST JOINED THIS WEEK · WHAT MEMBERS SEE ON THE MOBILE SCREEN
+        <div style={{ marginBottom: "18px" }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "12px", marginBottom: "11px" }}>
+            <span style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".15em", color: "#C9943A" }}>
+              MOST JOINED THIS WEEK · WHAT MEMBERS SEE ON THE CHALLENGE SCREEN
             </span>
-            <span
-              className={`text-[11px] font-mono ${
-                isDark ? "text-[#F7F3EE]/45" : "text-[#0D2B45]/50"
-              }`}
-            >
+            <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.45)" }}>
               mirrors the mobile rail
             </span>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {rail.map((c) => (
+          <div style={{ display: "flex", gap: "11px", overflowX: "auto", paddingBottom: "4px" }}>
+            {rail.map((c, i) => (
               <div
-                key={c.n}
-                style={{ borderLeftWidth: 3, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
-                className={`w-[210px] shrink-0 rounded-2xl p-4 transition-all ${
-                  isDark
-                    ? "bg-[#0D2B45] border border-[#F7F3EE]/10"
-                    : "bg-white border border-[rgba(13,43,69,0.08)] shadow-sm"
-                }`}
+                key={c.n || i}
+                style={{
+                  width: "210px",
+                  flex: "none",
+                  background: "#0D2B45",
+                  borderRadius: "16px",
+                  borderLeft: "3px solid #B5651D",
+                  padding: "15px 16px",
+                  boxSizing: "border-box",
+                }}
               >
-                <div className="flex items-baseline justify-between mb-1">
-                  <span
-                    className={`text-lg font-mono font-bold ${
-                      isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
-                    }`}
-                  >
-                    {c.d}
-                  </span>
-                  <span className="text-[9.5px] font-semibold text-[#C9943A] uppercase">
-                    {c.type}
-                  </span>
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "8px", marginBottom: "7px" }}>
+                  <span style={{ font: "700 20px 'JetBrains Mono', monospace", color: "#F7F3EE" }}>{c.d}</span>
+                  <span style={{ font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: ".1em", color: "#C9943A" }}>{c.type}</span>
                 </div>
-                <div
-                  className={`font-semibold text-sm truncate ${
-                    isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
-                  }`}
-                >
-                  {c.n}
-                </div>
-                <div
-                  className={`text-[11px] font-mono mt-1 ${
-                    isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
-                  }`}
-                >
-                  {c.joined}
-                </div>
-                <div className="flex gap-2 mt-3">
-                  <button
-                    type="button"
-                    onClick={c.onEdit}
-                    className="flex-1 h-8 rounded-lg border border-[#C9943A]/60 hover:border-[#C9943A] text-[#C9943A] font-bold text-xs"
+                <div style={{ font: "600 15px/1.3 'DM Sans', sans-serif", color: "#F7F3EE" }}>{c.n}</div>
+                <div style={{ font: "400 11.5px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.5)", marginTop: "5px" }}>{c.joined}</div>
+                <div style={{ display: "flex", gap: "7px", marginTop: "12px" }}>
+                  <div
+                    onClick={() => (c.onEdit ? c.onEdit() : openDrawer("challenge"))}
+                    style={{
+                      flex: 1,
+                      height: "34px",
+                      borderRadius: "9px",
+                      boxSizing: "border-box",
+                      border: "1.5px solid rgba(201,148,58,.6)",
+                      color: "#C9943A",
+                      font: "700 12px 'DM Sans', sans-serif",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      userSelect: "none",
+                    }}
                   >
                     Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={c.onRemove}
-                    className="w-8 h-8 rounded-lg border border-red-400/50 hover:border-red-400 text-red-500 font-bold text-sm"
+                  </div>
+                  <div
+                    onClick={() => (c.onRemove ? c.onRemove() : showToast(`Removed ${c.n}`))}
+                    style={{
+                      width: "38px",
+                      height: "34px",
+                      borderRadius: "9px",
+                      boxSizing: "border-box",
+                      border: "1.5px solid rgba(217,138,62,.55)",
+                      color: "#D98A3E",
+                      font: "700 13px 'DM Sans', sans-serif",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      userSelect: "none",
+                    }}
                   >
                     ×
-                  </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -267,176 +565,222 @@ export default function ClaudeAdminTable({
         </div>
       )}
 
-      {/* Filters Row */}
+      {/* Filter Tabs Row & Item Count (lines 450-453 & 1781-1785) */}
       {filters && filters.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          {filters.map((f) => (
-            <button
-              key={f}
-              type="button"
-              onClick={() => setActiveFilter(f)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                activeFilter === f
-                  ? "bg-[#C9943A] text-[#0D0D0D] shadow-xs"
-                  : isDark
-                  ? "bg-[#F7F3EE]/6 text-[#F7F3EE]/70 hover:bg-[#F7F3EE]/12 hover:text-[#F7F3EE]"
-                  : "bg-white border border-[rgba(13,43,69,0.12)] text-[#0D2B45]/75 hover:bg-[#F7F3EE] hover:text-[#0D2B45] shadow-xs"
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-          <span className="text-xs font-mono font-bold text-[#C9943A] ml-2">
-            {filteredRows.length} items
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "14px" }}>
+          {filters.map((f, i) => {
+            const on = i === activeFilterIdx;
+            return (
+              <div
+                key={f}
+                onClick={() => {
+                  setActiveFilterIdx(i);
+                  setSelectedId(null);
+                }}
+                style={{
+                  padding: "9px 15px",
+                  borderRadius: "10px",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  font: `${on ? "700" : "500"} 12.5px 'DM Sans', sans-serif`,
+                  ...(on
+                    ? { background: "#C9943A", color: "#0D0D0D" }
+                    : { boxSizing: "border-box", border: "1px solid rgba(247,243,238,.2)", color: "rgba(247,243,238,.65)" }),
+                  userSelect: "none",
+                }}
+              >
+                {f}
+              </div>
+            );
+          })}
+          <span style={{ font: "700 11.5px 'JetBrains Mono', monospace", color: "#C9943A", marginLeft: "6px" }}>
+            {filteredRows.length} of {normalizedRows.length} shown
           </span>
         </div>
       )}
 
-      {/* Table Container */}
+      {/* Canonical Table: Exact 1:1 Grid Layout (lines 455-477 & 1556-1558 & 1933-1948) */}
       <div
-        className={`rounded-2xl overflow-hidden border transition-all ${
-          isDark
-            ? "bg-[#0D2B45] border-[#F7F3EE]/10"
-            : "bg-white border-[rgba(13,43,69,0.08)] shadow-[0_4px_20px_rgba(13,43,69,0.04)]"
-        }`}
+        style={{
+          background: "#0D2B45",
+          borderRadius: "20px",
+          overflow: "hidden",
+        }}
       >
-        {/* Table Header */}
+        {/* Table Header Row */}
         <div
-          className={`flex items-center px-4 sm:px-6 py-3 border-b text-[10px] font-semibold tracking-wider uppercase transition-colors ${
-            isDark
-              ? "border-[#F7F3EE]/12 text-[#F7F3EE]/50 bg-[#0A0A0A]/30"
-              : "border-[rgba(13,43,69,0.08)] text-[#0D2B45]/55 bg-[#FAF7F2]"
-          }`}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 2.6fr) minmax(0, 2.2fr) minmax(0, 1.3fr) minmax(0, 1.3fr) 88px",
+            gap: "12px",
+            alignItems: "start",
+            padding: "13px 20px",
+            borderBottom: "1px solid rgba(247,243,238,.12)",
+            background: "rgba(247,243,238,.04)",
+          }}
         >
-          <div className="flex-2 min-w-0 pr-4">{cols[0] || "ITEM"}</div>
-          <div className="flex-1 min-w-0 text-left">{cols[1] || "TYPE"}</div>
-          <div className="flex-1 min-w-0 text-left">{cols[2] || "DETAIL"}</div>
-          <div className="flex-1 min-w-0 text-left">{cols[3] || "ACTIVITY"}</div>
-          <div className="w-24 text-right">{cols[4] || "ACTIONS"}</div>
+          {headerCols.map((name, i) => (
+            <span
+              key={i}
+              style={{
+                minWidth: 0,
+                font: "500 9.5px 'DM Sans', sans-serif",
+                letterSpacing: ".13em",
+                color: "rgba(247,243,238,.5)",
+                textAlign: i === 3 ? "right" : "left",
+              }}
+            >
+              {name}
+            </span>
+          ))}
+          <span style={{ minWidth: 0 }} />
         </div>
 
-        {/* Table Rows */}
+        {/* Table Body Rows */}
         {isLoading ? (
-          <div className="py-16 text-center">
+          <div style={{ padding: "40px 20px", textAlign: "center" }}>
             <div className="w-7 h-7 border-2 border-[#C9943A] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <div
-              className={`text-xs font-mono ${
-                isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
-              }`}
-            >
+            <div style={{ font: "400 12px 'JetBrains Mono', monospace", color: "rgba(247,243,238,.5)" }}>
               Loading records...
             </div>
           </div>
         ) : filteredRows.length === 0 ? (
           <div
-            className={`py-14 text-center text-xs sm:text-sm font-inter ${
-              isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
-            }`}
+            style={{
+              padding: "34px 20px",
+              textAlign: "center",
+              font: "400 13.5px 'Inter', sans-serif",
+              color: "rgba(247,243,238,.5)",
+            }}
           >
             Nothing matches this filter. Good news, usually.
           </div>
         ) : (
-          <div
-            className={`divide-y transition-colors ${
-              isDark ? "divide-[#F7F3EE]/5" : "divide-[rgba(13,43,69,0.06)]"
-            }`}
-          >
-            {filteredRows.map((r, idx) => {
-              const tone = r.tone;
+          <div>
+            {filteredRows.map((r, i, arr) => {
+              const selected = selectedId === r.id;
+              const ink = r.tone === "good" ? "#5FC48E" : r.tone === "warn" ? "#C9943A" : "#D98A3E";
               return (
                 <div
-                  key={r.id || idx}
-                  onClick={() => onRowClick && onRowClick(r)}
-                  className={`flex items-center px-4 sm:px-6 py-3.5 transition-colors group cursor-pointer ${
-                    isDark
-                      ? "hover:bg-[#0A0A0A]/40"
-                      : "hover:bg-[#F7F3EE]/60"
-                  }`}
+                  key={r.id}
+                  onClick={() => {
+                    setSelectedId(selected ? null : r.id);
+                    if (onRowClick) onRowClick(r.raw || r);
+                  }}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "minmax(0, 2.6fr) minmax(0, 2.2fr) minmax(0, 1.3fr) minmax(0, 1.3fr) auto",
+                    gap: "12px",
+                    alignItems: "start",
+                    padding: "15px 20px",
+                    cursor: "pointer",
+                    borderBottom: i < arr.length - 1 ? "1px solid rgba(247,243,238,.08)" : "none",
+                    ...(selected
+                      ? { background: "rgba(201,148,58,.13)", boxShadow: "inset 3px 0 0 #C9943A" }
+                      : {}),
+                    transition: "background 0.12s ease",
+                  }}
                 >
-                  {/* Column 0: Title & Subtitle */}
-                  <div className="flex-2 min-w-0 pr-4">
-                    <div
-                      className={`font-semibold text-sm sm:text-[14.5px] truncate group-hover:text-[#C9943A] transition-colors ${
-                        isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"
-                      }`}
-                    >
+                  {/* Column 0: r.a & r.b */}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ font: "600 14.5px/1.3 'DM Sans', sans-serif", color: "#F7F3EE", overflowWrap: "break-word" }}>
                       {r.a}
                     </div>
                     {r.b && (
                       <div
-                        className={`text-[11.5px] font-mono truncate mt-0.5 ${
-                          isDark ? "text-[#F7F3EE]/50" : "text-[#0D2B45]/55"
-                        }`}
+                        style={{
+                          font: "500 11.5px/1.35 'JetBrains Mono', monospace",
+                          color: "rgba(247,243,238,.5)",
+                          marginTop: "4px",
+                          overflowWrap: "break-word",
+                        }}
                       >
                         {r.b}
                       </div>
                     )}
                   </div>
 
-                  {/* Column 1 */}
-                  <div
-                    className={`flex-1 min-w-0 text-xs sm:text-sm truncate font-inter ${
-                      isDark ? "text-[#F7F3EE]/80" : "text-[#0D2B45]/85"
-                    }`}
+                  {/* Column 1: r.c */}
+                  <span
+                    style={{
+                      minWidth: 0,
+                      font: "500 13px/1.35 'DM Sans', sans-serif",
+                      color: "rgba(247,243,238,.8)",
+                      overflowWrap: "break-word",
+                    }}
                   >
                     {r.c}
-                  </div>
+                  </span>
 
-                  {/* Column 2 */}
-                  <div
-                    className={`flex-1 min-w-0 text-xs sm:text-sm font-mono truncate ${
-                      isDark ? "text-[#F7F3EE]/70" : "text-[#0D2B45]/75"
-                    }`}
+                  {/* Column 2: r.d */}
+                  <span
+                    style={{
+                      minWidth: 0,
+                      font: "500 12px/1.35 'JetBrains Mono', monospace",
+                      color: "rgba(247,243,238,.6)",
+                      overflowWrap: "break-word",
+                    }}
                   >
                     {r.d}
-                  </div>
+                  </span>
 
-                  {/* Column 3: Status / State badge */}
-                  <div className="flex-1 min-w-0 text-xs sm:text-sm truncate">
-                    {r.e && (
-                      <span
-                        className={`inline-block px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold ${
-                          tone === "good"
-                            ? isDark
-                              ? "bg-[#1A7A4A]/20 text-[#5FC48E]"
-                              : "bg-[#1A7A4A]/12 text-[#1A7A4A]"
-                            : tone === "warn"
-                            ? isDark
-                              ? "bg-[#C9943A]/20 text-[#C9943A]"
-                              : "bg-[#C9943A]/15 text-[#B5651D]"
-                            : tone === "bad"
-                            ? isDark
-                              ? "bg-[#B5651D]/20 text-[#D98A3E]"
-                              : "bg-red-50 text-red-600 border border-red-200"
-                            : isDark
-                            ? "bg-[#F7F3EE]/10 text-[#F7F3EE]/60"
-                            : "bg-[rgba(13,43,69,0.06)] text-[#0D2B45]/65"
-                        }`}
-                      >
-                        {r.e}
-                      </span>
-                    )}
-                  </div>
+                  {/* Column 3: r.e with exact color ink */}
+                  <span
+                    style={{
+                      minWidth: 0,
+                      textAlign: "right",
+                      font: "700 12.5px/1.35 'DM Sans', sans-serif",
+                      color: ink,
+                      overflowWrap: "break-word",
+                    }}
+                  >
+                    {r.e}
+                  </span>
 
-                  {/* Column 4: Inline Edit & Delete Actions */}
+                  {/* Column 4: Edit & Delete Action Buttons (lines 468-472) */}
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className="w-24 shrink-0 flex items-center justify-end gap-1.5"
+                    style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}
                   >
-                    <button
-                      type="button"
-                      onClick={() => onEditRow && onEditRow(r)}
-                      className="h-7 px-2.5 rounded-lg border border-[#C9943A]/60 hover:border-[#C9943A] text-[#C9943A] font-bold text-[11.5px] transition-colors cursor-pointer"
+                    <div
+                      onClick={() => resolveRowDrawer(r)}
+                      style={{
+                        height: "30px",
+                        padding: "0 10px",
+                        borderRadius: "8px",
+                        boxSizing: "border-box",
+                        border: "1.5px solid rgba(201,148,58,.55)",
+                        color: "#C9943A",
+                        font: "700 11.5px 'DM Sans', sans-serif",
+                        display: "flex",
+                        alignItems: "center",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        userSelect: "none",
+                      }}
                     >
                       Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDeleteRow && onDeleteRow(r)}
-                      className="w-7 h-7 rounded-lg border border-[#D98A3E]/50 hover:border-[#D98A3E] text-[#D98A3E] font-bold text-xs flex items-center justify-center transition-colors cursor-pointer"
+                    </div>
+                    <div
+                      onClick={(e) => handleDeleteClick(r, e)}
+                      style={{
+                        width: "30px",
+                        height: "30px",
+                        borderRadius: "8px",
+                        boxSizing: "border-box",
+                        border: "1.5px solid rgba(217,138,62,.5)",
+                        color: "#D98A3E",
+                        font: "700 13px 'DM Sans', sans-serif",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        flex: "none",
+                        userSelect: "none",
+                      }}
                     >
                       ×
-                    </button>
+                    </div>
                   </div>
                 </div>
               );

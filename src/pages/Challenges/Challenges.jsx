@@ -4,21 +4,21 @@ import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { adminApiRequest } from "../../../services/auth.service";
 
 const BASE_ROWS = [
-  { a: "21-Day Warrior", b: "Full transformation regimen", c: "Physical", d: "21 days · 412 joined", e: "Active", tone: "good", id: "c1" },
-  { a: "Cold Start", b: "Cold exposure nervous system training", c: "Physical", d: "3 days · 312 joined", e: "Active", tone: "good", id: "c2" },
-  { a: "Week of Strength", b: "Foundation compound barbell & dumbbells", c: "Physical", d: "7 days · 266 joined", e: "Active", tone: "good", id: "c3" },
-  { a: "Sleep Lock", b: "9-hour sleep sanctuary protocol", c: "Mental", d: "5 days · 188 joined", e: "Active", tone: "good", id: "c4" },
-  { a: "Deep Connection", b: "Accountability partner sync & dialogue", c: "Relational", d: "14 days · 94 joined", e: "Active", tone: "good", id: "c5" },
-  { a: "Clean Eating Fortnight", b: "Whole foods & zero processed sugar", c: "Physical", d: "14 days · 0 joined", e: "Opens Monday", tone: "warn", id: "c6" },
-  { a: "Digital Detox", b: "Screen curfew after 20:00", c: "Mental", d: "3 days · 141 joined", e: "Active", tone: "good", id: "c7" },
-  { a: "Forgive & Grow", b: "Daily journal reflection prompt", c: "Relational", d: "21 days · 38 joined", e: "Low uptake", tone: "warn", id: "c8" },
+  { a: "21-Day Warrior", b: "Physical", c: "21", d: "412", e: "Active", tone: "good", id: "c1" },
+  { a: "Cold Start", b: "Physical", c: "3", d: "312", e: "Active", tone: "good", id: "c2" },
+  { a: "Week of Strength", b: "Physical", c: "7", d: "266", e: "Active", tone: "good", id: "c3" },
+  { a: "Sleep Lock", b: "Mental", c: "5", d: "188", e: "Active", tone: "good", id: "c4" },
+  { a: "Deep Connection", b: "Relational", c: "14", d: "94", e: "Active", tone: "good", id: "c5" },
+  { a: "Clean Eating Fortnight", b: "Physical", c: "14", d: "0", e: "Opens Monday", tone: "warn", id: "c6" },
+  { a: "Digital Detox", b: "Mental", c: "3", d: "141", e: "Active", tone: "good", id: "c7" },
+  { a: "Forgive & Grow", b: "Relational", c: "21", d: "38", e: "Low uptake", tone: "warn", id: "c8" },
 ];
 
 const BASE_RAIL = [
-  { d: "21d", type: "PHYSICAL", n: "21-Day Warrior", joined: "412 active members" },
-  { d: "3d", type: "PHYSICAL", n: "Cold Start", joined: "312 active members" },
-  { d: "7d", type: "PHYSICAL", n: "Week of Strength", joined: "266 active members" },
-  { d: "5d", type: "MENTAL", n: "Sleep Lock", joined: "188 active members" },
+  { d: "21d", type: "Physical", n: "21-Day Warrior", joined: "412 joined" },
+  { d: "3d", type: "Physical", n: "Cold Start", joined: "312 joined" },
+  { d: "7d", type: "Physical", n: "Week of Strength", joined: "266 joined" },
+  { d: "5d", type: "Mental", n: "Sleep Lock", joined: "188 joined" },
 ];
 
 export default function Challenges() {
@@ -37,9 +37,9 @@ export default function Challenges() {
           const mapped = list.map((c) => ({
             id: c._id || c.id,
             a: c.title || "Challenge",
-            b: c.description || "Daily challenge",
-            c: c.category || c.goal_type || "Physical",
-            d: `${c.duration_days || c.durationDays || 7} days · ${c.participants_count || 0} joined`,
+            b: c.category || c.goal_type || "Physical",
+            c: String(c.duration_days || c.durationDays || 7),
+            d: String(c.participants_count || 0),
             e: c.status === "ACTIVE" ? "Active" : c.status || "Active",
             tone: c.status === "ACTIVE" ? "good" : "warn",
             rawData: c,
@@ -75,7 +75,7 @@ export default function Challenges() {
       pageTitle="Challenges"
       pageSub="Physical, Mental and Relational, from 3 to 21 days. The short ones convert browsers into posters; the long ones build the habit."
       pagePrimary="+ Add challenge"
-      pageSecondary="Duplicate challenge"
+      pageSecondary="Duplicate a challenge"
       onPrimary={() => openDrawer("challenge")}
       onSecondary={() => openDrawer("challenge")}
       pageStats={[
@@ -90,15 +90,15 @@ export default function Challenges() {
       rail={rail.map((item) => ({
         ...item,
         onEdit: () => openDrawer("challenge", { NAME: item.n }),
-        onRemove: () => showToast(`Removed ${item.n} from featured rail.`),
+        onRemove: () => showToast(`Removed ${item.n}`),
       }))}
       filters={["All", "3 day", "5 day", "7 day", "14 day", "21 day", "Draft"]}
-      cols={["CHALLENGE", "TYPE", "DAYS & PARTICIPANTS", "STATUS", "ACTIONS"]}
+      cols={["CHALLENGE", "TYPE", "DAYS", "JOINED", "STATUS"]}
       rows={rows}
       isLoading={loading}
-      onEditRow={(row) => openDrawer("challenge", { NAME: row.a, TYPE: row.c })}
+      onEditRow={(row) => openDrawer("challenge", { NAME: row.a, TYPE: row.b })}
       onDeleteRow={handleDelete}
-      onRowClick={(row) => openDrawer("challenge", { NAME: row.a, TYPE: row.c })}
+      onRowClick={(row) => openDrawer("challenge", { NAME: row.a, TYPE: row.b })}
     />
   );
 }

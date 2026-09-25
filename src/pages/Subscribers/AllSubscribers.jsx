@@ -4,14 +4,14 @@ import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { getUserManagementOverview } from "../../../services/admin-users.service";
 
 const BASE_ROWS = [
-  { a: "Michael Krause", b: "michael@krause.de", c: "GOLD", d: "Yearly · Renews 12 Mar", e: "Healthy", tone: "good", id: "sub1" },
-  { a: "Dominik Schulz", b: "d.schulz@berlin.de", c: "PLATINUM", d: "Yearly · Renews 04 Jan", e: "Healthy", tone: "good", id: "sub2" },
-  { a: "Anna Reinhardt", b: "anna.r@gmx.de", c: "SILVER", d: "Monthly · Renews 24 Sep", e: "Healthy", tone: "good", id: "sub3" },
-  { a: "Arjun Rao", b: "arjun.rao@tech.in", c: "GOLD", d: "Monthly · Renews 19 Sep", e: "Going quiet", tone: "warn", id: "sub4" },
-  { a: "Lena Meyer", b: "lena@meyer.de", c: "SILVER", d: "Monthly · Renews 21 Sep", e: "Going quiet", tone: "warn", id: "sub5" },
-  { a: "Sarah Fischer", b: "sarah@fischer.de", c: "GOLD", d: "Yearly · Renews 28 Sep", e: "Card declined", tone: "bad", id: "sub6" },
-  { a: "Peter Wagner", b: "p.wagner@wagner.de", c: "SILVER", d: "Monthly · Renews 23 Sep", e: "Card declined", tone: "bad", id: "sub7" },
-  { a: "Nana Owusu", b: "nana@accra.gh", c: "GOLD", d: "Yearly · Renews 02 Oct", e: "Healthy", tone: "good", id: "sub8" },
+  { a: "Michael Krause", b: "GOLD", c: "Yearly", d: "12 Mar", e: "Healthy", tone: "good", id: "sub1" },
+  { a: "Dominik Schulz", b: "PLATINUM", c: "Yearly", d: "04 Jan", e: "Healthy", tone: "good", id: "sub2" },
+  { a: "Anna Reinhardt", b: "SILVER", c: "Monthly", d: "24 Sep", e: "Healthy", tone: "good", id: "sub3" },
+  { a: "Arjun Rao", b: "GOLD", c: "Monthly", d: "19 Sep", e: "Going quiet", tone: "warn", id: "sub4" },
+  { a: "Lena Meyer", b: "SILVER", c: "Monthly", d: "21 Sep", e: "Going quiet", tone: "warn", id: "sub5" },
+  { a: "Sarah Fischer", b: "GOLD", c: "Yearly", d: "28 Sep", e: "Card declined", tone: "bad", id: "sub6" },
+  { a: "Peter Wagner", b: "SILVER", c: "Monthly", d: "23 Sep", e: "Card declined", tone: "bad", id: "sub7" },
+  { a: "Nana Owusu", b: "GOLD", c: "Yearly", d: "02 Oct", e: "Healthy", tone: "good", id: "sub8" },
 ];
 
 export default function AllSubscribers() {
@@ -31,9 +31,9 @@ export default function AllSubscribers() {
               paying.map((u) => ({
                 id: u._id || u.id,
                 a: u.fullName || u.name || "Subscriber",
-                b: u.email || "",
-                c: (u.subscriptionTier || "GOLD").toUpperCase(),
-                d: `Renews ${u.subscription_expires_at || "in 30 days"}`,
+                b: (u.subscriptionTier || "GOLD").toUpperCase(),
+                c: u.cycle || "Yearly",
+                d: u.renewalDate || "12 Mar",
                 e: u.status === "ACTIVE" ? "Healthy" : "Going quiet",
                 tone: u.status === "ACTIVE" ? "good" : "warn",
                 rawData: u,
@@ -64,7 +64,7 @@ export default function AllSubscribers() {
       pageAdviceDone="Warm up the five"
       onAdvice={() => openDrawer("message", { WHO: "5 subscribers renewing ≤14 days" })}
       filters={["All", "Renewing soon", "At risk", "Yearly", "Monthly", "Lapsed"]}
-      cols={["SUBSCRIBER", "TIER", "BILLING CYCLE & RENEWAL", "HEALTH", "ACTIONS"]}
+      cols={["SUBSCRIBER", "TIER", "CYCLE", "RENEWS", "HEALTH"]}
       rows={rows}
       isLoading={loading}
       onEditRow={(row) => openDrawer("message", { WHO: row.a })}

@@ -4,11 +4,11 @@ import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { listAdminWorkouts } from "../../../services/admin-workouts.service";
 
 const BASE_ROWS = [
-  { a: "Zone 2 Fundamentals", b: "Mitochondrial density & aerobic base", c: "Science", d: "15 min · 88 watched", e: "Live", tone: "good", id: "m1" },
-  { a: "Post-Workout Nutrition", b: "Timing leucine spikes & glycogen replenishment", c: "Nutrition", d: "18 min · 18 watched", e: "Live", tone: "good", id: "m2" },
-  { a: "Test Version One", b: "Full masterclass recording", c: "Nutrition", d: "60 min · 42 watched", e: "Live", tone: "good", id: "m3" },
-  { a: "Sleep and Recovery", b: "Sleep cycles and CNS resetting", c: "Science", d: "24 min · 0 watched", e: "Draft", tone: "warn", id: "m4" },
-  { a: "Protein Without Meat", b: "High bioavailability plant sources", c: "Nutrition", d: "22 min · 0 watched", e: "Draft", tone: "warn", id: "m5" },
+  { a: "Test Version One", b: "Nutrition", c: "60 min", d: "42", e: "Live", tone: "good", id: "m1" },
+  { a: "Zone 2 Fundamentals", b: "Science", c: "15 min", d: "88", e: "Live", tone: "good", id: "m2" },
+  { a: "Post-Workout Nutrition", b: "Nutrition", c: "18 min", d: "18", e: "Live", tone: "good", id: "m3" },
+  { a: "Sleep and Recovery", b: "Science", c: "24 min", d: "0", e: "Draft", tone: "warn", id: "m4" },
+  { a: "Protein Without Meat", b: "Nutrition", c: "22 min", d: "0", e: "Draft", tone: "warn", id: "m5" },
 ];
 
 export default function Masterclasses() {
@@ -26,9 +26,9 @@ export default function Masterclasses() {
             mc.map((w) => ({
               id: w._id || w.id,
               a: w.title,
-              b: w.coachNote || w.subtitle || "Long-form masterclass",
-              c: w.category || "Science",
-              d: `${w.duration || 20} min · ${w.viewsCount || 0} watched`,
+              b: w.category || "Science",
+              c: `${w.duration || 20} min`,
+              d: String(w.viewsCount || 0),
               e: w.isPublished ? "Live" : "Draft",
               tone: w.isPublished ? "good" : "warn",
               rawData: w,
@@ -59,15 +59,15 @@ export default function Masterclasses() {
       pageAdviceDone="Announce one to Gold"
       onAdvice={() => openDrawer("broadcast", { TARGET: "Gold" })}
       filters={["All", "Nutrition", "Science", "Training", "Draft"]}
-      cols={["TITLE", "CATEGORY", "LENGTH & WATCHED", "STATUS", "ACTIONS"]}
+      cols={["TITLE", "CATEGORY", "LENGTH", "WATCHED", "STATUS"]}
       rows={rows}
       isLoading={loading}
-      onEditRow={(row) => openDrawer("workout", { TITLE: row.a, PURPOSE: row.c })}
+      onEditRow={(row) => openDrawer("workout", { TITLE: row.a, PURPOSE: row.b })}
       onDeleteRow={(row) => {
         setRows((prev) => prev.filter((r) => r.id !== row.id));
         showToast(`Masterclass "${row.a}" removed.`);
       }}
-      onRowClick={(row) => openDrawer("workout", { TITLE: row.a, PURPOSE: row.c })}
+      onRowClick={(row) => openDrawer("workout", { TITLE: row.a, PURPOSE: row.b })}
     />
   );
 }

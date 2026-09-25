@@ -4,14 +4,14 @@ import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { fetchRevenue } from "../../../services/analytics.service";
 
 const BASE_ROWS = [
-  { a: "Victory Silver", b: "Full library & community", c: "€199 / yr", d: "€24 / mo", e: "21 subscribers · 18% MRR", tone: "good", id: "s1" },
-  { a: "Victory Gold", b: "AI Coach & Nutrition Planner", c: "€299 / yr", d: "€36 / mo", e: "34 subscribers · 62% MRR", tone: "good", id: "s2" },
-  { a: "Victory Platinum", b: "Human Coach 1-to-1 & Wearables", c: "€399 / yr", d: "€48 / mo", e: "9 subscribers · 17% MRR", tone: "good", id: "s3" },
-  { a: "Victory Inner Circle", b: "Victor Akko direct mentoring", c: "Application", d: "—", e: "4 subscribers · 3% MRR", tone: "good", id: "s4" },
-  { a: "21-Day Gold Beta", b: "One-time feedback program", c: "€0", d: "—", e: "15 enrolled · 0% MRR", tone: "warn", id: "s5" },
-  { a: "5-Day trial · Gold", b: "Self-serve 5-day trial", c: "€0", d: "—", e: "12 running · 0% MRR", tone: "warn", id: "s6" },
-  { a: "5-Day trial · Silver", b: "Self-serve 5-day trial", c: "€0", d: "—", e: "4 running · 0% MRR", tone: "warn", id: "s7" },
-  { a: "5-Day trial · Platinum", b: "Self-serve 5-day trial", c: "€0", d: "—", e: "3 running · 0% MRR", tone: "warn", id: "s8" },
+  { a: "Victory Silver", b: "€199", c: "€24", d: "21", e: "18%", tone: "good", id: "s1" },
+  { a: "Victory Gold", b: "€299", c: "€36", d: "34", e: "62%", tone: "good", id: "s2" },
+  { a: "Victory Platinum", b: "€399", c: "€48", d: "9", e: "17%", tone: "good", id: "s3" },
+  { a: "Victory Inner Circle", b: "Application", c: "—", d: "4", e: "3%", tone: "good", id: "s4" },
+  { a: "21-Day Gold Beta", b: "€0", c: "—", d: "15", e: "0%", tone: "warn", id: "s5" },
+  { a: "5-Day trial · Gold", b: "€0", c: "—", d: "12 running", e: "0%", tone: "warn", id: "s6" },
+  { a: "5-Day trial · Silver", b: "€0", c: "—", d: "4 running", e: "0%", tone: "warn", id: "s7" },
+  { a: "5-Day trial · Platinum", b: "€0", c: "—", d: "3 running", e: "0%", tone: "warn", id: "s8" },
 ];
 
 export default function Subscriptions() {
@@ -53,9 +53,9 @@ export default function Subscriptions() {
       pageStats={stats}
       pageAdvice="Ghana has 128 registered users and no completed payment. Until one MoMo transaction clears, every cedi spent on reach there is wasted."
       pageAdviceDone="Run a test payment"
-      onAdvice={() => openDrawer("flag")}
+      onAdvice={() => openDrawer("pricing")}
       filters={["All tiers", "Silver", "Gold", "Platinum", "Inner Circle", "Monthly", "Yearly"]}
-      cols={["PLAN", "ANNUAL", "MONTHLY", "SUBSCRIBERS & SHARE", "ACTIONS"]}
+      cols={["PLAN", "PRICE / YEAR", "PRICE / MONTH", "SUBSCRIBERS", "SHARE OF MRR"]}
       rows={rows}
       isLoading={loading}
       onEditRow={(row) => openDrawer("pricing", { TARGET: row.a })}

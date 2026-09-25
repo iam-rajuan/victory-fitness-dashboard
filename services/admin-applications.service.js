@@ -43,3 +43,22 @@ export const updateAdminApplication = async (applicationId, payload) => {
     throw new Error(wrapError(error, "Failed to update coaching application"));
   }
 };
+
+export const getInnerCircleApplicationQuestions = async ({ signal } = {}) => {
+  try {
+    return await adminApiRequest("/admin/content/inner-circle/application-questions", { signal });
+  } catch (error) {
+    throw new Error(wrapError(error, "Failed to load Inner Circle questions"));
+  }
+};
+
+export const updateInnerCircleApplicationQuestions = async (payload) => {
+  try {
+    return await adminApiRequest("/admin/content/inner-circle/application-questions", {
+      method: "PUT",
+      body: payload,
+    });
+  } catch (error) {
+    throw new Error(wrapError(error, "Failed to update Inner Circle questions"));
+  }
+};

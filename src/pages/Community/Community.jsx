@@ -4,14 +4,14 @@ import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { adminApiRequest } from "../../../services/auth.service";
 
 const BASE_ROWS = [
-  { a: "Victor Akko", b: "Official coach announcement", c: "Global", d: "Announcement · 1 hr ago", e: "62 cheers", tone: "good", id: "cm1" },
-  { a: "Lena Meyer", b: "Post-workout hydration plate", c: "Gold", d: "Photo · 3 hrs ago", e: "21 cheers", tone: "good", id: "cm2" },
-  { a: "Anna Reinhardt", b: "7-day habit streak unlocked", c: "Silver", d: "Completion · Today", e: "14 cheers", tone: "good", id: "cm3" },
-  { a: "Test A", b: "Partner invite for Cold Start", c: "Platinum", d: "Challenge invite · 9 Sep", e: "0 cheers", tone: "warn", id: "cm4" },
-  { a: "Md Hasan Saon", b: "Day 3 recovery reflections", c: "Gold", d: "Text · 8 Sep", e: "4 cheers", tone: "good", id: "cm5" },
-  { a: "test user five", b: "Clean Eating challenge lobby", c: "Gold", d: "Challenge invite · 8 Sep", e: "1 cheer", tone: "warn", id: "cm6" },
-  { a: "Kofi Mensah", b: "Form review question on deadlift", c: "Gold", d: "Video link · 7 Sep", e: "9 cheers", tone: "good", id: "cm7" },
-  { a: "Member", b: "First session logged!", c: "Global", d: "Text · 6 Sep", e: "2 cheers", tone: "warn", id: "cm8" },
+  { a: "Victor Akko", b: "Global", c: "Announcement", d: "1 hr ago", e: "62 cheers", tone: "good", id: "cm1" },
+  { a: "Lena Meyer", b: "Gold", c: "Photo", d: "3 hrs ago", e: "21 cheers", tone: "good", id: "cm2" },
+  { a: "Anna Reinhardt", b: "Silver", c: "Completion", d: "Today", e: "14 cheers", tone: "good", id: "cm3" },
+  { a: "Test A", b: "Platinum", c: "Challenge invite", d: "9 Sep", e: "0 cheers", tone: "warn", id: "cm4" },
+  { a: "Md Hasan Saon", b: "Gold", c: "Text", d: "8 Sep", e: "4 cheers", tone: "good", id: "cm5" },
+  { a: "test user five", b: "Gold", c: "Challenge invite", d: "8 Sep", e: "1 cheer", tone: "warn", id: "cm6" },
+  { a: "Kofi Mensah", b: "Gold", c: "YouTube link", d: "7 Sep", e: "9 cheers", tone: "good", id: "cm7" },
+  { a: "Member", b: "Global", c: "Text", d: "6 Sep", e: "2 cheers", tone: "warn", id: "cm8" },
 ];
 
 export default function Community() {
@@ -28,9 +28,9 @@ export default function Community() {
             list.map((p) => ({
               id: p._id || p.id,
               a: p.authorName || p.author || "Member",
-              b: p.content || p.caption || "Community share",
-              c: p.feedTier || p.tier || "Global",
-              d: `${p.postType || "Post"} · Today`,
+              b: p.feedTier || p.tier || "Global",
+              c: p.postType || "Text",
+              d: "Today",
               e: `${p.cheersCount || p.likesCount || 0} cheers`,
               tone: (p.cheersCount || 0) > 5 ? "good" : "warn",
               rawData: p,
@@ -68,7 +68,7 @@ export default function Community() {
       pageAdviceDone="Seed the Silver feed"
       onAdvice={() => openDrawer("broadcast", { TARGET: "Silver" })}
       filters={["All tiers", "Global", "Silver", "Gold", "Platinum", "Inner Circle", "Flagged"]}
-      cols={["AUTHOR", "FEED", "TYPE & POSTED", "ENGAGEMENT", "ACTIONS"]}
+      cols={["AUTHOR", "FEED", "TYPE", "POSTED", "ENGAGEMENT"]}
       rows={rows}
       isLoading={loading}
       onEditRow={(row) => openDrawer("broadcast", { HEADLINE: row.a })}
