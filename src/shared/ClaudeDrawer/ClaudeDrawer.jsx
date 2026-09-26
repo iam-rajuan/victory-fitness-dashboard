@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { useTheme } from "../../context/ThemeContext";
 import { adminApiRequest } from "../../../services/auth.service";
-import { previewAdminWorkoutSync, syncAdminWorkouts } from "../../../services/admin-workouts.service";
+import { previewAdminWorkoutSync, syncAdminWorkouts, uploadAdminWorkoutVideo } from "../../../services/admin-workouts.service";
 import ClaudeApplicationDrawer from "./ClaudeApplicationDrawer";
 
 const PRICE_TABLE = [
@@ -397,7 +397,8 @@ export default function ClaudeDrawer() {
         });
       }
       setFormValues(initial);
-      setActiveMediaKind(0);
+      const initialVideoSource = String(initial.videoSource || payload?.videoSource || "VIMEO").toUpperCase();
+      setActiveMediaKind(initialVideoSource === "UPLOAD" ? 1 : initialVideoSource === "YOUTUBE" ? 2 : 0);
       setSelectedStarterIdx(0);
       setVimeoPreview(null);
     }
@@ -559,6 +560,8 @@ export default function ClaudeDrawer() {
   const buildWorkoutRequestPayload = (visibility) => {
     const durationMatch = String(formValues.LENGTH || "").match(/\d+/);
     const durationMinutes = durationMatch ? Number(durationMatch[0]) : Number(payload?.durationMinutes || 0);
+    const videoSource = String(formValues.videoSource || payload?.videoSource || "VIMEO").trim().toUpperCase();
+    const isUpload = videoSource === "UPLOAD";
     const movements = (Array.isArray(formValues.MOVEMENTS) ? formValues.MOVEMENTS : [])
       .map((movement, index) => ({
         name: String(movement.name || "").trim(),
@@ -573,15 +576,17 @@ export default function ClaudeDrawer() {
       .filter((movement) => movement.name);
     return {
       title: String(formValues.TITLE || payload?.TITLE || "Untitled Workout").trim(),
-      vimeoId: String(payload?.vimeoId || formValues.vimeoId || "").trim(),
-      videoUrl: String(payload?.videoUrl || formValues.videoUrl || "").trim(),
-      videoSource: String(payload?.videoSource || formValues.videoSource || "VIMEO").trim().toUpperCase(),
+      vimeoId: isUpload ? "" : String(formValues.vimeoId || payload?.vimeoId || "").trim(),
+      videoUrl: isUpload
+        ? String(formValues.videoUrl || payload?.videoUrl || "").trim()
+        : String(formValues.videoUrl || payload?.videoUrl || "").trim(),
+      videoSource,
       tag: String(formValues.PURPOSE || "Strength").trim(),
       equipment: String(formValues.EQUIPMENT || "").trim(),
       level: String(formValues.LEVEL || "").trim(),
       durationMinutes,
       visibility,
-      thumbnail: String(payload?.thumbnail || formValues.thumbnail || "").trim(),
+      thumbnail: String(formValues.thumbnail || payload?.thumbnail || "").trim(),
       movements,
     };
   };
@@ -618,6 +623,12 @@ export default function ClaudeDrawer() {
 
   const saveWorkout = async (visibility) => {
     const requestPayload = buildWorkoutRequestPayload(visibility);
+    if (requestPayload.videoSource === "UPLOAD" && String(requestPayload.videoUrl || "").startsWith("blob:")) {
+      throw new Error("Please wait for the video upload to finish before saving.");
+    }
+    if (requestPayload.videoSource === "UPLOAD" && !requestPayload.videoUrl) {
+      throw new Error("Upload a video file before saving.");
+    }
     const workoutId = payload?.workoutId;
     const path = workoutId ? `/admin/workouts/${workoutId}` : "/admin/workouts";
     const method = workoutId ? "PATCH" : "POST";
@@ -771,7 +782,15 @@ export default function ClaudeDrawer() {
                   <button
                     key={kind}
                     type="button"
-                    onClick={() => setActiveMediaKind(idx)}
+                    onClick={() => {
+                      setActiveMediaKind(idx);
+                      if (type === "workout") {
+                        setFormValues((prev) => ({
+                          ...prev,
+                          videoSource: idx === 1 ? "UPLOAD" : idx === 2 ? "YOUTUBE" : "VIMEO",
+                        }));
+                      }
+                    }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
                       idx === activeMediaKind
                         ? "bg-[#C9943A] text-[#0D0D0D]"
@@ -797,6 +816,7 @@ export default function ClaudeDrawer() {
                           const match = val.match(/\d{6,}/);
                           setFormValues((prev) => ({
                             ...prev,
+                            videoSource: "VIMEO",
                             vimeoId: match ? match[0] : val,
                             videoUrl: val.includes("http") ? val : prev.videoUrl,
                           }));
@@ -814,16 +834,35 @@ export default function ClaudeDrawer() {
                         type="file"
                         accept="video/mp4,video/quicktime,video/webm"
                         className="hidden"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
                             const blobUrl = URL.createObjectURL(file);
                             setFormValues((prev) => ({
                               ...prev,
+                              videoSource: "UPLOAD",
                               videoUrl: blobUrl,
                               vimeoId: "",
                             }));
-                            showToast(`Loaded ${file.name} for preview`);
+                            showToast(`Uploading ${file.name}...`);
+                            try {
+                              const uploadedUrl = await uploadAdminWorkoutVideo(file);
+                              setFormValues((prev) => ({
+                                ...prev,
+                                videoSource: "UPLOAD",
+                                videoUrl: uploadedUrl,
+                                vimeoId: "",
+                              }));
+                              showToast(`Uploaded ${file.name}`);
+                            } catch (err) {
+                              setFormValues((prev) => ({
+                                ...prev,
+                                videoSource: "UPLOAD",
+                                videoUrl: "",
+                                vimeoId: "",
+                              }));
+                              showToast(`Failed: ${err?.message || "Video upload failed"}`);
+                            }
                           }
                         }}
                       />
@@ -840,6 +879,7 @@ export default function ClaudeDrawer() {
                           const val = e.target.value.trim();
                           setFormValues((prev) => ({
                             ...prev,
+                            videoSource: "YOUTUBE",
                             videoUrl: val,
                             vimeoId: "",
                           }));
