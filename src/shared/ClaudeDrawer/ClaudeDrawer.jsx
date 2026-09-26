@@ -151,6 +151,7 @@ const DRAWER_CONFIGS = {
       { k: "LENGTH", type: "chips", initial: "3", options: ["3", "5", "7", "14", "21"] },
       { k: "TYPE", type: "chips", initial: "Physical", options: ["Physical", "Mental", "Relational"] },
       { k: "STATUS", type: "chips", initial: "DRAFT", options: ["DRAFT", "UPCOMING", "ACTIVE", "ARCHIVED"] },
+      { k: "FEATURED CARD", type: "chips", initial: "No", options: ["No", "Yes"] },
       { k: "DIFFICULTY", type: "chips", initial: "BEGINNER", options: ["BEGINNER", "INTERMEDIATE", "ADVANCED"] },
       { k: "POINTS ON COMPLETION", type: "text", initial: "", placeholder: "e.g. 75", hint: "shown as the win" },
       { k: "WHAT TO DO", type: "input", initial: "", placeholder: "The instruction, verbatim...", hint: "the instruction, verbatim" },
@@ -693,6 +694,7 @@ export default function ClaudeDrawer() {
       difficulty: ["BEGINNER", "INTERMEDIATE", "ADVANCED"].includes(difficulty) ? difficulty : "BEGINNER",
       status: ["ACTIVE", "UPCOMING", "DRAFT", "ARCHIVED"].includes(status) ? status : "DRAFT",
       thumbnail: String(payload?.THUMBNAIL || "").trim(),
+      featured: String(formValues["FEATURED CARD"] || payload?.["FEATURED CARD"] || "").trim().toLowerCase() === "yes",
     };
   };
 

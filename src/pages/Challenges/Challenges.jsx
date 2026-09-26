@@ -20,7 +20,7 @@ const statusLabel = (status) => {
 
 const mapChallengeRow = (challenge) => ({
   id: challenge.id,
-  a: challenge.title || "Untitled challenge",
+  a: `${challenge.featured ? "★ " : ""}${challenge.title || "Untitled challenge"}`,
   b: challenge.category || "Physical",
   c: String(challenge.durationDays || 0),
   d: String(challenge.participantCount || 0),
@@ -39,6 +39,7 @@ const drawerPayloadFromChallenge = (challenge = {}) => ({
   "WHAT TO DO": challenge.description || "",
   "WHY IT MATTERS": challenge.whyItMatters || "",
   STATUS: challenge.status || "DRAFT",
+  "FEATURED CARD": challenge.featured ? "Yes" : "No",
   DIFFICULTY: challenge.difficulty || "BEGINNER",
   THUMBNAIL: challenge.thumbnail || "",
   PLAN_TEXT: challenge.planText || "",
