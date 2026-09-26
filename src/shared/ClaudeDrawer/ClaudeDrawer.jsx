@@ -419,7 +419,10 @@ export default function ClaudeDrawer() {
     if (config) {
       const initial = {};
       (config.fields || []).forEach((field) => {
-        initial[field.k] = (payload && payload[field.k]) || field.initial;
+        initial[field.k] =
+          payload && Object.prototype.hasOwnProperty.call(payload, field.k)
+            ? payload[field.k]
+            : field.initial;
       });
       // also allow payload direct key overrides
       if (payload && typeof payload === "object") {

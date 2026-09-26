@@ -30,20 +30,20 @@ const mapChallengeRow = (challenge) => ({
 });
 
 const drawerPayloadFromChallenge = (challenge = {}) => ({
-  id: challenge.id,
+  id: challenge.id || challenge._id,
   title: "Edit challenge",
   NAME: challenge.title || "",
-  LENGTH: String(challenge.durationDays || 7),
+  LENGTH: String(challenge.durationDays || challenge.duration_days || 7),
   TYPE: challenge.category || "Physical",
   "POINTS ON COMPLETION": challenge.points !== undefined && challenge.points !== null ? String(challenge.points) : "",
   "WHAT TO DO": challenge.description || "",
-  "WHY IT MATTERS": challenge.whyItMatters || "",
+  "WHY IT MATTERS": challenge.whyItMatters || challenge.why_it_matters || "",
   STATUS: challenge.status || "DRAFT",
   "FEATURED CARD": challenge.featured ? "Yes" : "No",
   DIFFICULTY: challenge.difficulty || "BEGINNER",
   THUMBNAIL: challenge.thumbnail || "",
-  PLAN_TEXT: challenge.planText || "",
-  PLAN_DAYS: challenge.planDays || [],
+  PLAN_TEXT: challenge.planText || challenge.plan_text || "",
+  PLAN_DAYS: challenge.planDays || challenge.plan_days || [],
 });
 
 export default function Challenges() {
@@ -60,6 +60,7 @@ export default function Challenges() {
       const data = await adminApiRequest("/admin/challenges");
       const list = Array.isArray(data) ? data : data?.challenges || data?.items || [];
       const sorted = [...list].sort((a, b) => {
+        if (Boolean(a.featured) !== Boolean(b.featured)) return a.featured ? -1 : 1;
         const timeA = new Date(a.updatedAt || a.createdAt || a.updated_at || a.created_at || 0).getTime();
         const timeB = new Date(b.updatedAt || b.createdAt || b.updated_at || b.created_at || 0).getTime();
         if (timeA && timeB && timeA !== timeB) return timeB - timeA;
@@ -122,9 +123,12 @@ export default function Challenges() {
     }));
   }, [rows]);
 
+  const getChallengeFromRow = (row) => row?.rawData || row?.raw?.rawData || row;
+
   const openChallengeDrawer = (row) => {
+    const challenge = getChallengeFromRow(row);
     openDrawer("challenge", {
-      ...drawerPayloadFromChallenge(row?.rawData || {}),
+      ...drawerPayloadFromChallenge(challenge || {}),
       onSaved: loadChallenges,
     });
   };
