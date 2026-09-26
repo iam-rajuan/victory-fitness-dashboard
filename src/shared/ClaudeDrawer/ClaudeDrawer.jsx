@@ -5,6 +5,36 @@ import { adminApiRequest } from "../../../services/auth.service";
 import { previewAdminWorkoutSync, syncAdminWorkouts, uploadAdminWorkoutVideo } from "../../../services/admin-workouts.service";
 import ClaudeApplicationDrawer from "./ClaudeApplicationDrawer";
 
+function readVideoDurationSeconds(file) {
+  return new Promise((resolve) => {
+    if (!file) {
+      resolve(0);
+      return;
+    }
+    const objectUrl = URL.createObjectURL(file);
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      const seconds = Number.isFinite(video.duration) ? Math.max(0, Math.round(video.duration)) : 0;
+      URL.revokeObjectURL(objectUrl);
+      resolve(seconds);
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(0);
+    };
+    video.src = objectUrl;
+  });
+}
+
+function formatDurationLabelFromSeconds(seconds) {
+  const total = Math.max(0, Math.round(Number(seconds || 0)));
+  if (!total) return "";
+  const minutes = Math.floor(total / 60);
+  const secs = total % 60;
+  return `${minutes}:${String(secs).padStart(2, "0")}`;
+}
+
 const PRICE_TABLE = [
   ["Victory Silver", 199, 24, "Silver"],
   ["Victory Gold", 299, 36, "Gold"],
@@ -560,6 +590,8 @@ export default function ClaudeDrawer() {
   const buildWorkoutRequestPayload = (visibility) => {
     const durationMatch = String(formValues.LENGTH || "").match(/\d+/);
     const durationMinutes = durationMatch ? Number(durationMatch[0]) : Number(payload?.durationMinutes || 0);
+    const durationSeconds = Number(formValues.durationSeconds || payload?.durationSeconds || 0)
+      || (durationMinutes > 0 ? durationMinutes * 60 : 0);
     const videoSource = String(formValues.videoSource || payload?.videoSource || "VIMEO").trim().toUpperCase();
     const isUpload = videoSource === "UPLOAD";
     const movements = (Array.isArray(formValues.MOVEMENTS) ? formValues.MOVEMENTS : [])
@@ -585,6 +617,7 @@ export default function ClaudeDrawer() {
       equipment: String(formValues.EQUIPMENT || "").trim(),
       level: String(formValues.LEVEL || "").trim(),
       durationMinutes,
+      durationSeconds,
       visibility,
       thumbnail: String(formValues.thumbnail || payload?.thumbnail || "").trim(),
       movements,
@@ -838,13 +871,18 @@ export default function ClaudeDrawer() {
                           const file = e.target.files?.[0];
                           if (file) {
                             const blobUrl = URL.createObjectURL(file);
+                            const durationSeconds = await readVideoDurationSeconds(file);
+                            const durationMinutes = durationSeconds > 0 ? Math.max(1, Math.ceil(durationSeconds / 60)) : 0;
                             setFormValues((prev) => ({
                               ...prev,
                               videoSource: "UPLOAD",
                               videoUrl: blobUrl,
                               vimeoId: "",
+                              durationSeconds,
+                              LENGTH: durationMinutes > 0 ? `${durationMinutes} min` : prev.LENGTH,
                             }));
-                            showToast(`Uploading ${file.name}...`);
+                            const durationLabel = formatDurationLabelFromSeconds(durationSeconds);
+                            showToast(`Uploading ${file.name}${durationLabel ? ` (${durationLabel})` : ""}...`);
                             try {
                               const uploadedUrl = await uploadAdminWorkoutVideo(file);
                               setFormValues((prev) => ({
@@ -852,6 +890,8 @@ export default function ClaudeDrawer() {
                                 videoSource: "UPLOAD",
                                 videoUrl: uploadedUrl,
                                 vimeoId: "",
+                                durationSeconds,
+                                LENGTH: durationMinutes > 0 ? `${durationMinutes} min` : prev.LENGTH,
                               }));
                               showToast(`Uploaded ${file.name}`);
                             } catch (err) {

@@ -11,7 +11,8 @@ const buildWorkoutPayload = (workout, onSaved) => {
     title: "Edit workout",
     TITLE: workout.title || "Untitled Workout",
     PURPOSE: workout.tag || "Strength",
-    LENGTH: duration > 0 ? `${duration} min` : "20 min",
+    LENGTH: duration > 0 ? `${duration} min` : "Not set",
+    durationSeconds: Number(workout.durationSeconds || 0),
     EQUIPMENT: workout.equipment || "Bodyweight",
     LEVEL: workout.level || "Intermediate",
     VISIBILITY: workout.visibility || "Draft",
@@ -22,6 +23,16 @@ const buildWorkoutPayload = (workout, onSaved) => {
     MOVEMENTS: Array.isArray(workout.movements) ? workout.movements : [],
     onSaved,
   };
+};
+
+const formatWorkoutLength = (durationMinutes, durationSeconds) => {
+  const seconds = Number(durationSeconds || 0);
+  if (seconds > 0) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${String(secs).padStart(2, "0")}`;
+  }
+  return durationMinutes > 0 ? `${durationMinutes} min` : "Not set";
 };
 
 export default function Workouts() {
@@ -45,17 +56,18 @@ export default function Workouts() {
       const list = Array.isArray(data) ? data : data?.workouts || data?.items || [];
       const mapped = list.map((w) => {
         const duration = Number(w.durationMinutes || w.duration || w.lengthMinutes || 0);
+        const durationSeconds = Number(w.durationSeconds || 0);
         const isPublished = w.visibility === "Published" || w.isPublished;
         const source = w.videoSource ? String(w.videoSource).toLowerCase().replace(/^\w/, (c) => c.toUpperCase()) : "Vimeo";
         return {
           id: w._id || w.id,
           a: w.title || "Untitled Workout",
           b: `${w.tag || "Untagged"} · ${source}`,
-          c: duration > 0 ? `${duration} min` : "Not set",
+          c: formatWorkoutLength(duration, durationSeconds),
           d: String(w.viewsCount || w.starts || "0"),
           e: isPublished ? "Published" : "Draft",
           tone: isPublished ? "good" : "warn",
-          rawData: { ...w, durationMinutes: duration },
+          rawData: { ...w, durationMinutes: duration, durationSeconds },
         };
       });
 
