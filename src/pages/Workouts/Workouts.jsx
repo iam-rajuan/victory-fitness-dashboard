@@ -19,6 +19,7 @@ const buildWorkoutPayload = (workout, onSaved) => {
     videoUrl: workout.videoUrl || "",
     vimeoId: workout.vimeoId || "",
     thumbnail: workout.thumbnail || "",
+    MOVEMENTS: Array.isArray(workout.movements) ? workout.movements : [],
     onSaved,
   };
 };

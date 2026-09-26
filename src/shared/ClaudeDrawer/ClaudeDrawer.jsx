@@ -89,7 +89,7 @@ const DRAWER_CONFIGS = {
       { k: "EQUIPMENT", type: "chips", initial: "Bodyweight", options: ["Bodyweight", "Dumbbells", "Barbell", "Kettlebell", "Pull-up bar", "Bands", "Full gym"] },
       { k: "LEVEL", type: "chips", initial: "Intermediate", options: ["Beginner", "Intermediate", "Advanced"] },
       { k: "TIER ACCESS", type: "chips", initial: "All tiers", options: ["All tiers", "Gold and up", "Platinum and up", "Inner Circle"] },
-      { k: "EXERCISE LIST", type: "text", initial: "7 exercises · 21 sets · rest 45s", hint: "drives the in-session set list" },
+      { k: "MOVEMENTS", type: "movements", initial: [], hint: "drives the in-session set list" },
       { k: "COACH NOTE", type: "input", initial: "Keep the shoulders down on the press. Stop two reps short of failure.", hint: "shown before the first set" },
     ],
   },
@@ -523,9 +523,54 @@ export default function ClaudeDrawer() {
     setFormValues((prev) => ({ ...prev, [fieldKey]: value }));
   };
 
+  const handleMovementChange = (index, key, value) => {
+    setFormValues((prev) => {
+      const movements = Array.isArray(prev.MOVEMENTS) ? [...prev.MOVEMENTS] : [];
+      movements[index] = { ...(movements[index] || {}), [key]: value };
+      return { ...prev, MOVEMENTS: movements };
+    });
+  };
+
+  const addMovement = () => {
+    setFormValues((prev) => {
+      const movements = Array.isArray(prev.MOVEMENTS) ? [...prev.MOVEMENTS] : [];
+      movements.push({
+        id: `movement-${Date.now()}`,
+        name: "",
+        sets: "",
+        reps: "",
+        load: "",
+        equipment: prev.EQUIPMENT || "",
+        restSeconds: 45,
+        notes: "",
+        order: movements.length,
+      });
+      return { ...prev, MOVEMENTS: movements };
+    });
+  };
+
+  const removeMovement = (index) => {
+    setFormValues((prev) => ({
+      ...prev,
+      MOVEMENTS: (Array.isArray(prev.MOVEMENTS) ? prev.MOVEMENTS : []).filter((_, idx) => idx !== index),
+    }));
+  };
+
   const buildWorkoutRequestPayload = (visibility) => {
     const durationMatch = String(formValues.LENGTH || "").match(/\d+/);
     const durationMinutes = durationMatch ? Number(durationMatch[0]) : Number(payload?.durationMinutes || 0);
+    const movements = (Array.isArray(formValues.MOVEMENTS) ? formValues.MOVEMENTS : [])
+      .map((movement, index) => ({
+        name: String(movement.name || "").trim(),
+        sets: String(movement.sets || "").trim(),
+        reps: String(movement.reps || "").trim(),
+        load: String(movement.load || "").trim(),
+        equipment: String(movement.equipment || "").trim(),
+        restSeconds: Number(movement.restSeconds || 0),
+        notes: String(movement.notes || "").trim(),
+        order: index,
+      }))
+      .filter((movement) => movement.name);
     return {
       title: String(formValues.TITLE || payload?.TITLE || "Untitled Workout").trim(),
       vimeoId: String(payload?.vimeoId || formValues.vimeoId || "").trim(),
@@ -537,6 +582,7 @@ export default function ClaudeDrawer() {
       durationMinutes,
       visibility,
       thumbnail: String(payload?.thumbnail || formValues.thumbnail || "").trim(),
+      movements,
     };
   };
 
@@ -1090,6 +1136,72 @@ export default function ClaudeDrawer() {
                   >
                     {formValues[field.k] ?? field.initial}
                   </p>
+                )}
+
+                {field.type === "movements" && (
+                  <div className="space-y-3">
+                    {(Array.isArray(formValues.MOVEMENTS) ? formValues.MOVEMENTS : []).map((movement, idx) => (
+                      <div
+                        key={movement.id || idx}
+                        className="rounded-xl border border-[#F7F3EE]/10 bg-[#071E31]/60 p-3"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="w-7 h-7 rounded-lg bg-[#C9943A] text-[#0D0D0D] font-mono font-bold text-xs flex items-center justify-center">
+                            {idx + 1}
+                          </span>
+                          <input
+                            type="text"
+                            value={movement.name || ""}
+                            onChange={(e) => handleMovementChange(idx, "name", e.target.value)}
+                            placeholder="Movement name"
+                            className="flex-1 min-w-0 rounded-lg border border-[#F7F3EE]/20 bg-transparent px-3 py-2 text-sm font-semibold text-[#F7F3EE] outline-none focus:border-[#C9943A]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeMovement(idx)}
+                            className="w-8 h-8 rounded-lg border border-[#D98A3E]/50 text-[#D98A3E] font-bold"
+                            aria-label={`Remove movement ${idx + 1}`}
+                          >
+                            ×
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                          {[
+                            ["sets", "Sets"],
+                            ["reps", "Reps"],
+                            ["load", "Load"],
+                            ["equipment", "Equipment"],
+                            ["restSeconds", "Rest sec"],
+                          ].map(([key, label]) => (
+                            <label key={key} className="block">
+                              <span className="block mb-1 text-[9px] tracking-[0.12em] uppercase text-[#F7F3EE]/40">{label}</span>
+                              <input
+                                type={key === "restSeconds" ? "number" : "text"}
+                                min={key === "restSeconds" ? "0" : undefined}
+                                value={movement[key] ?? ""}
+                                onChange={(e) => handleMovementChange(idx, key, e.target.value)}
+                                className="w-full rounded-lg border border-[#F7F3EE]/20 bg-transparent px-2 py-2 text-xs text-[#F7F3EE] outline-none focus:border-[#C9943A]"
+                              />
+                            </label>
+                          ))}
+                        </div>
+                        <textarea
+                          rows={2}
+                          value={movement.notes || ""}
+                          onChange={(e) => handleMovementChange(idx, "notes", e.target.value)}
+                          placeholder="Coach cue or notes"
+                          className="mt-2 w-full resize-vertical rounded-lg border border-[#F7F3EE]/20 bg-transparent px-3 py-2 text-xs text-[#F7F3EE] outline-none focus:border-[#C9943A]"
+                        />
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={addMovement}
+                      className="h-10 px-4 rounded-xl border border-[#C9943A]/60 text-[#C9943A] font-bold text-sm"
+                    >
+                      + Add movement
+                    </button>
+                  </div>
                 )}
 
                 {field.type === "file" && (
