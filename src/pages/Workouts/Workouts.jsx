@@ -1,99 +1,172 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
-import { listAdminWorkouts, deleteAdminWorkout } from "../../../services/admin-workouts.service";
+import { deleteAdminWorkout, listAdminWorkouts } from "../../../services/admin-workouts.service";
 
-const BASE_ROWS = [
-  { a: "Awakening Flow", b: "Mobility", c: "12 min", d: "412", e: "Published", tone: "good", id: "w1" },
-  { a: "Muscle Start", b: "Strength", c: "38 min", d: "288", e: "Published", tone: "good", id: "w2" },
-  { a: "Recovery Reset", b: "Recovery", c: "20 min", d: "196", e: "Published", tone: "good", id: "w3" },
-  { a: "Push and Pull", b: "Strength", c: "45 min", d: "0", e: "Draft", tone: "warn", id: "w4" },
-  { a: "Rambo Timer", b: "Conditioning", c: "25 min", d: "0", e: "Draft", tone: "warn", id: "w5" },
-  { a: "Victory Core", b: "Core", c: "15 min", d: "0", e: "Draft", tone: "warn", id: "w6" },
-  { a: "Langhantel Basis", b: "Strength", c: "40 min", d: "0", e: "Draft · untagged", tone: "bad", id: "w7" },
-  { a: "The Anchor", b: "Mobility", c: "18 min", d: "0", e: "Draft", tone: "warn", id: "w8" },
-];
+const buildWorkoutPayload = (workout, onSaved) => {
+  const duration = Number(workout.durationMinutes || 0);
+  return {
+    mode: "edit",
+    workoutId: workout.id,
+    title: "Edit workout",
+    TITLE: workout.title || "Untitled Workout",
+    PURPOSE: workout.tag || "Strength",
+    LENGTH: duration > 0 ? `${duration} min` : "20 min",
+    EQUIPMENT: workout.equipment || "Bodyweight",
+    LEVEL: workout.level || "Intermediate",
+    VISIBILITY: workout.visibility || "Draft",
+    videoSource: workout.videoSource || "VIMEO",
+    videoUrl: workout.videoUrl || "",
+    vimeoId: workout.vimeoId || "",
+    thumbnail: workout.thumbnail || "",
+    onSaved,
+  };
+};
 
 export default function Workouts() {
   const { openDrawer, showToast } = useAdminDrawer();
   const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState(BASE_ROWS);
+  const [rows, setRows] = useState([]);
   const [stats, setStats] = useState([
-    { k: "TOTAL", v: "170", note: "147 published, 23 draft" },
-    { k: "MOST STARTED", v: "Awakening", note: "412 starts this month" },
-    { k: "AVG COMPLETION", v: "68%", note: "Drops below 20% past 45 min" },
-    { k: "UNTAGGED", v: "31", note: "No purpose or equipment set" },
+    { k: "TOTAL", v: "0", note: "0 published, 0 draft" },
+    { k: "PUBLISHED", v: "0", note: "Visible in the app" },
+    { k: "DRAFT", v: "0", note: "Hidden from members" },
+    { k: "UNTAGGED", v: "0", note: "No purpose, equipment or level set" },
   ]);
+  const [summary, setSummary] = useState({ total: 0, published: 0, draft: 0, untagged: 0, under20: 0 });
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
-    listAdminWorkouts()
-      .then((data) => {
-        if (!isMounted || !data) return;
-        const list = Array.isArray(data) ? data : data.workouts || data.items || [];
-        if (list.length > 0) {
-          const mapped = list.map((w) => ({
-            id: w._id || w.id,
-            a: w.title || "Untitled Workout",
-            b: w.purpose || w.category || "Mobility",
-            c: `${w.duration || w.lengthMinutes || "20"} min`,
-            d: String(w.viewsCount || w.starts || "0"),
-            e: w.isPublished ? "Published" : "Draft",
-            tone: w.isPublished ? "good" : "warn",
-            rawData: w,
-          }));
-          setRows(mapped);
-          const publishedCount = list.filter((w) => w.isPublished).length;
-          setStats([
-            { k: "TOTAL", v: String(list.length), note: `${publishedCount} published, ${list.length - publishedCount} draft` },
-            { k: "MOST STARTED", v: list[0]?.title || "Awakening", note: "412 starts this month" },
-            { k: "AVG COMPLETION", v: "68%", note: "Drops below 20% past 45 min" },
-            { k: "UNTAGGED", v: String(list.filter((w) => !w.purpose).length), note: "No purpose or equipment set" },
-          ]);
-        }
-      })
-      .catch(() => null)
-      .finally(() => {
-        if (isMounted) setLoading(false);
+  const loadWorkouts = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
+    try {
+      const data = await listAdminWorkouts();
+      const list = Array.isArray(data) ? data : data?.workouts || data?.items || [];
+      const mapped = list.map((w) => {
+        const duration = Number(w.durationMinutes || w.duration || w.lengthMinutes || 0);
+        const isPublished = w.visibility === "Published" || w.isPublished;
+        const source = w.videoSource ? String(w.videoSource).toLowerCase().replace(/^\w/, (c) => c.toUpperCase()) : "Vimeo";
+        return {
+          id: w._id || w.id,
+          a: w.title || "Untitled Workout",
+          b: `${w.tag || "Untagged"} · ${source}`,
+          c: duration > 0 ? `${duration} min` : "Not set",
+          d: String(w.viewsCount || w.starts || "0"),
+          e: isPublished ? "Published" : "Draft",
+          tone: isPublished ? "good" : "warn",
+          rawData: { ...w, durationMinutes: duration },
+        };
       });
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+      const publishedCount = list.filter((w) => w.visibility === "Published" || w.isPublished).length;
+      const draftCount = list.length - publishedCount;
+      const untaggedCount = list.filter((w) => !w.tag || !w.equipment || !w.level).length;
+      const under20Count = list.filter((w) => Number(w.durationMinutes || 0) > 0 && Number(w.durationMinutes || 0) < 20).length;
 
-  const handleDelete = async (row) => {
-    if (window.confirm(`Delete workout "${row.a}"?`)) {
-      try {
-        await deleteAdminWorkout(row.id).catch(() => null);
-        setRows((prev) => prev.filter((r) => r.id !== row.id));
-        showToast(`Workout "${row.a}" removed.`);
-      } catch (err) {
-        showToast(`Failed: ${err.message}`);
-      }
+      setRows(mapped);
+      setSummary({ total: list.length, published: publishedCount, draft: draftCount, untagged: untaggedCount, under20: under20Count });
+      setStats([
+        { k: "TOTAL", v: String(list.length), note: `${publishedCount} published, ${draftCount} draft` },
+        { k: "PUBLISHED", v: String(publishedCount), note: "Visible in the app" },
+        { k: "DRAFT", v: String(draftCount), note: "Hidden from members" },
+        { k: "UNTAGGED", v: String(untaggedCount), note: "No purpose, equipment or level set" },
+      ]);
+    } catch (err) {
+      showToast(`Failed to load workouts: ${err.message}`);
+    } finally {
+      if (!silent) setLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    loadWorkouts();
+  }, [loadWorkouts]);
+
+  const handleSaved = async () => {
+    await loadWorkouts({ silent: true });
+  };
+
+  const openWorkoutEditor = (row) => {
+    const workout = row.rawData || row.raw?.rawData || row;
+    openDrawer("workout", buildWorkoutPayload(workout, handleSaved));
+  };
+
+  const handleDelete = (row) => {
+    setDeleteTarget(row);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await deleteAdminWorkout(deleteTarget.id);
+      showToast(`Workout "${deleteTarget.a}" removed.`);
+      setDeleteTarget(null);
+      await loadWorkouts({ silent: true });
+    } catch (err) {
+      showToast(`Failed: ${err.message}`);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   return (
-    <ClaudeAdminTable
-      pageKicker="170 IN THE LIBRARY · VIMEO"
-      pageTitle="Workout library"
-      pageSub="Import from Vimeo, review as drafts, publish only what you want live. Purpose, duration and equipment are what members filter on."
-      pagePrimary="+ Add workout"
-      pageSecondary="Import from Vimeo"
-      onPrimary={() => openDrawer("workout")}
-      onSecondary={() => openDrawer("vimeo")}
-      pageStats={stats}
-      pageAdvice="23 workouts are sitting in draft and invisible to members. Six of them are under 20 minutes — the filter people use most."
-      pageAdviceDone="Publish the short ones"
-      onAdvice={() => openDrawer("workout")}
-      filters={["All", "Published", "Draft", "Untagged", "Under 20 min", "No equipment"]}
-      cols={["WORKOUT", "PURPOSE", "LENGTH", "STARTS", "STATUS"]}
-      rows={rows}
-      isLoading={loading}
-      onEditRow={(row) => openDrawer("workout", { TITLE: row.a, PURPOSE: row.b })}
-      onDeleteRow={handleDelete}
-      onRowClick={(row) => openDrawer("workout", { TITLE: row.a, PURPOSE: row.b })}
-    />
+    <>
+      <ClaudeAdminTable
+        pageKicker={`${summary.total} IN THE LIBRARY · VIMEO`}
+        pageTitle="Workout library"
+        pageSub="Import from Vimeo, review as drafts, publish only what you want live. Purpose, duration and equipment are what members filter on."
+        pagePrimary="+ Add workout"
+        pageSecondary="Import from Vimeo"
+        onPrimary={() => openDrawer("workout", { mode: "create", onSaved: handleSaved })}
+        onSecondary={() => openDrawer("vimeo", { onImported: handleSaved })}
+        pageStats={stats}
+        pageAdvice={`${summary.draft} workouts are sitting in draft and invisible to members. ${summary.under20} of them are under 20 minutes - the filter people use most.`}
+        pageAdviceDone="Review drafts"
+        onAdvice={() => openDrawer("vimeo", { onImported: handleSaved })}
+        filters={["All", "Published", "Draft", "Untagged", "Under 20 min", "No equipment"]}
+        cols={["WORKOUT", "PURPOSE", "LENGTH", "STARTS", "STATUS"]}
+        rows={rows}
+        isLoading={loading}
+        onEditRow={openWorkoutEditor}
+        onDeleteRow={handleDelete}
+      />
+
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-[120] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 font-dmsans"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-[#F7F3EE]/15 bg-[#0D0D0D] p-6 text-[#F7F3EE] shadow-2xl">
+            <div className="text-[10px] font-medium tracking-[0.16em] text-[#B5651D] uppercase mb-2">
+              Confirm deletion
+            </div>
+            <h2 className="text-2xl font-semibold font-clash leading-tight mb-2">Delete workout?</h2>
+            <p className="text-sm font-inter leading-relaxed text-[#F7F3EE]/65 mb-5">
+              This removes "{deleteTarget.a}" from the dashboard and the member app. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={confirmDelete}
+                className="flex-1 h-11 rounded-xl bg-[#B5651D] text-[#0D0D0D] font-bold text-sm disabled:opacity-50"
+              >
+                {isDeleting ? "Deleting..." : "Delete workout"}
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeleteTarget(null)}
+                className="w-28 h-11 rounded-xl border border-[#F7F3EE]/20 text-[#F7F3EE] font-semibold text-sm disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

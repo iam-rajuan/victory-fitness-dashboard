@@ -68,13 +68,25 @@ export const deleteAdminWorkout = async (workoutId) => {
   }
 };
 
-export const syncAdminWorkouts = async () => {
+export const syncAdminWorkouts = async (payload = {}) => {
   try {
     return await adminApiRequest("/admin/workouts/sync", {
       method: "POST",
+      body: payload,
     });
   } catch (error) {
     throw new Error(createFriendlyWorkoutError(error, "Failed to sync workouts"));
+  }
+};
+
+export const previewAdminWorkoutSync = async (payload = {}) => {
+  try {
+    return await adminApiRequest("/admin/workouts/sync/preview", {
+      method: "POST",
+      body: payload,
+    });
+  } catch (error) {
+    throw new Error(createFriendlyWorkoutError(error, "Failed to preview Vimeo workouts"));
   }
 };
 

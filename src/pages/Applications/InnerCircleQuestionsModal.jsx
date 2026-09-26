@@ -97,6 +97,7 @@ export default function InnerCircleQuestionsModal({
             ? "bg-[#0D2B45] text-[#F7F3EE] border-[#F7F3EE]/14 shadow-[0_24px_64px_rgba(0,0,0,0.85),0_0_0_1px_rgba(201,148,58,0.18)]"
             : "bg-white text-[#0D2B45] border-[#0D2B45]/12 shadow-[0_24px_64px_rgba(13,43,69,0.18),0_0_0_1px_rgba(201,148,58,0.22)]"
         }`}
+        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-question-set-title"

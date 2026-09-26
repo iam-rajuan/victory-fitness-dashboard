@@ -20,6 +20,7 @@ export default function DetailModal({
       open={open}
       centered
       onCancel={onCancel}
+      maskClosable={true}
       footer={null}
       width={width}
       style={{ maxWidth: "calc(100vw - 32px)" }}

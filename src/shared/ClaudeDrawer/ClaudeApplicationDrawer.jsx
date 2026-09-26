@@ -383,6 +383,7 @@ export default function ClaudeApplicationDrawer({ isOpen, onClose, payload }) {
           justifyContent: "space-between",
           boxShadow: "-12px 0 40px rgba(0,0,0,0.6)",
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <div>
           {/* Header */}

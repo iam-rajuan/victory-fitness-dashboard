@@ -68,6 +68,17 @@ const PAGE_MATCH = {
   "Applications|Call booked": (r) => (r.e || "").trim() === "Call booked",
   "Applications|Accepted": (r) => (r.e || "").trim() === "Accepted",
   "Applications|Declined": (r) => /Declined/.test(r.e || ""),
+  "Workout library|Published": (r) => (r.raw?.rawData?.visibility || r.e || "").trim() === "Published",
+  "Workout library|Draft": (r) => (r.raw?.rawData?.visibility || r.e || "").trim() === "Draft",
+  "Workout library|Untagged": (r) => {
+    const workout = r.raw?.rawData || {};
+    return !workout.tag || !workout.equipment || !workout.level;
+  },
+  "Workout library|Under 20 min": (r) => Number(r.raw?.rawData?.durationMinutes || 0) > 0 && Number(r.raw?.rawData?.durationMinutes || 0) < 20,
+  "Workout library|No equipment": (r) => {
+    const equipment = String(r.raw?.rawData?.equipment || "").trim().toLowerCase();
+    return !equipment || equipment === "bodyweight" || equipment === "no equipment";
+  },
 };
 
 const COL_MATCH = {

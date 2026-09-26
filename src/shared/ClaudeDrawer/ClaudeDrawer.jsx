@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { useTheme } from "../../context/ThemeContext";
 import { adminApiRequest } from "../../../services/auth.service";
+import { previewAdminWorkoutSync, syncAdminWorkouts } from "../../../services/admin-workouts.service";
 import ClaudeApplicationDrawer from "./ClaudeApplicationDrawer";
 
 const PRICE_TABLE = [
@@ -96,11 +97,11 @@ const DRAWER_CONFIGS = {
     kicker: "IMPORT AND CATEGORISE",
     title: "Import from Vimeo",
     sub: "Pull in a Vimeo folder, then tag each video against the Train screen's filters before it goes live. Nothing publishes until it is tagged.",
-    cta: "Import 12 and tag",
+    cta: "Import 12 new and tag",
     alt: "Cancel",
     note: "23 of your 170 are imported but untagged, so members cannot find them. Tag on import and that number stops growing.",
     fields: [
-      { k: "VIMEO FOLDER", type: "text", initial: "Victory Fitness / Workouts 2026", hint: "412 videos available" },
+      { k: "VIMEO FOLDER", type: "text", initial: "Victory Fitness / Workouts 2026", hint: "Checking Vimeo..." },
       { k: "APPLY TO ALL", type: "chips", initial: "Strength", options: ["Strength", "Mobility", "Core", "Conditioning", "Recovery"] },
       { k: "DEFAULT EQUIPMENT", type: "chips", initial: "Dumbbells", options: ["Bodyweight", "Dumbbells", "Barbell", "Kettlebell", "Full gym"] },
       { k: "DEFAULT LEVEL", type: "chips", initial: "Intermediate", options: ["Beginner", "Intermediate", "Advanced"] },
@@ -377,6 +378,7 @@ export default function ClaudeDrawer() {
   const [selectedStarterIdx, setSelectedStarterIdx] = useState(0);
   const [activeMediaKind, setActiveMediaKind] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [vimeoPreview, setVimeoPreview] = useState(null);
 
   const config = type && DRAWER_CONFIGS[type] ? DRAWER_CONFIGS[type] : null;
 
@@ -397,8 +399,59 @@ export default function ClaudeDrawer() {
       setFormValues(initial);
       setActiveMediaKind(0);
       setSelectedStarterIdx(0);
+      setVimeoPreview(null);
     }
   }, [type, payload, config]);
+
+  const buildVimeoImportPayload = () => ({
+    folderName: formValues["VIMEO FOLDER"] || "",
+    tag: formValues["APPLY TO ALL"] || "Strength",
+    equipment: formValues["DEFAULT EQUIPMENT"] || "Dumbbells",
+    level: formValues["DEFAULT LEVEL"] || "Intermediate",
+    useVimeoDuration: formValues["LENGTH FROM"] !== "Set manually",
+    visibility: formValues["AFTER IMPORT"] === "Publish immediately" ? "Published" : "Draft",
+    importLimit: 12,
+  });
+
+  useEffect(() => {
+    if (!isOpen || type !== "vimeo" || !formValues["VIMEO FOLDER"]) return;
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      previewAdminWorkoutSync(buildVimeoImportPayload())
+        .then((data) => {
+          if (!cancelled) setVimeoPreview(data);
+        })
+        .catch(() => {
+          if (!cancelled) setVimeoPreview(null);
+        });
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    isOpen,
+    type,
+    formValues["VIMEO FOLDER"],
+    formValues["APPLY TO ALL"],
+    formValues["DEFAULT EQUIPMENT"],
+    formValues["DEFAULT LEVEL"],
+    formValues["LENGTH FROM"],
+    formValues["AFTER IMPORT"],
+  ]);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && isOpen && !isSubmitting) {
+        closeDrawer();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, isSubmitting, closeDrawer]);
 
   // Live dynamic calculation for pricing table matching reference lines 1850-1873
   const computedPriceRows = useMemo(() => {
@@ -442,12 +495,81 @@ export default function ClaudeDrawer() {
 
   if (!config) return null;
 
+  const vimeoImportableCount =
+    type === "vimeo" && vimeoPreview
+      ? Math.min(Number(vimeoPreview.remainingToImport || 0), 12)
+      : 12;
+  const primaryCtaLabel =
+    type === "vimeo"
+      ? vimeoPreview
+        ? vimeoImportableCount > 0
+          ? `Import ${vimeoImportableCount} new and tag`
+          : "No new videos to import"
+        : "Checking Vimeo..."
+      : config.cta;
+  const isPrimaryDisabled = isSubmitting || (type === "vimeo" && (!vimeoPreview || vimeoImportableCount <= 0));
+  const drawerNote =
+    type === "vimeo" && vimeoPreview
+      ? Number(vimeoPreview.untaggedCount || 0) > 0
+        ? `${Number(vimeoPreview.untaggedCount || 0)} of your ${Number(vimeoPreview.libraryTotal || 0)} imported workouts are missing Train filters, so members cannot find them reliably. Tag on import and that number stops growing.`
+        : `All ${Number(vimeoPreview.libraryTotal || 0)} imported workouts have Train filters. New Vimeo imports will be tagged before members see them.`
+      : config.note;
+
   const handleChipSelect = (fieldKey, value) => {
     setFormValues((prev) => ({ ...prev, [fieldKey]: value }));
   };
 
   const handleTextChange = (fieldKey, value) => {
     setFormValues((prev) => ({ ...prev, [fieldKey]: value }));
+  };
+
+  const buildWorkoutRequestPayload = (visibility) => {
+    const durationMatch = String(formValues.LENGTH || "").match(/\d+/);
+    const durationMinutes = durationMatch ? Number(durationMatch[0]) : Number(payload?.durationMinutes || 0);
+    return {
+      title: String(formValues.TITLE || payload?.TITLE || "Untitled Workout").trim(),
+      vimeoId: String(payload?.vimeoId || formValues.vimeoId || "").trim(),
+      videoUrl: String(payload?.videoUrl || formValues.videoUrl || "").trim(),
+      videoSource: String(payload?.videoSource || formValues.videoSource || "VIMEO").trim().toUpperCase(),
+      tag: String(formValues.PURPOSE || "Strength").trim(),
+      equipment: String(formValues.EQUIPMENT || "").trim(),
+      level: String(formValues.LEVEL || "").trim(),
+      durationMinutes,
+      visibility,
+      thumbnail: String(payload?.thumbnail || formValues.thumbnail || "").trim(),
+    };
+  };
+
+  const resolveWorkoutPreviewUrl = () => {
+    const videoUrl = String(payload?.videoUrl || formValues.videoUrl || "").trim();
+    const vimeoId = String(payload?.vimeoId || formValues.vimeoId || "").trim();
+    if (videoUrl) {
+      if (/vimeo\.com\/\d+/.test(videoUrl) && !/player\.vimeo\.com/.test(videoUrl)) {
+        const match = videoUrl.match(/vimeo\.com\/(\d+)/);
+        return match ? `https://player.vimeo.com/video/${match[1]}?title=0&byline=0&portrait=0&playsinline=1&dnt=1` : videoUrl;
+      }
+      return videoUrl;
+    }
+    if (vimeoId) {
+      return `https://player.vimeo.com/video/${vimeoId}?title=0&byline=0&portrait=0&playsinline=1&dnt=1`;
+    }
+    return "";
+  };
+
+  const saveWorkout = async (visibility) => {
+    const requestPayload = buildWorkoutRequestPayload(visibility);
+    const workoutId = payload?.workoutId;
+    const path = workoutId ? `/admin/workouts/${workoutId}` : "/admin/workouts";
+    const method = workoutId ? "PATCH" : "POST";
+    const saved = await adminApiRequest(path, {
+      method,
+      body: requestPayload,
+    });
+    if (typeof payload?.onSaved === "function") {
+      await payload.onSaved(saved);
+    }
+    showToast(`Workout "${saved?.title || requestPayload.title}" saved.`);
+    closeDrawer();
   };
 
   const handleSave = async () => {
@@ -465,35 +587,57 @@ export default function ClaudeDrawer() {
       }
 
       if (type === "workout") {
-        await adminApiRequest("/admin/workouts", {
-          method: "POST",
-          body: JSON.stringify(formValues),
-        }).catch(() => null);
+        await saveWorkout("Published");
+        return;
+      } else if (type === "vimeo") {
+        const result = await syncAdminWorkouts(buildVimeoImportPayload());
+        if (typeof payload?.onImported === "function") {
+          await payload.onImported(result);
+        }
+        const imported = Number(result?.syncedCount || 0);
+        const remaining = Number(result?.remainingToImport || 0);
+        showToast(`Imported ${imported} new Vimeo workouts. ${remaining} remaining.`);
+        closeDrawer();
+        return;
       } else if (type === "challenge") {
         await adminApiRequest("/challenges", {
           method: "POST",
-          body: JSON.stringify(formValues),
+          body: formValues,
         }).catch(() => null);
       } else if (type === "quote") {
         await adminApiRequest("/admin/content/quotes", {
           method: "POST",
-          body: JSON.stringify({
+          body: {
             quote: formValues["THE QUOTE"],
             author: formValues["AUTHOR"] || "Victor Akko",
-          }),
+          },
         }).catch(() => null);
       } else if (type === "broadcast") {
         await adminApiRequest("/admin/content/broadcast", {
           method: "POST",
-          body: JSON.stringify(formValues),
+          body: formValues,
         }).catch(() => null);
       }
 
       showToast(`✓ ${config.title} saved successfully.`);
       closeDrawer();
     } catch (err) {
-      showToast(`Saved: ${err?.message || "Operation completed."}`);
+      showToast(`Failed: ${err?.message || "Operation could not be completed."}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAltAction = async () => {
+    if (type !== "workout") {
       closeDrawer();
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await saveWorkout("Draft");
+    } catch (err) {
+      showToast(`Failed: ${err?.message || "Operation could not be completed."}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -503,12 +647,22 @@ export default function ClaudeDrawer() {
   const siblingCount = STARTERS.filter((x) => x[1] === activeStarter[1]).length;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex justify-end font-dmsans">
+    <div
+      className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex justify-end font-dmsans"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isSubmitting) {
+          closeDrawer();
+        }
+      }}
+      role="dialog"
+      aria-modal="true"
+    >
       <div
         className={`w-[620px] max-w-[95vw] h-screen overflow-y-auto p-6 sm:p-8 flex flex-col justify-between shadow-2xl animate-in slide-in-from-right duration-200 transition-colors ${
           isDark ? "bg-[#0D0D0D] border-l border-[#F7F3EE]/15 text-[#F7F3EE]" : "bg-[#0D0D0D] border-l border-[rgba(247,243,238,0.15)] text-[#F7F3EE]"
         }`}
-        role="dialog"
+        onClick={(e) => e.stopPropagation()}
+        role="document"
       >
         <div>
           {/* Header */}
@@ -560,12 +714,34 @@ export default function ClaudeDrawer() {
                 ))}
               </div>
               <div className="h-28 rounded-xl flex flex-col items-center justify-center gap-2 border bg-gradient-to-br from-[#12314c] to-[#0a2439] border-[#F7F3EE]/10">
-                <div className="w-10 h-8 rounded-lg bg-[#C9943A] flex items-center justify-center shadow-md">
-                  <div className="w-0 h-0 border-l-[10px] border-l-[#0D0D0D] border-y-[6px] border-y-transparent ml-1" />
-                </div>
-                <span className="text-[11px] font-mono text-[#F7F3EE]/45">
-                  {config.mediaHint}
-                </span>
+                {type === "workout" && resolveWorkoutPreviewUrl() ? (
+                  /player\.vimeo\.com|youtube\.com\/embed/.test(resolveWorkoutPreviewUrl()) ? (
+                    <iframe
+                      src={resolveWorkoutPreviewUrl()}
+                      title={`${formValues.TITLE || "Workout"} preview`}
+                      allow="autoplay; fullscreen; picture-in-picture"
+                      allowFullScreen
+                      className="w-full h-full rounded-xl"
+                      style={{ border: 0, display: "block" }}
+                    />
+                  ) : (
+                    <video
+                      src={resolveWorkoutPreviewUrl()}
+                      controls
+                      playsInline
+                      className="w-full h-full rounded-xl object-cover"
+                    />
+                  )
+                ) : (
+                  <>
+                    <div className="w-10 h-8 rounded-lg bg-[#C9943A] flex items-center justify-center shadow-md">
+                      <div className="w-0 h-0 border-l-[10px] border-l-[#0D0D0D] border-y-[6px] border-y-transparent ml-1" />
+                    </div>
+                    <span className="text-[11px] font-mono text-[#F7F3EE]/45">
+                      {type === "workout" ? "No video connected yet" : config.mediaHint}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -686,14 +862,18 @@ export default function ClaudeDrawer() {
                   >
                     {field.k}
                   </span>
-                  {field.hint && (
+                  {(field.hint || (type === "vimeo" && field.k === "VIMEO FOLDER")) && (
                     <span
                       style={{
                         font: "400 10.5px 'JetBrains Mono', monospace",
                         color: "rgba(247, 243, 238, 0.4)",
                       }}
                     >
-                      {field.hint}
+                      {type === "vimeo" && field.k === "VIMEO FOLDER"
+                        ? vimeoPreview
+                          ? `${vimeoPreview.videosAvailable} videos · ${vimeoPreview.alreadyImportedCount} imported · ${vimeoPreview.remainingToImport} new`
+                          : "Checking Vimeo..."
+                        : field.hint}
                     </span>
                   )}
                 </div>
@@ -736,16 +916,38 @@ export default function ClaudeDrawer() {
                 )}
 
                 {field.type === "text" && (
-                  <div
-                    style={{
-                      font: "500 14px/1.6 'DM Sans', sans-serif",
-                      color: "#F7F3EE",
-                      textWrap: "pretty",
-                      wordBreak: "break-word",
-                    }}
-                  >
-                    {formValues[field.k] ?? field.initial}
-                  </div>
+                  (type === "workout" && field.k === "TITLE") || (type === "vimeo" && field.k === "VIMEO FOLDER") ? (
+                    <input
+                      type="text"
+                      value={formValues[field.k] ?? ""}
+                      onChange={(e) => handleTextChange(field.k, e.target.value)}
+                      style={{
+                        boxSizing: "border-box",
+                        border: "1.5px solid rgba(247, 243, 238, 0.2)",
+                        borderRadius: "12px",
+                        padding: "12px 14px",
+                        font: "500 14px/1.4 'DM Sans', sans-serif",
+                        color: "#F7F3EE",
+                        backgroundColor: "transparent",
+                        outline: "none",
+                        width: "100%",
+                        display: "block",
+                      }}
+                      onFocus={(e) => (e.currentTarget.style.borderColor = "#C9943A")}
+                      onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(247, 243, 238, 0.2)")}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        font: "500 14px/1.6 'DM Sans', sans-serif",
+                        color: "#F7F3EE",
+                        textWrap: "pretty",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {formValues[field.k] ?? field.initial}
+                    </div>
+                  )
                 )}
 
                 {field.type === "input" && (
@@ -856,12 +1058,12 @@ export default function ClaudeDrawer() {
           </div>
 
           {/* Drawer note */}
-          {config.note && (
+          {drawerNote && (
             <div
               style={{ borderLeftWidth: 3, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
               className="mt-5 p-3.5 rounded-xl border border-[#B5651D]/30 text-xs font-inter leading-relaxed bg-[#B5651D]/15 text-[#F7F3EE]/85"
             >
-              {config.note}
+              {drawerNote}
             </div>
           )}
         </div>
@@ -870,15 +1072,16 @@ export default function ClaudeDrawer() {
         <div className="flex items-center gap-3 mt-8 pt-4 border-t border-[#F7F3EE]/10">
           <button
             type="button"
-            disabled={isSubmitting}
+            disabled={isPrimaryDisabled}
             onClick={handleSave}
             className="flex-1 h-12 bg-[#C9943A] hover:bg-[#d8a24a] text-[#0D0D0D] font-bold text-sm rounded-xl transition-all shadow-lg active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer font-dmsans disabled:opacity-50"
           >
-            {isSubmitting ? "Processing..." : config.cta}
+            {isSubmitting ? "Processing..." : primaryCtaLabel}
           </button>
           <button
             type="button"
-            onClick={closeDrawer}
+            disabled={isSubmitting}
+            onClick={handleAltAction}
             className="w-28 h-12 border transition-colors cursor-pointer font-dmsans font-semibold text-sm rounded-xl border-[#F7F3EE]/20 hover:border-[#F7F3EE]/40 text-[#F7F3EE]"
           >
             {config.alt || "Close"}
