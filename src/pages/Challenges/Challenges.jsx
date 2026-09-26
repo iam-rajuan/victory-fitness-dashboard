@@ -58,8 +58,14 @@ export default function Challenges() {
     try {
       const data = await adminApiRequest("/admin/challenges");
       const list = Array.isArray(data) ? data : data?.challenges || data?.items || [];
-      setRows(list.map(mapChallengeRow));
-      setTotal(Number(data?.total ?? list.length) || 0);
+      const sorted = [...list].sort((a, b) => {
+        const timeA = new Date(a.updatedAt || a.createdAt || a.updated_at || a.created_at || 0).getTime();
+        const timeB = new Date(b.updatedAt || b.createdAt || b.updated_at || b.created_at || 0).getTime();
+        if (timeA && timeB && timeA !== timeB) return timeB - timeA;
+        return String(b.id || b._id || "").localeCompare(String(a.id || a._id || ""));
+      });
+      setRows(sorted.map(mapChallengeRow));
+      setTotal(Number(data?.total ?? sorted.length) || 0);
     } catch (err) {
       showToast(`Failed to load challenges: ${err?.message || "Request failed"}`);
       setRows([]);
