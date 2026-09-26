@@ -546,12 +546,26 @@ export default function ClaudeDrawer() {
     if (videoUrl) {
       if (/vimeo\.com\/\d+/.test(videoUrl) && !/player\.vimeo\.com/.test(videoUrl)) {
         const match = videoUrl.match(/vimeo\.com\/(\d+)/);
-        return match ? `https://player.vimeo.com/video/${match[1]}?title=0&byline=0&portrait=0&playsinline=1&dnt=1` : videoUrl;
+        return match
+          ? `https://player.vimeo.com/video/${match[1]}?title=0&byline=0&portrait=0&playsinline=1&dnt=1&color=c9943a&transparent=0`
+          : videoUrl;
+      }
+      if (/youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/.test(videoUrl)) {
+        const match = videoUrl.match(/youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/);
+        return match ? `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1` : videoUrl;
+      }
+      if (/youtu\.be\/([a-zA-Z0-9_-]+)/.test(videoUrl)) {
+        const match = videoUrl.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+        return match ? `https://www.youtube.com/embed/${match[1]}?rel=0&modestbranding=1` : videoUrl;
+      }
+      if (/player\.vimeo\.com\/video\/\d+/.test(videoUrl) && !videoUrl.includes("transparent=0")) {
+        return `${videoUrl}&color=c9943a&transparent=0`;
       }
       return videoUrl;
     }
     if (vimeoId) {
-      return `https://player.vimeo.com/video/${vimeoId}?title=0&byline=0&portrait=0&playsinline=1&dnt=1`;
+      const cleanId = String(vimeoId).replace(/\D/g, "");
+      return `https://player.vimeo.com/video/${cleanId || vimeoId}?title=0&byline=0&portrait=0&playsinline=1&dnt=1&color=c9943a&transparent=0`;
     }
     return "";
   };
@@ -694,9 +708,18 @@ export default function ClaudeDrawer() {
               style={{ borderLeftWidth: 4, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
               className="rounded-2xl border p-4 mb-5 bg-[#0D2B45] border-[#F7F3EE]/10 text-[#F7F3EE]"
             >
-              <div className="text-[10px] font-medium tracking-[0.14em] text-[#C9943A] uppercase mb-2.5">
-                {config.mediaLabel}
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="text-[10px] font-medium tracking-[0.14em] text-[#C9943A] uppercase">
+                  {config.mediaLabel}
+                </div>
+                {type === "workout" && resolveWorkoutPreviewUrl() && (
+                  <span className="text-[9.5px] font-mono tracking-wider font-semibold px-2 py-0.5 rounded-full bg-[#C9943A]/20 text-[#C9943A] border border-[#C9943A]/30">
+                    16:9 PREVIEW
+                  </span>
+                )}
               </div>
+
+              {/* Media source chips */}
               <div className="flex gap-2 mb-3 flex-wrap">
                 {(config.mediaKinds || []).map((kind, idx) => (
                   <button
@@ -713,36 +736,116 @@ export default function ClaudeDrawer() {
                   </button>
                 ))}
               </div>
-              <div className="h-28 rounded-xl flex flex-col items-center justify-center gap-2 border bg-gradient-to-br from-[#12314c] to-[#0a2439] border-[#F7F3EE]/10">
-                {type === "workout" && resolveWorkoutPreviewUrl() ? (
-                  /player\.vimeo\.com|youtube\.com\/embed/.test(resolveWorkoutPreviewUrl()) ? (
+
+              {/* Source inputs for workout videos */}
+              {type === "workout" && (
+                <div className="mb-3">
+                  {activeMediaKind === 0 && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Vimeo ID or URL (e.g. 1052697858 or vimeo.com/1052697858)"
+                        value={formValues.vimeoId || formValues.videoUrl || ""}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          const match = val.match(/\d{6,}/);
+                          setFormValues((prev) => ({
+                            ...prev,
+                            vimeoId: match ? match[0] : val,
+                            videoUrl: val.includes("http") ? val : prev.videoUrl,
+                          }));
+                        }}
+                        className="flex-1 px-3 py-2 text-xs font-mono bg-[#07131E] border border-[#F7F3EE]/15 rounded-lg text-[#F7F3EE] placeholder-[#F7F3EE]/40 focus:outline-none focus:border-[#C9943A] transition-colors"
+                      />
+                    </div>
+                  )}
+
+                  {activeMediaKind === 1 && (
+                    <label className="flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-dashed border-[#C9943A]/50 bg-[#07131E]/60 hover:bg-[#07131E] cursor-pointer transition-colors text-xs text-[#F7F3EE]/80">
+                      <span className="font-semibold text-[#C9943A]">Upload Video File</span>
+                      <span className="text-[11px] text-[#F7F3EE]/50 font-mono">MP4, MOV, WebM (max 500MB)</span>
+                      <input
+                        type="file"
+                        accept="video/mp4,video/quicktime,video/webm"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const blobUrl = URL.createObjectURL(file);
+                            setFormValues((prev) => ({
+                              ...prev,
+                              videoUrl: blobUrl,
+                              vimeoId: "",
+                            }));
+                            showToast(`Loaded ${file.name} for preview`);
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
+
+                  {activeMediaKind === 2 && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="Paste YouTube link (e.g. https://www.youtube.com/watch?v=...)"
+                        value={formValues.videoUrl || ""}
+                        onChange={(e) => {
+                          const val = e.target.value.trim();
+                          setFormValues((prev) => ({
+                            ...prev,
+                            videoUrl: val,
+                            vimeoId: "",
+                          }));
+                        }}
+                        className="flex-1 px-3 py-2 text-xs font-mono bg-[#07131E] border border-[#F7F3EE]/15 rounded-lg text-[#F7F3EE] placeholder-[#F7F3EE]/40 focus:outline-none focus:border-[#C9943A] transition-colors"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Video Player / Preview Frame */}
+              {type === "workout" && resolveWorkoutPreviewUrl() ? (
+                <div
+                  className="w-full aspect-video rounded-xl border border-[#F7F3EE]/15 bg-black overflow-hidden shadow-2xl relative flex items-center justify-center"
+                  style={{ backgroundColor: "#000000" }}
+                >
+                  {/player\.vimeo\.com|youtube\.com\/embed/.test(resolveWorkoutPreviewUrl()) ? (
                     <iframe
                       src={resolveWorkoutPreviewUrl()}
                       title={`${formValues.TITLE || "Workout"} preview`}
                       allow="autoplay; fullscreen; picture-in-picture"
                       allowFullScreen
-                      className="w-full h-full rounded-xl"
-                      style={{ border: 0, display: "block" }}
+                      className="w-full h-full"
+                      style={{
+                        border: 0,
+                        display: "block",
+                        backgroundColor: "#000000",
+                        width: "100%",
+                        height: "100%",
+                      }}
                     />
                   ) : (
                     <video
                       src={resolveWorkoutPreviewUrl()}
                       controls
                       playsInline
-                      className="w-full h-full rounded-xl object-cover"
+                      className="w-full h-full object-contain bg-black"
+                      style={{ backgroundColor: "#000000" }}
                     />
-                  )
-                ) : (
-                  <>
-                    <div className="w-10 h-8 rounded-lg bg-[#C9943A] flex items-center justify-center shadow-md">
-                      <div className="w-0 h-0 border-l-[10px] border-l-[#0D0D0D] border-y-[6px] border-y-transparent ml-1" />
-                    </div>
-                    <span className="text-[11px] font-mono text-[#F7F3EE]/45">
-                      {type === "workout" ? "No video connected yet" : config.mediaHint}
-                    </span>
-                  </>
-                )}
-              </div>
+                  )}
+                </div>
+              ) : (
+                <div className="h-32 rounded-xl flex flex-col items-center justify-center gap-2 border bg-gradient-to-br from-[#12314c] to-[#0a2439] border-[#F7F3EE]/10">
+                  <div className="w-10 h-8 rounded-lg bg-[#C9943A] flex items-center justify-center shadow-md">
+                    <div className="w-0 h-0 border-l-[10px] border-l-[#0D0D0D] border-y-[6px] border-y-transparent ml-1" />
+                  </div>
+                  <span className="text-[11px] font-mono text-[#F7F3EE]/45">
+                    {type === "workout" ? "No video connected yet" : config.mediaHint}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
