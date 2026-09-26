@@ -2,6 +2,31 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { useTheme } from "../../context/ThemeContext";
+import RequirementAuditBoundary from "../../components/audit/RequirementAuditBoundary";
+
+function renderWithBetaAudit(text) {
+  if (!text || typeof text !== "string") return text;
+  const regex = /(21-Day Gold Beta|beta testers|Beta testers|21-Day Beta)/;
+  const match = text.match(regex);
+  if (!match) return text;
+  const index = match.index;
+  const matchedText = match[0];
+  const before = text.substring(0, index);
+  const after = text.substring(index + matchedText.length);
+  return (
+    <>
+      {before}
+      <RequirementAuditBoundary
+        auditId="ADMIN-MISMATCH-006"
+        status="mismatch"
+        className="inline-block"
+      >
+        <span>{matchedText}</span>
+      </RequirementAuditBoundary>
+      {after}
+    </>
+  );
+}
 
 const SCOPE_CONFIG = {
   today: {
@@ -535,17 +560,19 @@ export default function DashboardPage() {
     <div className={`animate-in fade-in duration-200 font-dmsans ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
       {/* Top Header Row */}
       <div className="flex items-start justify-between gap-6 flex-wrap mb-2">
-        <div>
-          <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: "0.18em", color: "#B5651D", marginBottom: "8px" }}>
-            FRIDAY, 11 SEPTEMBER · 09:17
+        <RequirementAuditBoundary auditId="ADMIN-EXTRA-009" status="extra">
+          <div>
+            <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: "0.18em", color: "#B5651D", marginBottom: "8px" }}>
+              FRIDAY, 11 SEPTEMBER · 09:17
+            </div>
+            <h1 style={{ margin: "0 0 8px", font: "600 36px/1.06 'Clash Display', 'DM Sans', sans-serif", color: t.text, letterSpacing: "-0.015em" }}>
+              {currentScopeData.headline}
+            </h1>
+            <p style={{ margin: 0, maxWidth: "620px", font: "400 14.5px/1.6 'Inter', sans-serif", color: t.subtext, textWrap: "pretty" }}>
+              {currentScopeData.subhead}
+            </p>
           </div>
-          <h1 style={{ margin: "0 0 8px", font: "600 36px/1.06 'Clash Display', 'DM Sans', sans-serif", color: t.text, letterSpacing: "-0.015em" }}>
-            {currentScopeData.headline}
-          </h1>
-          <p style={{ margin: 0, maxWidth: "620px", font: "400 14.5px/1.6 'Inter', sans-serif", color: t.subtext, textWrap: "pretty" }}>
-            {currentScopeData.subhead}
-          </p>
-        </div>
+        </RequirementAuditBoundary>
 
         {/* Filter Segment Pills */}
         <div className="flex gap-2.5 items-center flex-wrap">
@@ -647,7 +674,7 @@ export default function DashboardPage() {
                 {p.v}
               </div>
               <div style={{ font: "400 12px/1.45 'Inter', sans-serif", color: t.subtext, marginTop: "7px" }}>
-                {p.note}
+                {renderWithBetaAudit(p.note)}
               </div>
             </div>
           );
@@ -659,232 +686,237 @@ export default function DashboardPage() {
         
         {/* Left Column: Exactly Matching Claude Reference (flex: 1 1 620px; min-width: 0) */}
         <div style={{ flex: "1 1 620px", minWidth: 0 }}>
-          {/* Action Queue Header */}
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "12px", marginBottom: "12px" }}>
-            <div>
-              <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".17em", color: "#B5651D", marginBottom: "5px" }}>
-                {queueKicker}
+          <RequirementAuditBoundary auditId="ADMIN-EXTRA-010" status="extra" className="mb-4">
+            {/* Action Queue Header */}
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "12px", marginBottom: "12px" }}>
+              <div>
+                <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".17em", color: "#B5651D", marginBottom: "5px" }}>
+                  {queueKicker}
+                </div>
+                <h2 style={{ margin: 0, font: "600 24px 'Clash Display', 'DM Sans', sans-serif", color: t.text }}>
+                  {queueTitle}
+                </h2>
               </div>
-              <h2 style={{ margin: 0, font: "600 24px 'Clash Display', 'DM Sans', sans-serif", color: t.text }}>
-                {queueTitle}
-              </h2>
+              <RequirementAuditBoundary auditId="ADMIN-EXTRA-011" status="extra" className="inline-flex flex-col items-end">
+                <span style={{ font: "700 12.5px 'JetBrains Mono', monospace", color: "#C9943A" }}>
+                  {doneCount} of {actions.length} done
+                </span>
+              </RequirementAuditBoundary>
             </div>
-            <span style={{ font: "700 12.5px 'JetBrains Mono', monospace", color: "#C9943A" }}>
-              {doneCount} of {actions.length} done
-            </span>
-          </div>
 
-          {/* Action Cards List - Direct unnested items */}
-          {actions.map((a, index) => {
-            const key = `${scope}${index}`;
-            const isDone = doneList.includes(key);
-            const target = getTarget(a.t, a.cta);
-            const toneColor = getToneColor(a.tagTone);
+            {/* Action Cards List - Direct unnested items */}
+            {actions.map((a, index) => {
+              const key = `${scope}${index}`;
+              const isDone = doneList.includes(key);
+              const target = getTarget(a.t, a.cta);
+              const toneColor = getToneColor(a.tagTone);
 
-            return (
-              <div
-                key={key}
-                style={{
-                  background: t.cardBg,
-                  borderRadius: "18px",
-                  padding: "18px 20px",
-                  marginBottom: "10px",
-                  opacity: isDone ? 0.6 : 1,
-                  boxShadow: t.cardShadow,
-                  border: isDark ? "none" : `1px solid ${t.cardBorder}`,
-                  borderLeft: isDone ? "4px solid #1A7A4A" : `4px solid ${toneColor}`,
-                  boxSizing: "border-box",
-                  transition: "opacity 0.15s ease, border-color 0.15s ease",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
-                  {/* Exact 22x22 Checkbox with 7px Radius */}
-                  <div
-                    onClick={() => toggleDone(scope, index, a.t)}
-                    style={
-                      isDone
-                        ? {
-                            width: "22px",
-                            height: "22px",
-                            borderRadius: "7px",
-                            background: "#1A7A4A",
-                            flex: "none",
-                            marginTop: "3px",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }
-                        : {
-                            width: "22px",
-                            height: "22px",
-                            borderRadius: "7px",
-                            boxSizing: "border-box",
-                            border: isDark ? "1.5px solid rgba(201,148,58,.6)" : "1.5px solid rgba(201,148,58,.8)",
-                            background: isDark ? "transparent" : "#FFF9F0",
-                            flex: "none",
-                            marginTop: "3px",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }
-                    }
-                    title={isDone ? "Undo" : "Mark done"}
-                  >
-                    {isDone && (
-                      <span style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: "11.5px", lineHeight: "1" }}>
-                        ✓
-                      </span>
-                    )}
-                  </div>
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {/* Tag & When Header */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "9px", flexWrap: "wrap", marginBottom: "6px" }}>
-                      <span style={{ font: "700 9.5px 'DM Sans', sans-serif", letterSpacing: ".12em", color: toneColor }}>
-                        {a.tag}
-                      </span>
-                      <span style={{ font: "500 11px 'JetBrains Mono', monospace", color: t.muted }}>
-                        {a.when}
-                      </span>
-                    </div>
-
-                    {/* Action Title */}
+              return (
+                <div
+                  key={key}
+                  style={{
+                    background: t.cardBg,
+                    borderRadius: "18px",
+                    padding: "18px 20px",
+                    marginBottom: "10px",
+                    opacity: isDone ? 0.6 : 1,
+                    boxShadow: t.cardShadow,
+                    border: isDark ? "none" : `1px solid ${t.cardBorder}`,
+                    borderLeft: isDone ? "4px solid #1A7A4A" : `4px solid ${toneColor}`,
+                    boxSizing: "border-box",
+                    transition: "opacity 0.15s ease, border-color 0.15s ease",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
+                    {/* Exact 22x22 Checkbox with 7px Radius */}
                     <div
-                      style={{
-                        font: `600 ${isDone ? "17" : "19"}px/1.25 'Clash Display', 'DM Sans', sans-serif`,
-                        color: t.text,
-                        textDecoration: isDone ? "line-through" : "none",
-                      }}
+                      onClick={() => toggleDone(scope, index, a.t)}
+                      style={
+                        isDone
+                          ? {
+                              width: "22px",
+                              height: "22px",
+                              borderRadius: "7px",
+                              background: "#1A7A4A",
+                              flex: "none",
+                              marginTop: "3px",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }
+                          : {
+                              width: "22px",
+                              height: "22px",
+                              borderRadius: "7px",
+                              boxSizing: "border-box",
+                              border: isDark ? "1.5px solid rgba(201,148,58,.6)" : "1.5px solid rgba(201,148,58,.8)",
+                              background: isDark ? "transparent" : "#FFF9F0",
+                              flex: "none",
+                              marginTop: "3px",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }
+                      }
+                      title={isDone ? "Undo" : "Mark done"}
                     >
-                      {a.t}
+                      {isDone && (
+                        <span style={{ color: "#FFFFFF", fontWeight: "bold", fontSize: "11.5px", lineHeight: "1" }}>
+                          ✓
+                        </span>
+                      )}
                     </div>
 
-                    {/* Why Copy */}
-                    <p
-                      style={{
-                        margin: "7px 0 0",
-                        font: "400 13.5px/1.55 'Inter', sans-serif",
-                        color: t.subtext,
-                        textWrap: "pretty",
-                      }}
-                    >
-                      {a.why}
-                    </p>
-
-                    {/* Action Footer Bar */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "13px", flexWrap: "wrap" }}>
-                      {/* Primary CTA Button */}
-                      <div
-                        onClick={() => handleActionOpen(a)}
-                        style={
-                          isDone
-                            ? {
-                                height: "38px",
-                                padding: "0 16px",
-                                borderRadius: "11px",
-                                boxSizing: "border-box",
-                                border: isDark ? "1.5px solid rgba(247,243,238,.22)" : "1.5px solid rgba(13,43,69,.2)",
-                                color: t.muted,
-                                font: "700 13px 'DM Sans', sans-serif",
-                                display: "flex",
-                                alignItems: "center",
-                                cursor: "pointer",
-                                userSelect: "none",
-                                whiteSpace: "nowrap",
-                              }
-                            : {
-                                height: "38px",
-                                padding: "0 16px",
-                                borderRadius: "11px",
-                                background: "#C9943A",
-                                color: "#0D0D0D",
-                                font: "700 13px 'DM Sans', sans-serif",
-                                display: "flex",
-                                alignItems: "center",
-                                cursor: "pointer",
-                                userSelect: "none",
-                                whiteSpace: "nowrap",
-                              }
-                        }
-                      >
-                        {a.cta} →
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      {/* Tag & When Header */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "9px", flexWrap: "wrap", marginBottom: "6px" }}>
+                        <span style={{ font: "700 9.5px 'DM Sans', sans-serif", letterSpacing: ".12em", color: toneColor }}>
+                          {a.tag}
+                        </span>
+                        <span style={{ font: "500 11px 'JetBrains Mono', monospace", color: t.muted }}>
+                          {a.when}
+                        </span>
                       </div>
 
-                      {/* Secondary Mark done / Undo Button */}
+                      {/* Action Title */}
                       <div
-                        onClick={() => toggleDone(scope, index, a.t)}
                         style={{
-                          height: "38px",
-                          padding: "0 13px",
-                          borderRadius: "11px",
-                          boxSizing: "border-box",
-                          border: isDark ? "1.5px solid rgba(247,243,238,.2)" : "1.5px solid rgba(13,43,69,.15)",
-                          color: t.subtext,
-                          font: "700 12.5px 'DM Sans', sans-serif",
-                          display: "flex",
-                          alignItems: "center",
-                          cursor: "pointer",
-                          whiteSpace: "nowrap",
-                          userSelect: "none",
+                          font: `600 ${isDone ? "17" : "19"}px/1.25 'Clash Display', 'DM Sans', sans-serif`,
+                          color: t.text,
+                          textDecoration: isDone ? "line-through" : "none",
                         }}
                       >
-                        {isDone ? "Undo" : "Mark done"}
+                        {renderWithBetaAudit(a.t)}
                       </div>
 
-                      {/* Impact Stat */}
-                      {!isDone && a.impact && (
-                        <span style={{ font: "700 12.5px 'JetBrains Mono', monospace", color: isDark ? "#5FC48E" : "#1A7A4A" }}>
-                          {a.impact}
-                        </span>
-                      )}
+                      {/* Why Copy */}
+                      <p
+                        style={{
+                          margin: "7px 0 0",
+                          font: "400 13.5px/1.55 'Inter', sans-serif",
+                          color: t.subtext,
+                          textWrap: "pretty",
+                        }}
+                      >
+                        {a.why}
+                      </p>
 
-                      {/* Effort Estimate */}
-                      {!isDone && a.effort && (
-                        <span style={{ font: "400 12px 'Inter', sans-serif", color: t.muted }}>
-                          {a.effort}
-                        </span>
-                      )}
+                      {/* Action Footer Bar */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "13px", flexWrap: "wrap" }}>
+                        {/* Primary CTA Button */}
+                        <div
+                          onClick={() => handleActionOpen(a)}
+                          style={
+                            isDone
+                              ? {
+                                  height: "38px",
+                                  padding: "0 16px",
+                                  borderRadius: "11px",
+                                  boxSizing: "border-box",
+                                  border: isDark ? "1.5px solid rgba(247,243,238,.22)" : "1.5px solid rgba(13,43,69,.2)",
+                                  color: t.muted,
+                                  font: "700 13px 'DM Sans', sans-serif",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  cursor: "pointer",
+                                  userSelect: "none",
+                                  whiteSpace: "nowrap",
+                                }
+                              : {
+                                  height: "38px",
+                                  padding: "0 16px",
+                                  borderRadius: "11px",
+                                  background: "#C9943A",
+                                  color: "#0D0D0D",
+                                  font: "700 13px 'DM Sans', sans-serif",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  cursor: "pointer",
+                                  userSelect: "none",
+                                  whiteSpace: "nowrap",
+                                }
+                          }
+                        >
+                          {a.cta} →
+                        </div>
 
-                      {/* Opens Target Hint */}
-                      <span style={{ font: "500 11px 'JetBrains Mono', monospace", color: t.muted }}>
-                        opens {target}
-                      </span>
+                        {/* Secondary Mark done / Undo Button */}
+                        <div
+                          onClick={() => toggleDone(scope, index, a.t)}
+                          style={{
+                            height: "38px",
+                            padding: "0 13px",
+                            borderRadius: "11px",
+                            boxSizing: "border-box",
+                            border: isDark ? "1.5px solid rgba(247,243,238,.2)" : "1.5px solid rgba(13,43,69,.15)",
+                            color: t.subtext,
+                            font: "700 12.5px 'DM Sans', sans-serif",
+                            display: "flex",
+                            alignItems: "center",
+                            cursor: "pointer",
+                            whiteSpace: "nowrap",
+                            userSelect: "none",
+                          }}
+                        >
+                          {isDone ? "Undo" : "Mark done"}
+                        </div>
+
+                        {/* Impact Stat */}
+                        {!isDone && a.impact && (
+                          <span style={{ font: "700 12.5px 'JetBrains Mono', monospace", color: isDark ? "#5FC48E" : "#1A7A4A" }}>
+                            {a.impact}
+                          </span>
+                        )}
+
+                        {/* Effort Estimate */}
+                        {!isDone && a.effort && (
+                          <span style={{ font: "400 12px 'Inter', sans-serif", color: t.muted }}>
+                            {a.effort}
+                          </span>
+                        )}
+
+                        {/* Opens Target Hint */}
+                        <span style={{ font: "500 11px 'JetBrains Mono', monospace", color: t.muted }}>
+                          opens {renderWithBetaAudit(target)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </RequirementAuditBoundary>
 
           {/* Conditional: The Week Ahead (Scope: Today or Week) */}
           {(scope === "today" || scope === "week") && (
-            <div
-              style={{
-                marginTop: "20px",
-                backgroundColor: t.cardBg,
-                borderRadius: "20px",
-                boxShadow: t.cardShadow,
-                border: isDark ? "none" : `1px solid ${t.cardBorder}`,
-                borderLeft: "4px solid #B5651D",
-                padding: "22px",
-                boxSizing: "border-box",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "12px", marginBottom: "16px" }}>
-                <div>
-                  <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: "0.16em", color: "#C9943A", marginBottom: "5px" }}>
-                    THE WEEK AHEAD
+            <RequirementAuditBoundary auditId="ADMIN-EXTRA-014" status="extra" className="mt-5">
+              <div
+                style={{
+                  marginTop: "20px",
+                  backgroundColor: t.cardBg,
+                  borderRadius: "20px",
+                  boxShadow: t.cardShadow,
+                  border: isDark ? "none" : `1px solid ${t.cardBorder}`,
+                  borderLeft: "4px solid #B5651D",
+                  padding: "22px",
+                  boxSizing: "border-box",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "12px", marginBottom: "16px" }}>
+                  <div>
+                    <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: "0.16em", color: "#C9943A", marginBottom: "5px" }}>
+                      THE WEEK AHEAD
+                    </div>
+                    <h3 style={{ margin: 0, font: "600 20px 'Clash Display', 'DM Sans', sans-serif", color: t.text }}>
+                      Seven days, planned
+                    </h3>
                   </div>
-                  <h3 style={{ margin: 0, font: "600 20px 'Clash Display', 'DM Sans', sans-serif", color: t.text }}>
-                    Seven days, planned
-                  </h3>
+                  <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: t.muted }}>
+                    auto-scheduled from your data
+                  </span>
                 </div>
-                <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: t.muted }}>
-                  auto-scheduled from your data
-                </span>
-              </div>
 
               <div>
                 {WEEK_ITEMS.map((w, idx) => (
@@ -929,6 +961,7 @@ export default function DashboardPage() {
                 ))}
               </div>
             </div>
+            </RequirementAuditBoundary>
           )}
 
           {/* Conditional: YoY Table (Scope: Month or Year) */}
@@ -1069,245 +1102,267 @@ export default function DashboardPage() {
                   <p style={{ margin: "0 0 10px", font: "400 12.5px/1.5 'Inter', sans-serif", color: t.subtext, textWrap: "pretty" }}>
                     {m.verdict}
                   </p>
-                  <div
-                    onClick={() => openDrawer(m.drawer)}
-                    style={{
-                      height: "40px",
-                      borderRadius: "11px",
-                      boxSizing: "border-box",
-                      border: `1.5px solid ${isDark ? m.ink : m.tone}`,
-                      color: isDark ? m.ink : m.tone,
-                      font: "700 13px 'DM Sans', sans-serif",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: "pointer",
-                      userSelect: "none",
-                    }}
-                  >
-                    {m.action}
-                  </div>
+                  <RequirementAuditBoundary auditId="ADMIN-EXTRA-012" status="extra">
+                    <div
+                      onClick={() => openDrawer(m.drawer)}
+                      style={{
+                        height: "40px",
+                        borderRadius: "11px",
+                        boxSizing: "border-box",
+                        border: `1.5px solid ${isDark ? m.ink : m.tone}`,
+                        color: isDark ? m.ink : m.tone,
+                        font: "700 13px 'DM Sans', sans-serif",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        userSelect: "none",
+                      }}
+                    >
+                      {m.action}
+                    </div>
+                  </RequirementAuditBoundary>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Needs You / Inbox */}
-          <div
-            style={{
-              backgroundColor: t.cardBg,
-              borderRadius: "20px",
-              boxShadow: t.cardShadow,
-              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
-              padding: "20px",
-              boxSizing: "border-box",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", marginBottom: "14px" }}>
-              <span style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A" }}>
-                NEEDS YOU
-              </span>
-              <span style={{ font: "700 11.5px 'JetBrains Mono', monospace", color: t.muted }}>
-                {inboxCount}
-              </span>
-            </div>
-            <div>
-              {INBOX_ITEMS.map((item, idx) => (
-                <div
-                  key={item.t}
-                  onClick={() => navigate(item.route)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    padding: "12px 0",
-                    cursor: "pointer",
-                    borderBottom: idx < INBOX_ITEMS.length - 1 ? `1px solid ${t.rowBorder}` : "none",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "8px",
-                      height: "8px",
-                      borderRadius: "99px",
-                      flex: "none",
-                      backgroundColor:
-                        item.c === "0"
-                          ? isDark ? "rgba(247, 243, 238, 0.2)" : "rgba(13, 43, 69, 0.2)"
-                          : item.tone === "gold" ? "#C9943A" : (isDark ? "#D98A3E" : "#B5651D"),
-                    }}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ font: "600 14px 'DM Sans', sans-serif", color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {item.t}
-                    </div>
-                    <div style={{ font: "400 11.5px 'Inter', sans-serif", color: t.muted, marginTop: "2px" }}>
-                      {item.note}
-                    </div>
-                  </div>
-                  <span
-                    style={{
-                      font: "700 13px 'JetBrains Mono', monospace",
-                      flex: "none",
-                      color: item.c === "0" ? t.muted : t.text,
-                    }}
-                  >
-                    {item.c}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Push Something, Now / Levers */}
-          <div
-            style={{
-              backgroundColor: t.cardBg,
-              borderRadius: "20px",
-              boxShadow: t.cardShadow,
-              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
-              padding: "20px",
-              boxSizing: "border-box",
-            }}
-          >
-            <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "14px" }}>
-              PUSH SOMETHING, NOW
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
-              {LEVER_ITEMS.map((lever) => (
-                <div
-                  key={lever.t}
-                  onClick={() => openDrawer(lever.drawer)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    backgroundColor: t.subtleBg,
-                    border: isDark ? "none" : `1px solid ${t.cardBorder}`,
-                    borderRadius: "13px",
-                    padding: "13px 15px",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ font: "600 14px 'DM Sans', sans-serif", color: t.text }}>
-                      {lever.t}
-                    </div>
-                    <div style={{ font: "400 11.5px/1.45 'Inter', sans-serif", color: t.muted, marginTop: "3px" }}>
-                      {lever.note}
-                    </div>
-                  </div>
-                  <span style={{ font: "700 15px 'DM Sans', sans-serif", color: "#C9943A", flex: "none" }}>›</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Country and Currency: Exact Claude Reference (lines 224-236) */}
-          <div
-            style={{
-              backgroundColor: t.cardBg,
-              borderRadius: "20px",
-              boxShadow: t.cardShadow,
-              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
-              borderLeft: "4px solid #B5651D",
-              padding: "20px",
-              boxSizing: "border-box",
-            }}
-          >
-            <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "6px" }}>
-              COUNTRY AND CURRENCY
-            </div>
-            <div style={{ font: "400 12.5px/1.5 'Inter', sans-serif", color: t.subtext, marginBottom: "14px" }}>
-              How someone registering from outside your three target markets is handled.
-            </div>
-            <div>
-              {MARKET_RULES.map((m) => (
-                <div
-                  key={m.k}
-                  style={{
-                    display: "flex",
-                    gap: "11px",
-                    padding: "10px 0",
-                    borderTop: `1px solid ${t.rowBorder}`,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "8px",
-                      height: "8px",
-                      borderRadius: "99px",
-                      flex: "none",
-                      marginTop: "6px",
-                      backgroundColor: m.tone === "good" ? "#1A7A4A" : "#B5651D",
-                    }}
-                  />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ font: "600 13.5px 'DM Sans', sans-serif", color: t.text }}>
-                      {m.k}
-                    </div>
-                    <div style={{ font: "400 12px/1.5 'Inter', sans-serif", color: t.subtext, marginTop: "3px" }}>
-                      {m.v}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Retention Gate: Exact Claude Reference (lines 238-249) */}
-          <div
-            style={{
-              backgroundColor: t.cardBg,
-              borderRadius: "20px",
-              boxShadow: t.cardShadow,
-              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
-              padding: "20px",
-              boxSizing: "border-box",
-            }}
-          >
-            <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "6px" }}>
-              RETENTION GATE
-            </div>
-            <div style={{ font: "400 12.5px/1.5 'Inter', sans-serif", color: t.subtext, marginBottom: "16px" }}>
-              Day-7 above 45% for four straight weeks is the signal to spend on ads. Not before.
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "14px" }}>
-              {COHORTS.map((c) => (
-                <div key={c.w} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <span style={{ width: "52px", flex: "none", font: "500 11px 'JetBrains Mono', monospace", color: t.muted }}>
-                    {c.w}
-                  </span>
-                  <div style={{ flex: 1, height: "6px", borderRadius: "99px", backgroundColor: isDark ? "rgba(247, 243, 238, 0.12)" : "rgba(13, 43, 69, 0.08)", overflow: "hidden" }}>
-                    <div
-                      style={{
-                        width: `${c.v}%`,
-                        height: "100%",
-                        backgroundColor: c.v >= 45 ? "#1A7A4A" : "#B5651D",
-                      }}
-                    />
-                  </div>
-                  <span style={{ width: "44px", textAlign: "right", flex: "none", font: "700 12px 'JetBrains Mono', monospace", color: c.v >= 45 ? (isDark ? "#5FC48E" : "#1A7A4A") : (isDark ? "#D98A3E" : "#B5651D") }}>
-                    {c.pct}
-                  </span>
-                </div>
-              ))}
-            </div>
+          <RequirementAuditBoundary auditId="ADMIN-EXTRA-013" status="extra">
             <div
               style={{
-                padding: "13px 15px",
-                borderRadius: "13px",
-                backgroundColor: isDark ? "rgba(181, 101, 29, 0.14)" : "rgba(181, 101, 29, 0.08)",
+                backgroundColor: t.cardBg,
+                borderRadius: "20px",
+                boxShadow: t.cardShadow,
+                border: isDark ? "none" : `1px solid ${t.cardBorder}`,
+                padding: "20px",
                 boxSizing: "border-box",
-                borderLeft: "3px solid #B5651D",
-                font: "400 12.5px/1.55 'Inter', sans-serif",
-                color: t.subtext,
               }}
             >
-              Two of four weeks above the line. Hold ad spend one more week — if 08 Sep lands above 45%, scale Germany first.
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", marginBottom: "14px" }}>
+                <span style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A" }}>
+                  NEEDS YOU
+                </span>
+                <span style={{ font: "700 11.5px 'JetBrains Mono', monospace", color: t.muted }}>
+                  {inboxCount}
+                </span>
+              </div>
+              <div>
+                {INBOX_ITEMS.map((item, idx) => (
+                  <div
+                    key={item.t}
+                    onClick={() => navigate(item.route)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "12px",
+                      padding: "12px 0",
+                      cursor: "pointer",
+                      borderBottom: idx < INBOX_ITEMS.length - 1 ? `1px solid ${t.rowBorder}` : "none",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "99px",
+                        flex: "none",
+                        backgroundColor:
+                          item.c === "0"
+                            ? isDark ? "rgba(247, 243, 238, 0.2)" : "rgba(13, 43, 69, 0.2)"
+                            : item.tone === "gold" ? "#C9943A" : (isDark ? "#D98A3E" : "#B5651D"),
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ font: "600 14px 'DM Sans', sans-serif", color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {item.t}
+                      </div>
+                      <div style={{ font: "400 11.5px 'Inter', sans-serif", color: t.muted, marginTop: "2px" }}>
+                        {item.note}
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        font: "700 13px 'JetBrains Mono', monospace",
+                        flex: "none",
+                        color: item.c === "0" ? t.muted : t.text,
+                      }}
+                    >
+                      {item.c}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          </RequirementAuditBoundary>
+
+          {/* Push Something, Now / Levers */}
+          <RequirementAuditBoundary auditId="ADMIN-EXTRA-015" status="extra">
+            <div
+              style={{
+                backgroundColor: t.cardBg,
+                borderRadius: "20px",
+                boxShadow: t.cardShadow,
+                border: isDark ? "none" : `1px solid ${t.cardBorder}`,
+                padding: "20px",
+                boxSizing: "border-box",
+              }}
+            >
+              <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "14px" }}>
+                PUSH SOMETHING, NOW
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
+                {LEVER_ITEMS.map((lever) => {
+                  const leverCard = (
+                    <div
+                      key={lever.t}
+                      onClick={() => openDrawer(lever.drawer)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        backgroundColor: t.subtleBg,
+                        border: isDark ? "none" : `1px solid ${t.cardBorder}`,
+                        borderRadius: "13px",
+                        padding: "13px 15px",
+                        cursor: "pointer",
+                        userSelect: "none",
+                      }}
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ font: "600 14px 'DM Sans', sans-serif", color: t.text }}>
+                          {lever.t}
+                        </div>
+                        <div style={{ font: "400 11.5px/1.45 'Inter', sans-serif", color: t.muted, marginTop: "3px" }}>
+                          {lever.note}
+                        </div>
+                      </div>
+                      <span style={{ font: "700 15px 'DM Sans', sans-serif", color: "#C9943A", flex: "none" }}>›</span>
+                    </div>
+                  );
+
+                  if (lever.t === "Offer a win-back") {
+                    return (
+                      <RequirementAuditBoundary key={lever.t} auditId="ADMIN-EXTRA-016" status="extra">
+                        {leverCard}
+                      </RequirementAuditBoundary>
+                    );
+                  }
+
+                  return leverCard;
+                })}
+              </div>
+            </div>
+          </RequirementAuditBoundary>
+
+          {/* Country and Currency: Exact Claude Reference (lines 224-236) */}
+          <RequirementAuditBoundary auditId="ADMIN-EXTRA-017" status="extra">
+            <div
+              style={{
+                backgroundColor: t.cardBg,
+                borderRadius: "20px",
+                boxShadow: t.cardShadow,
+                border: isDark ? "none" : `1px solid ${t.cardBorder}`,
+                borderLeft: "4px solid #B5651D",
+                padding: "20px",
+                boxSizing: "border-box",
+              }}
+            >
+              <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "6px" }}>
+                COUNTRY AND CURRENCY
+              </div>
+              <div style={{ font: "400 12.5px/1.5 'Inter', sans-serif", color: t.subtext, marginBottom: "14px" }}>
+                How someone registering from outside your three target markets is handled.
+              </div>
+              <div>
+                {MARKET_RULES.map((m) => (
+                  <div
+                    key={m.k}
+                    style={{
+                      display: "flex",
+                      gap: "11px",
+                      padding: "10px 0",
+                      borderTop: `1px solid ${t.rowBorder}`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "8px",
+                        height: "8px",
+                        borderRadius: "99px",
+                        flex: "none",
+                        marginTop: "6px",
+                        backgroundColor: m.tone === "good" ? "#1A7A4A" : "#B5651D",
+                      }}
+                    />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ font: "600 13.5px 'DM Sans', sans-serif", color: t.text }}>
+                        {m.k}
+                      </div>
+                      <div style={{ font: "400 12px/1.5 'Inter', sans-serif", color: t.subtext, marginTop: "3px" }}>
+                        {m.v}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </RequirementAuditBoundary>
+
+          {/* Retention Gate: Exact Claude Reference (lines 238-249) */}
+          <RequirementAuditBoundary auditId="ADMIN-EXTRA-018" status="extra">
+            <div
+              style={{
+                backgroundColor: t.cardBg,
+                borderRadius: "20px",
+                boxShadow: t.cardShadow,
+                border: isDark ? "none" : `1px solid ${t.cardBorder}`,
+                padding: "20px",
+                boxSizing: "border-box",
+              }}
+            >
+              <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "6px" }}>
+                RETENTION GATE
+              </div>
+              <div style={{ font: "400 12.5px/1.5 'Inter', sans-serif", color: t.subtext, marginBottom: "16px" }}>
+                Day-7 above 45% for four straight weeks is the signal to spend on ads. Not before.
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "14px" }}>
+                {COHORTS.map((c) => (
+                  <div key={c.w} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ width: "52px", flex: "none", font: "500 11px 'JetBrains Mono', monospace", color: t.muted }}>
+                      {c.w}
+                    </span>
+                    <div style={{ flex: 1, height: "6px", borderRadius: "99px", backgroundColor: isDark ? "rgba(247, 243, 238, 0.12)" : "rgba(13, 43, 69, 0.08)", overflow: "hidden" }}>
+                      <div
+                        style={{
+                          width: `${c.v}%`,
+                          height: "100%",
+                          backgroundColor: c.v >= 45 ? "#1A7A4A" : "#B5651D",
+                        }}
+                      />
+                    </div>
+                    <span style={{ width: "44px", textAlign: "right", flex: "none", font: "700 12px 'JetBrains Mono', monospace", color: c.v >= 45 ? (isDark ? "#5FC48E" : "#1A7A4A") : (isDark ? "#D98A3E" : "#B5651D") }}>
+                      {c.pct}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div
+                style={{
+                  padding: "13px 15px",
+                  borderRadius: "13px",
+                  backgroundColor: isDark ? "rgba(181, 101, 29, 0.14)" : "rgba(181, 101, 29, 0.08)",
+                  boxSizing: "border-box",
+                  borderLeft: "3px solid #B5651D",
+                  font: "400 12.5px/1.55 'Inter', sans-serif",
+                  color: t.subtext,
+                }}
+              >
+                Two of four weeks above the line. Hold ad spend one more week — if 08 Sep lands above 45%, scale Germany first.
+              </div>
+            </div>
+          </RequirementAuditBoundary>
 
         </div>
       </div>
