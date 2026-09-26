@@ -554,10 +554,17 @@ export default function ClaudeDrawer() {
     setFormValues((prev) => ({ ...prev, [fieldKey]: value }));
   };
 
+  const normalizePositiveIntegerInput = (value, fallback = "") => {
+    const digits = String(value ?? "").replace(/\D/g, "");
+    if (!digits) return fallback;
+    return String(Math.max(1, Number(digits)));
+  };
+
   const handleMovementChange = (index, key, value) => {
     setFormValues((prev) => {
       const movements = Array.isArray(prev.MOVEMENTS) ? [...prev.MOVEMENTS] : [];
-      movements[index] = { ...(movements[index] || {}), [key]: value };
+      const nextValue = key === "sets" ? normalizePositiveIntegerInput(value) : value;
+      movements[index] = { ...(movements[index] || {}), [key]: nextValue };
       return { ...prev, MOVEMENTS: movements };
     });
   };
@@ -568,7 +575,7 @@ export default function ClaudeDrawer() {
       movements.push({
         id: `movement-${Date.now()}`,
         name: "",
-        sets: "",
+        sets: "1",
         reps: "",
         load: "",
         equipment: prev.EQUIPMENT || "",
@@ -597,7 +604,7 @@ export default function ClaudeDrawer() {
     const movements = (Array.isArray(formValues.MOVEMENTS) ? formValues.MOVEMENTS : [])
       .map((movement, index) => ({
         name: String(movement.name || "").trim(),
-        sets: String(movement.sets || "").trim(),
+        sets: normalizePositiveIntegerInput(movement.sets, "1"),
         reps: String(movement.reps || "").trim(),
         load: String(movement.load || "").trim(),
         equipment: String(movement.equipment || "").trim(),
@@ -1270,8 +1277,9 @@ export default function ClaudeDrawer() {
                             <label key={key} className="block">
                               <span className="block mb-1 text-[9px] tracking-[0.12em] uppercase text-[#F7F3EE]/40">{label}</span>
                               <input
-                                type={key === "restSeconds" ? "number" : "text"}
-                                min={key === "restSeconds" ? "0" : undefined}
+                                type={key === "sets" || key === "restSeconds" ? "number" : "text"}
+                                min={key === "sets" ? "1" : key === "restSeconds" ? "0" : undefined}
+                                step={key === "sets" || key === "restSeconds" ? "1" : undefined}
                                 value={movement[key] ?? ""}
                                 onChange={(e) => handleMovementChange(idx, key, e.target.value)}
                                 className="w-full rounded-lg border border-[#F7F3EE]/20 bg-transparent px-2 py-2 text-xs text-[#F7F3EE] outline-none focus:border-[#C9943A]"
