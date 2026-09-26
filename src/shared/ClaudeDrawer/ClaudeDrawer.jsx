@@ -959,6 +959,20 @@ export default function ClaudeDrawer() {
                       playsInline
                       className="w-full h-full object-contain bg-black"
                       style={{ backgroundColor: "#000000" }}
+                      onLoadedMetadata={(event) => {
+                        const duration = Number(event.currentTarget.duration || 0);
+                        if (!Number.isFinite(duration) || duration <= 0) return;
+                        const durationSeconds = Math.round(duration);
+                        const durationMinutes = Math.max(1, Math.ceil(durationSeconds / 60));
+                        setFormValues((prev) => {
+                          if (Number(prev.durationSeconds || 0) > 0) return prev;
+                          return {
+                            ...prev,
+                            durationSeconds,
+                            LENGTH: `${durationMinutes} min`,
+                          };
+                        });
+                      }}
                     />
                   )}
                 </div>
