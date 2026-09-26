@@ -83,7 +83,7 @@ const DRAWER_CONFIGS = {
     alt: "Save draft",
     note: "Members filter by purpose, then by time. If you leave either blank this workout never appears in a filtered list — only in search.",
     fields: [
-      { k: "TITLE", type: "text", initial: "Awakening Flow", hint: "shown on the card" },
+      { k: "TITLE", type: "text", initial: "New workout", hint: "shown on the card" },
       { k: "PURPOSE", type: "chips", initial: "Mobility", options: ["Strength", "Mobility", "Core", "Conditioning", "Recovery", "Lower body", "Upper body"] },
       { k: "LENGTH", type: "chips", initial: "15 min", options: ["10 min", "15 min", "25 min", "38 min", "45 min", "60 min"] },
       { k: "EQUIPMENT", type: "chips", initial: "Bodyweight", options: ["Bodyweight", "Dumbbells", "Barbell", "Kettlebell", "Pull-up bar", "Bands", "Full gym"] },
@@ -99,7 +99,7 @@ const DRAWER_CONFIGS = {
     sub: "Pull in a Vimeo folder, then tag each video against the Train screen's filters before it goes live. Nothing publishes until it is tagged.",
     cta: "Import 12 new and tag",
     alt: "Cancel",
-    note: "23 of your 170 are imported but untagged, so members cannot find them. Tag on import and that number stops growing.",
+    note: "Checking imported workout filters...",
     fields: [
       { k: "VIMEO FOLDER", type: "text", initial: "Victory Fitness / Workouts 2026", hint: "Checking Vimeo..." },
       { k: "APPLY TO ALL", type: "chips", initial: "Strength", options: ["Strength", "Mobility", "Core", "Conditioning", "Recovery"] },
