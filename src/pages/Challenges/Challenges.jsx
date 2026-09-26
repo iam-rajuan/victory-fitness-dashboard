@@ -1,104 +1,195 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { adminApiRequest } from "../../../services/auth.service";
 
-const BASE_ROWS = [
-  { a: "21-Day Warrior", b: "Physical", c: "21", d: "412", e: "Active", tone: "good", id: "c1" },
-  { a: "Cold Start", b: "Physical", c: "3", d: "312", e: "Active", tone: "good", id: "c2" },
-  { a: "Week of Strength", b: "Physical", c: "7", d: "266", e: "Active", tone: "good", id: "c3" },
-  { a: "Sleep Lock", b: "Mental", c: "5", d: "188", e: "Active", tone: "good", id: "c4" },
-  { a: "Deep Connection", b: "Relational", c: "14", d: "94", e: "Active", tone: "good", id: "c5" },
-  { a: "Clean Eating Fortnight", b: "Physical", c: "14", d: "0", e: "Opens Monday", tone: "warn", id: "c6" },
-  { a: "Digital Detox", b: "Mental", c: "3", d: "141", e: "Active", tone: "good", id: "c7" },
-  { a: "Forgive & Grow", b: "Relational", c: "21", d: "38", e: "Low uptake", tone: "warn", id: "c8" },
-];
+const statusTone = (status) => {
+  const normalized = String(status || "").toUpperCase();
+  if (normalized === "ACTIVE") return "good";
+  if (normalized === "UPCOMING" || normalized === "DRAFT") return "warn";
+  return "bad";
+};
 
-const BASE_RAIL = [
-  { d: "21d", type: "Physical", n: "21-Day Warrior", joined: "412 joined" },
-  { d: "3d", type: "Physical", n: "Cold Start", joined: "312 joined" },
-  { d: "7d", type: "Physical", n: "Week of Strength", joined: "266 joined" },
-  { d: "5d", type: "Mental", n: "Sleep Lock", joined: "188 joined" },
-];
+const statusLabel = (status) => {
+  const normalized = String(status || "DRAFT").toUpperCase();
+  if (normalized === "ACTIVE") return "Active";
+  if (normalized === "UPCOMING") return "Upcoming";
+  if (normalized === "ARCHIVED") return "Archived";
+  return "Draft";
+};
+
+const mapChallengeRow = (challenge) => ({
+  id: challenge.id,
+  a: challenge.title || "Untitled challenge",
+  b: challenge.category || "Physical",
+  c: String(challenge.durationDays || 0),
+  d: String(challenge.participantCount || 0),
+  e: statusLabel(challenge.status),
+  tone: statusTone(challenge.status),
+  rawData: challenge,
+});
+
+const drawerPayloadFromChallenge = (challenge = {}) => ({
+  id: challenge.id,
+  title: "Edit challenge",
+  NAME: challenge.title || "",
+  LENGTH: String(challenge.durationDays || 7),
+  TYPE: challenge.category || "Physical",
+  "POINTS ON COMPLETION": challenge.points !== undefined && challenge.points !== null ? String(challenge.points) : "",
+  "WHAT TO DO": challenge.description || "",
+  "WHY IT MATTERS": challenge.whyItMatters || "",
+  STATUS: challenge.status || "DRAFT",
+  DIFFICULTY: challenge.difficulty || "BEGINNER",
+  THUMBNAIL: challenge.thumbnail || "",
+  PLAN_TEXT: challenge.planText || "",
+  PLAN_DAYS: challenge.planDays || [],
+});
 
 export default function Challenges() {
   const { openDrawer, showToast } = useAdminDrawer();
   const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState(BASE_ROWS);
-  const [rail, setRail] = useState(BASE_RAIL);
+  const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
-    adminApiRequest("/challenges")
-      .then((data) => {
-        if (!isMounted || !data) return;
-        const list = Array.isArray(data) ? data : data.challenges || data.items || [];
-        if (list.length > 0) {
-          const mapped = list.map((c) => ({
-            id: c._id || c.id,
-            a: c.title || "Challenge",
-            b: c.category || c.goal_type || "Physical",
-            c: String(c.duration_days || c.durationDays || 7),
-            d: String(c.participants_count || 0),
-            e: c.status === "ACTIVE" ? "Active" : c.status || "Active",
-            tone: c.status === "ACTIVE" ? "good" : "warn",
-            rawData: c,
-          }));
-          setRows(mapped);
-        }
-      })
-      .catch(() => null)
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const handleDelete = async (row) => {
-    if (window.confirm(`Delete challenge "${row.a}"?`)) {
-      try {
-        await adminApiRequest(`/challenges/${row.id}`, { method: "DELETE" }).catch(() => null);
-        setRows((prev) => prev.filter((r) => r.id !== row.id));
-        showToast(`Challenge "${row.a}" deleted.`);
-      } catch (err) {
-        showToast(`Failed: ${err.message}`);
-      }
+  const loadChallenges = async () => {
+    setLoading(true);
+    try {
+      const data = await adminApiRequest("/admin/challenges");
+      const list = Array.isArray(data) ? data : data?.challenges || data?.items || [];
+      setRows(list.map(mapChallengeRow));
+      setTotal(Number(data?.total ?? list.length) || 0);
+    } catch (err) {
+      showToast(`Failed to load challenges: ${err?.message || "Request failed"}`);
+      setRows([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
     }
   };
 
+  useEffect(() => {
+    void loadChallenges();
+  }, []);
+
+  const summary = useMemo(() => {
+    const active = rows.filter((row) => row.rawData?.status === "ACTIVE").length;
+    const upcoming = rows.filter((row) => row.rawData?.status === "UPCOMING").length;
+    const draft = rows.filter((row) => row.rawData?.status === "DRAFT").length;
+    const joined = rows.reduce((sum, row) => sum + Number(row.rawData?.participantCount || 0), 0);
+    const completed = rows.reduce((sum, row) => sum + Number(row.rawData?.completionCount || 0), 0);
+    const completionPct = joined > 0 ? Math.round((completed / joined) * 100) : 0;
+    const categories = new Set(rows.map((row) => row.rawData?.category).filter(Boolean)).size;
+    return { active, upcoming, draft, joined, completed, completionPct, categories };
+  }, [rows]);
+
+  const handleDelete = (row) => {
+    setDeleteTarget(row);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await adminApiRequest(`/admin/challenges/${deleteTarget.id}`, { method: "DELETE" });
+      setRows((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+      setTotal((prev) => Math.max(0, prev - 1));
+      showToast(`Challenge "${deleteTarget.a}" deleted.`);
+      setDeleteTarget(null);
+    } catch (err) {
+      showToast(`Failed: ${err?.message || "Delete failed"}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const rail = useMemo(() => {
+    return rows.slice(0, 4).map((row) => ({
+      d: `${row.c}d`,
+      type: row.b,
+      n: row.a,
+      joined: `${row.d} joined`,
+      onEdit: () => openDrawer("challenge", { ...drawerPayloadFromChallenge(row.rawData), onSaved: loadChallenges }),
+      onRemove: () => handleDelete(row),
+    }));
+  }, [rows]);
+
+  const openChallengeDrawer = (row) => {
+    openDrawer("challenge", {
+      ...drawerPayloadFromChallenge(row?.rawData || {}),
+      onSaved: loadChallenges,
+    });
+  };
+
   return (
-    <ClaudeAdminTable
-      pageKicker="35 IN THE LIBRARY · 3 TO 21 DAYS"
-      pageTitle="Challenges"
-      pageSub="Physical, Mental and Relational, from 3 to 21 days. The short ones convert browsers into posters; the long ones build the habit."
-      pagePrimary="+ Add challenge"
-      pageSecondary="Duplicate a challenge"
-      onPrimary={() => openDrawer("challenge")}
-      onSecondary={() => openDrawer("challenge")}
-      pageStats={[
-        { k: "TOTAL", v: "35", note: "7 physical, 12 mental, 16 mixed" },
-        { k: "ACTIVE JOINS", v: "1,240", note: "Across all live challenges" },
-        { k: "INVITES SENT", v: "318", note: "41% became a signup" },
-        { k: "COMPLETION", v: "62%", note: "3-day: 81% · 21-day: 34%" },
-      ]}
-      pageAdvice="The 3-day challenges drive 4× the invites of the 21-day ones, but you only have seven of them. One more 3-day is the cheapest growth lever here."
-      pageAdviceDone="Create a 3-day challenge"
-      onAdvice={() => openDrawer("challenge", { LENGTH: "3", TYPE: "Physical" })}
-      rail={rail.map((item) => ({
-        ...item,
-        onEdit: () => openDrawer("challenge", { NAME: item.n }),
-        onRemove: () => showToast(`Removed ${item.n}`),
-      }))}
-      filters={["All", "3 day", "5 day", "7 day", "14 day", "21 day", "Draft"]}
-      cols={["CHALLENGE", "TYPE", "DAYS", "JOINED", "STATUS"]}
-      rows={rows}
-      isLoading={loading}
-      onEditRow={(row) => openDrawer("challenge", { NAME: row.a, TYPE: row.b })}
-      onDeleteRow={handleDelete}
-      onRowClick={(row) => openDrawer("challenge", { NAME: row.a, TYPE: row.b })}
-    />
+    <>
+      <ClaudeAdminTable
+        pageKicker={`${total} IN THE LIBRARY · BACKEND LIVE`}
+        pageTitle="Challenges"
+        pageSub="Create, review and publish challenge cards. App members only see challenges that are active or upcoming."
+        pagePrimary="+ Add challenge"
+        pageSecondary="Refresh"
+        onPrimary={() => openDrawer("challenge", { onSaved: loadChallenges })}
+        onSecondary={loadChallenges}
+        pageStats={[
+          { k: "TOTAL", v: total.toLocaleString(), note: `${summary.categories} categories configured` },
+          { k: "ACTIVE", v: summary.active.toLocaleString(), note: `${summary.upcoming} upcoming, ${summary.draft} draft` },
+          { k: "JOINED", v: summary.joined.toLocaleString(), note: "Across backend challenge memberships" },
+          { k: "COMPLETION", v: `${summary.completionPct}%`, note: `${summary.completed} completed logs` },
+        ]}
+        pageAdvice={
+          summary.draft > 0
+            ? `${summary.draft} challenge${summary.draft === 1 ? " is" : "s are"} still in draft. Publish only after plan days are configured.`
+            : "All listed challenges are either active, upcoming or archived in the backend."
+        }
+        pageAdviceDone="Create challenge"
+        onAdvice={() => openDrawer("challenge", { LENGTH: "3", TYPE: "Physical", STATUS: "DRAFT", onSaved: loadChallenges })}
+        rail={rail}
+        filters={["All", "3 day", "5 day", "7 day", "14 day", "21 day", "Draft"]}
+        cols={["CHALLENGE", "TYPE", "DAYS", "JOINED", "STATUS"]}
+        rows={rows}
+        isLoading={loading}
+        onEditRow={openChallengeDrawer}
+        onDeleteRow={handleDelete}
+        onRowClick={openChallengeDrawer}
+      />
+
+      {deleteTarget && (
+        <div
+          className="fixed inset-0 z-[120] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 font-dmsans"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-[#F7F3EE]/15 bg-[#0D0D0D] p-6 text-[#F7F3EE] shadow-2xl">
+            <div className="text-[10px] font-medium tracking-[0.16em] text-[#B5651D] uppercase mb-2">
+              Confirm deletion
+            </div>
+            <h2 className="text-2xl font-semibold font-clash leading-tight mb-2">Delete challenge?</h2>
+            <p className="text-sm font-inter leading-relaxed text-[#F7F3EE]/65 mb-5">
+              This removes "{deleteTarget.a}" from the dashboard and the member app. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={confirmDelete}
+                className="flex-1 h-11 rounded-xl bg-[#B5651D] text-[#0D0D0D] font-bold text-sm disabled:opacity-50"
+              >
+                {isDeleting ? "Deleting..." : "Delete challenge"}
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeleteTarget(null)}
+                className="w-28 h-11 rounded-xl border border-[#F7F3EE]/20 text-[#F7F3EE] font-semibold text-sm disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

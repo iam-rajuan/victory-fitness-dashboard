@@ -143,16 +143,18 @@ const DRAWER_CONFIGS = {
     kicker: "CHALLENGE EDITOR",
     title: "New challenge",
     sub: "Length first — that is the question members ask before anything else. The instruction and the “why it matters” line are what they read on the detail screen.",
-    cta: "Create and publish",
+    cta: "Save challenge",
     alt: "Save draft",
     note: "Your 3-day challenges drive four times the invites of the 21-day ones. If you are unsure of the length, make it short.",
     fields: [
-      { k: "NAME", type: "text", initial: "Cold Start", hint: "shown on the card" },
+      { k: "NAME", type: "text", initial: "", placeholder: "Challenge name", hint: "shown on the card" },
       { k: "LENGTH", type: "chips", initial: "3", options: ["3", "5", "7", "14", "21"] },
       { k: "TYPE", type: "chips", initial: "Physical", options: ["Physical", "Mental", "Relational"] },
-      { k: "POINTS ON COMPLETION", type: "text", initial: "75 pts · 50% for over half", hint: "shown as the win" },
-      { k: "WHAT TO DO", type: "input", initial: "Finish every shower with 60 seconds of cold water for 3 consecutive days.", hint: "the instruction, verbatim" },
-      { k: "WHY IT MATTERS", type: "input", initial: "Each icy shock teaches your nervous system that discomfort is survivable — and suddenly every hard thing feels smaller.", hint: "largest text on the detail screen" },
+      { k: "STATUS", type: "chips", initial: "DRAFT", options: ["DRAFT", "UPCOMING", "ACTIVE", "ARCHIVED"] },
+      { k: "DIFFICULTY", type: "chips", initial: "BEGINNER", options: ["BEGINNER", "INTERMEDIATE", "ADVANCED"] },
+      { k: "POINTS ON COMPLETION", type: "text", initial: "", placeholder: "e.g. 75", hint: "shown as the win" },
+      { k: "WHAT TO DO", type: "input", initial: "", placeholder: "The instruction, verbatim...", hint: "the instruction, verbatim" },
+      { k: "WHY IT MATTERS", type: "input", initial: "", placeholder: "Why this challenge matters...", hint: "largest text on the detail screen" },
       { k: "TIER ACCESS", type: "chips", initial: "All tiers", options: ["All tiers", "Gold and up", "Platinum and up"] },
     ],
   },
@@ -631,6 +633,91 @@ export default function ClaudeDrawer() {
     };
   };
 
+  const buildFallbackChallengePlanDays = ({ durationDays, title, description, category }) => {
+    return Array.from({ length: durationDays }, (_, index) => {
+      const dayNumber = index + 1;
+      return {
+        day_number: dayNumber,
+        title: durationDays === 1 ? title : `Day ${dayNumber}: ${title}`,
+        focus: category,
+        notes: description,
+        sections: [
+          {
+            id: `day-${dayNumber}-section-1`,
+            title: "Daily action",
+            description,
+            estimated_minutes: 10,
+            exercises: [
+              {
+                id: `day-${dayNumber}-exercise-1`,
+                name: title,
+                details: description,
+                notes: "",
+                workout_id: "",
+                workout_title: "",
+                workout_vimeo_id: "",
+                workout_video_url: "",
+                workout_video_source: "VIMEO",
+                workout_thumbnail: "",
+              },
+            ],
+          },
+        ],
+      };
+    });
+  };
+
+  const buildChallengeRequestPayload = (statusOverride) => {
+    const durationDays = Math.max(1, Number(String(formValues.LENGTH || payload?.LENGTH || "7").match(/\d+/)?.[0] || 7));
+    const points = Math.max(0, Number(String(formValues["POINTS ON COMPLETION"] || "0").match(/\d+/)?.[0] || 0));
+    const status = String(statusOverride || formValues.STATUS || payload?.STATUS || "DRAFT").trim().toUpperCase();
+    const difficulty = String(formValues.DIFFICULTY || payload?.DIFFICULTY || "BEGINNER").trim().toUpperCase();
+    const title = String(formValues.NAME || "Untitled challenge").trim();
+    const description = String(formValues["WHAT TO DO"] || title).trim();
+    const category = String(formValues.TYPE || "Physical").trim();
+    const existingPlanDays = Array.isArray(payload?.PLAN_DAYS) ? payload.PLAN_DAYS : [];
+    const planDays =
+      existingPlanDays.length === durationDays
+        ? existingPlanDays
+        : buildFallbackChallengePlanDays({ durationDays, title: title || "Daily Action", description: description || "Daily challenge session", category });
+    const planText = String(payload?.PLAN_TEXT || "").trim();
+    return {
+      title,
+      description,
+      whyItMatters: String(formValues["WHY IT MATTERS"] || "").trim(),
+      planText,
+      planDays,
+      category,
+      durationDays,
+      points,
+      difficulty: ["BEGINNER", "INTERMEDIATE", "ADVANCED"].includes(difficulty) ? difficulty : "BEGINNER",
+      status: ["ACTIVE", "UPCOMING", "DRAFT", "ARCHIVED"].includes(status) ? status : "DRAFT",
+      thumbnail: String(payload?.THUMBNAIL || "").trim(),
+    };
+  };
+
+  const saveChallenge = async (statusOverride) => {
+    const title = String(formValues.NAME || "").trim();
+    if (!title) {
+      showToast("Please enter a challenge name.");
+      return;
+    }
+    const requestPayload = buildChallengeRequestPayload(statusOverride);
+    const challengeId = payload?.id;
+    const saved = await adminApiRequest(
+      challengeId ? `/admin/challenges/${challengeId}` : "/admin/challenges",
+      {
+        method: challengeId ? "PATCH" : "POST",
+        body: requestPayload,
+      }
+    );
+    if (typeof payload?.onSaved === "function") {
+      await payload.onSaved(saved);
+    }
+    showToast(`Challenge "${saved?.title || requestPayload.title}" saved.`);
+    closeDrawer();
+  };
+
   const resolveWorkoutPreviewUrl = () => {
     const videoUrl = String(payload?.videoUrl || formValues.videoUrl || "").trim();
     const vimeoId = String(payload?.vimeoId || formValues.vimeoId || "").trim();
@@ -711,10 +798,8 @@ export default function ClaudeDrawer() {
         closeDrawer();
         return;
       } else if (type === "challenge") {
-        await adminApiRequest("/challenges", {
-          method: "POST",
-          body: formValues,
-        }).catch(() => null);
+        await saveChallenge();
+        return;
       } else if (type === "quote") {
         await adminApiRequest("/admin/content/quotes", {
           method: "POST",
@@ -740,6 +825,18 @@ export default function ClaudeDrawer() {
   };
 
   const handleAltAction = async () => {
+    if (type === "challenge") {
+      setIsSubmitting(true);
+      try {
+        await saveChallenge("DRAFT");
+      } catch (err) {
+        showToast(`Failed: ${err?.message || "Operation could not be completed."}`);
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
     if (type !== "workout") {
       closeDrawer();
       return;
@@ -783,7 +880,7 @@ export default function ClaudeDrawer() {
                 {payload?.kicker || config.kicker}
               </div>
               <h2 className="text-2xl sm:text-3xl font-semibold font-clash leading-tight text-[#F7F3EE]">
-                {payload?.title || config.title}
+                {payload?.title || (payload?.id && type === "challenge" ? "Edit challenge" : config.title)}
               </h2>
               <p className="mt-1.5 text-xs sm:text-sm font-inter leading-relaxed max-w-lg text-[#F7F3EE]/60">
                 {payload?.sub || config.sub}
@@ -1166,38 +1263,27 @@ export default function ClaudeDrawer() {
                 )}
 
                 {field.type === "text" && (
-                  (type === "workout" && field.k === "TITLE") || (type === "vimeo" && field.k === "VIMEO FOLDER") ? (
-                    <input
-                      type="text"
-                      value={formValues[field.k] ?? ""}
-                      onChange={(e) => handleTextChange(field.k, e.target.value)}
-                      style={{
-                        boxSizing: "border-box",
-                        border: "1.5px solid rgba(247, 243, 238, 0.2)",
-                        borderRadius: "12px",
-                        padding: "12px 14px",
-                        font: "500 14px/1.4 'DM Sans', sans-serif",
-                        color: "#F7F3EE",
-                        backgroundColor: "transparent",
-                        outline: "none",
-                        width: "100%",
-                        display: "block",
-                      }}
-                      onFocus={(e) => (e.currentTarget.style.borderColor = "#C9943A")}
-                      onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(247, 243, 238, 0.2)")}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        font: "500 14px/1.6 'DM Sans', sans-serif",
-                        color: "#F7F3EE",
-                        textWrap: "pretty",
-                        wordBreak: "break-word",
-                      }}
-                    >
-                      {formValues[field.k] ?? field.initial}
-                    </div>
-                  )
+                  <input
+                    type="text"
+                    value={formValues[field.k] ?? ""}
+                    onChange={(e) => handleTextChange(field.k, e.target.value)}
+                    placeholder={field.placeholder || ""}
+                    className="placeholder:text-[#F7F3EE]/35"
+                    style={{
+                      boxSizing: "border-box",
+                      border: "1.5px solid rgba(247, 243, 238, 0.2)",
+                      borderRadius: "12px",
+                      padding: "12px 14px",
+                      font: "500 14px/1.4 'DM Sans', sans-serif",
+                      color: "#F7F3EE",
+                      backgroundColor: "transparent",
+                      outline: "none",
+                      width: "100%",
+                      display: "block",
+                    }}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = "#C9943A")}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(247, 243, 238, 0.2)")}
+                  />
                 )}
 
                 {field.type === "input" && (
@@ -1205,6 +1291,8 @@ export default function ClaudeDrawer() {
                     rows={3}
                     value={formValues[field.k] ?? ""}
                     onChange={(e) => handleTextChange(field.k, e.target.value)}
+                    placeholder={field.placeholder || ""}
+                    className="placeholder:text-[#F7F3EE]/35"
                     style={{
                       minHeight: "76px",
                       boxSizing: "border-box",
