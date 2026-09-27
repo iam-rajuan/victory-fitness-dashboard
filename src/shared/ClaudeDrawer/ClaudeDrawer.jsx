@@ -183,6 +183,23 @@ const DRAWER_CONFIGS = {
       { k: "SEND", type: "chips", initial: "This evening, 20:30 local", options: ["Now", "This evening, 20:30 local", "Tomorrow morning"] },
     ],
   },
+  user: {
+    kicker: "USER EDITOR",
+    title: "Edit user",
+    sub: "Account fields shown here come from the backend user record. Keep identity and access clean before changing status.",
+    cta: "Save user",
+    alt: "Cancel",
+    note: "Status controls whether the account is verified. Subscription data is managed from Subscriptions, not this editor.",
+    fields: [
+      { k: "FULL NAME", type: "text", initial: "", placeholder: "Full name", hint: "shown across admin and app" },
+      { k: "EMAIL", type: "text", initial: "", placeholder: "member@example.com", hint: "login email" },
+      { k: "ROLE", type: "chips", initial: "user", options: ["user", "trainer", "moderator"] },
+      { k: "STATUS", type: "chips", initial: "PENDING", options: ["PENDING", "ACTIVE", "INACTIVE"] },
+      { k: "CONTACT NUMBER", type: "text", initial: "", placeholder: "+491234567890", hint: "optional" },
+      { k: "COUNTRY", type: "text", initial: "", placeholder: "Germany", hint: "market/country" },
+      { k: "PROFILE IMAGE", type: "text", initial: "", placeholder: "https://...", hint: "optional URL" },
+    ],
+  },
   application: {
     kicker: "INNER CIRCLE APPLICATION · INGRID VOGEL",
     title: "Read, then decide",
@@ -797,6 +814,33 @@ export default function ClaudeDrawer() {
     closeDrawer();
   };
 
+  const saveUser = async () => {
+    const fullName = String(formValues["FULL NAME"] || "").trim();
+    const email = String(formValues.EMAIL || "").trim().toLowerCase();
+    if (!fullName || !email) {
+      throw new Error("Full name and email are required.");
+    }
+    const requestPayload = {
+      fullName,
+      email,
+      role: String(formValues.ROLE || "user").trim().toLowerCase(),
+      status: String(formValues.STATUS || "PENDING").trim().toUpperCase(),
+      contactNumber: String(formValues["CONTACT NUMBER"] || "").trim(),
+      country: String(formValues.COUNTRY || "").trim(),
+      profileImage: String(formValues["PROFILE IMAGE"] || "").trim(),
+    };
+    const userId = payload?.id;
+    const saved = await adminApiRequest(userId ? `/admin/users/${userId}` : "/admin/users", {
+      method: userId ? "PATCH" : "POST",
+      body: requestPayload,
+    });
+    if (typeof payload?.onSaved === "function") {
+      await payload.onSaved(saved);
+    }
+    showToast(`User "${saved?.fullName || requestPayload.fullName}" saved.`);
+    closeDrawer();
+  };
+
   const handleSave = async () => {
     setIsSubmitting(true);
     try {
@@ -813,6 +857,9 @@ export default function ClaudeDrawer() {
 
       if (type === "workout") {
         await saveWorkout("Published");
+        return;
+      } else if (type === "user") {
+        await saveUser();
         return;
       } else if (type === "vimeo") {
         const result = await syncAdminWorkouts(buildVimeoImportPayload());

@@ -1,87 +1,122 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
-import { getUserManagementOverview, deleteAdminUser } from "../../../services/admin-users.service";
+import { deleteAdminUser, getUserManagementOverview } from "../../../services/admin-users.service";
 
-const BASE_ROWS = [
-  { a: "Michael Krause", b: "GOLD", c: "Germany", d: "2 hours ago", e: "Healthy", tone: "good", id: "u1" },
-  { a: "Anna Reinhardt", b: "SILVER", c: "Germany", d: "Today", e: "Healthy", tone: "good", id: "u2" },
-  { a: "Kofi Mensah", b: "TRIAL · GOLD", c: "Ghana", d: "Today", e: "Ends in 2 days", tone: "warn", id: "u3" },
-  { a: "Arjun Rao", b: "GOLD", c: "India", d: "Yesterday", e: "Healthy", tone: "good", id: "u4" },
-  { a: "Dominik Schulz", b: "PLATINUM", c: "Germany", d: "Today", e: "Healthy", tone: "good", id: "u5" },
-  { a: "Lena Meyer", b: "SILVER", c: "Germany", d: "6 days ago", e: "Going quiet", tone: "warn", id: "u6" },
-  { a: "Thomas Bauer", b: "TRIAL · SILVER", c: "Austria", d: "9 days ago", e: "Never activated", tone: "bad", id: "u7" },
-  { a: "James Hill", b: "BETA", c: "United Kingdom", d: "Never", e: "Never activated", tone: "bad", id: "u8" },
-];
+const USER_FILTERS = ["All", "Paying", "On trial", "Beta testers", "At risk", "Never active"];
+
+const pct = (part, total) => {
+  if (!total) return "0%";
+  return `${Math.round((Number(part || 0) / Number(total || 1)) * 100)}%`;
+};
+
+const normalizeTierLabel = (user) => {
+  const tier = String(user.tier || user.subscription_tier || user.subscriptionTier || "NONE").trim().toUpperCase();
+  if (user.isBetaTester || user.is_beta_tester) {
+    return tier && tier !== "NONE" && tier !== "GOLD_BETA" ? `TRIAL · ${tier}` : "BETA";
+  }
+  if (user.isTrial || user.trial_type) {
+    return tier && tier !== "NONE" ? `TRIAL · ${tier}` : "TRIAL";
+  }
+  return tier === "NONE" ? "FREE" : tier;
+};
+
+const mapUserRow = (user) => ({
+  id: user.id,
+  a: user.fullName || user.name || user.email || "Member",
+  b: normalizeTierLabel(user),
+  c: user.country || user.country_code || "Not set",
+  d: user.lastActiveLabel || "Never",
+  e: user.statusLabel || (user.status === "ACTIVE" ? "Healthy" : user.status || "Pending"),
+  tone: user.tone || (user.neverActive ? "bad" : user.isAtRisk ? "warn" : "good"),
+  rawData: user,
+  isPaying: Boolean(user.isPaying),
+  isTrial: Boolean(user.isTrial || user.trial_type),
+  isBetaTester: Boolean(user.isBetaTester || user.is_beta_tester),
+  isAtRisk: Boolean(user.isAtRisk),
+  neverActive: Boolean(user.neverActive),
+});
 
 export default function UserDetails() {
   const { openDrawer, showToast } = useAdminDrawer();
   const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState(BASE_ROWS);
-  const [stats, setStats] = useState([
-    { k: "TOTAL", v: "312", note: "+34 this week" },
-    { k: "PAYING", v: "68", note: "22% of registered" },
-    { k: "ACTIVE 7 DAYS", v: "214", note: "69% of registered" },
-    { k: "NEVER ACTIVE", v: "9", note: "Registered, never opened a feature" },
-  ]);
+  const [rows, setRows] = useState([]);
+  const [summary, setSummary] = useState(null);
+
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getUserManagementOverview({ limit: 500 });
+      const nextSummary = data?.summary || {};
+      const users = Array.isArray(data?.table?.users) ? data.table.users : [];
+      setSummary(nextSummary);
+      setRows(users.map(mapUserRow));
+    } catch (err) {
+      showToast(`Failed: ${err?.message || "Unable to load users."}`);
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
 
   useEffect(() => {
-    let isMounted = true;
-    getUserManagementOverview()
-      .then((data) => {
-        if (!isMounted || !data) return;
-        if (data.users && Array.isArray(data.users) && data.users.length > 0) {
-          const mapped = data.users.map((u) => ({
-            id: u._id || u.id,
-            a: u.fullName || u.name || "Member",
-            b: (u.subscriptionTier || u.tier || "FREE").toUpperCase(),
-            c: u.country || "Germany",
-            d: u.lastActive ? new Date(u.lastActive).toLocaleDateString() : "Today",
-            e: u.status === "ACTIVE" ? "Healthy" : u.status || "Healthy",
-            tone: u.status === "ACTIVE" ? "good" : "warn",
-            rawData: u,
-          }));
-          setRows(mapped);
-        }
-        if (data.totalUsers) {
-          setStats([
-            { k: "TOTAL", v: String(data.totalUsers || 312), note: "+34 this week" },
-            { k: "PAYING", v: String(data.activeUsers || 68), note: "22% of registered" },
-            { k: "ACTIVE 7 DAYS", v: String(Math.round((data.totalUsers || 312) * 0.69)), note: "69% of registered" },
-            { k: "NEVER ACTIVE", v: "9", note: "Registered, never opened a feature" },
-          ]);
-        }
-      })
-      .catch(() => null)
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
+    void loadUsers();
+  }, [loadUsers]);
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const stats = useMemo(() => {
+    const total = Number(summary?.totalUsers || 0);
+    const paying = Number(summary?.payingUsers || 0);
+    const active7 = Number(summary?.active7DaysUsers || 0);
+    const never = Number(summary?.neverActiveUsers || 0);
+    const registeredThisWeek = Number(summary?.registeredThisWeek || 0);
+    return [
+      { k: "TOTAL", v: String(total), note: `+${registeredThisWeek} this week` },
+      { k: "PAYING", v: String(paying), note: `${pct(paying, total)} of registered` },
+      { k: "ACTIVE 7 DAYS", v: String(active7), note: `${pct(active7, total)} of registered` },
+      { k: "NEVER ACTIVE", v: String(never), note: "Registered, never opened a feature" },
+    ];
+  }, [summary]);
+
+  const pageKicker = `${Number(summary?.totalUsers || 0)} REGISTERED · ${Number(summary?.countryCount || 0)} COUNTRIES`;
+  const neverActiveCount = Number(summary?.neverActiveUsers || 0);
+
+  const openUserEditor = useCallback((row) => {
+    const user = row?.rawData || {};
+    openDrawer("user", {
+      id: user.id,
+      title: user.id ? "Edit user" : "Invite user",
+      "FULL NAME": user.fullName || "",
+      EMAIL: user.email || "",
+      ROLE: user.role || "user",
+      STATUS: user.status || "PENDING",
+      "CONTACT NUMBER": user.contactNumber || "",
+      COUNTRY: user.country || "",
+      "PROFILE IMAGE": user.profileImage || "",
+      onSaved: loadUsers,
+    });
+  }, [loadUsers, openDrawer]);
 
   const handleDelete = async (row) => {
-    if (window.confirm(`Are you sure you want to remove user "${row.a}"?`)) {
-      try {
-        await deleteAdminUser(row.id).catch(() => null);
-        setRows((prev) => prev.filter((r) => r.id !== row.id));
-        showToast(`User ${row.a} deleted.`);
-      } catch (err) {
-        showToast(`Failed: ${err.message}`);
-      }
+    if (!window.confirm(`Delete "${row.a}"? This removes the account from the backend.`)) {
+      return;
+    }
+    try {
+      await deleteAdminUser(row.id);
+      showToast(`User ${row.a} deleted.`);
+      await loadUsers();
+    } catch (err) {
+      showToast(`Failed: ${err?.message || "Unable to delete user."}`);
     }
   };
 
   return (
     <ClaudeAdminTable
-      pageKicker="312 REGISTERED · 6 COUNTRIES"
+      pageKicker={pageKicker}
       pageTitle="All users"
       pageSub="Everyone who has an account, paid or not. Sorted by what they are worth to you, not by when they joined."
       pagePrimary="+ Invite user"
       pageSecondary="Export CSV"
-      onPrimary={() => openDrawer("message")}
+      onPrimary={() => openUserEditor({ rawData: {} })}
       pageStats={stats}
       pageAdvice="9 users have never opened a feature since registering. They are the cheapest churn you will ever prevent — one message each."
       pageAdviceDone="Message the 9"
@@ -91,7 +126,7 @@ export default function UserDetails() {
         status: "extra",
         label: "NEW FEATURE - INACTIVE USER CHURN NUDGE ADVICE NOT IN REQUIREMENT",
       }}
-      filters={["All", "Paying", "On trial", "Beta testers", "At risk", "Never active"]}
+      filters={USER_FILTERS}
       cols={["NAME", "TIER", "MARKET", "LAST ACTIVE", "STATUS"]}
       rows={rows}
       isLoading={loading}

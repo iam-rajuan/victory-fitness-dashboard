@@ -94,6 +94,17 @@ export const getAdminUser = async (userId, { signal } = {}) => {
   }
 };
 
+export const createAdminUser = async (payload) => {
+  try {
+    return await adminApiRequest("/admin/users", {
+      method: "POST",
+      body: payload,
+    });
+  } catch (error) {
+    throw new Error(createFriendlyUserManagementError(error, "Failed to create user"));
+  }
+};
+
 export const updateAdminUser = async (userId, payload) => {
   try {
     return await adminApiRequest(`/admin/users/${userId}`, {

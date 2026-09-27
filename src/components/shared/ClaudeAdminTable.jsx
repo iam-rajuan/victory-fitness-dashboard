@@ -29,6 +29,11 @@ const ALIAS = {
 };
 
 const PAGE_MATCH = {
+  "All users|Paying": (r) => Boolean(r.raw?.isPaying || r.raw?.rawData?.isPaying),
+  "All users|On trial": (r) => Boolean(r.raw?.isTrial || r.raw?.rawData?.isTrial || r.raw?.rawData?.trial_type),
+  "All users|Beta testers": (r) => Boolean(r.raw?.isBetaTester || r.raw?.rawData?.isBetaTester || r.raw?.rawData?.is_beta_tester),
+  "All users|At risk": (r) => Boolean(r.raw?.isAtRisk || r.raw?.rawData?.isAtRisk),
+  "All users|Never active": (r) => Boolean(r.raw?.neverActive || r.raw?.rawData?.neverActive),
   "Audit Logs|Broadcasts": (r) => /broadcast/i.test(r.c || ""),
   "Audit Logs|Pricing": (r) => /price|refund/i.test(r.c || ""),
   "Audit Logs|Content": (r) => /workout|challenge|masterclass|quote/i.test(r.c || ""),
