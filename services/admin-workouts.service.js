@@ -90,15 +90,16 @@ export const previewAdminWorkoutSync = async (payload = {}) => {
   }
 };
 
-export const uploadAdminWorkoutVideo = async (file) => {
+export const uploadAdminWorkoutVideo = async (file, uploadType = "WORKOUT_VIDEO") => {
   const contentType = String(file?.type || "video/mp4").trim() || "video/mp4";
   const fileName = String(file?.name || "workout-video.mp4").trim() || "workout-video.mp4";
+  const uploadLabel = uploadType === "MASTERCLASS_VIDEO" ? "masterclass video" : "workout video";
 
   try {
     const directUpload = await adminApiRequest("/admin/uploads/presign", {
       method: "POST",
       body: {
-        uploadType: "WORKOUT_VIDEO",
+        uploadType,
         contentType,
         fileName,
       },
@@ -118,7 +119,7 @@ export const uploadAdminWorkoutVideo = async (file) => {
 
     return directUpload.fileUrl;
   } catch (error) {
-    throw new Error(createFriendlyWorkoutError(error, "Failed to upload workout video"));
+    throw new Error(createFriendlyWorkoutError(error, `Failed to upload ${uploadLabel}`));
   }
 };
 

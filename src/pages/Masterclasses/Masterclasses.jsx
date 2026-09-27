@@ -1,73 +1,166 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
-import { listAdminWorkouts } from "../../../services/admin-workouts.service";
+import {
+  deleteAdminMasterclass,
+  listAdminMasterclasses,
+} from "../../../services/admin-content.service";
 
-const BASE_ROWS = [
-  { a: "Test Version One", b: "Nutrition", c: "60 min", d: "42", e: "Live", tone: "good", id: "m1" },
-  { a: "Zone 2 Fundamentals", b: "Science", c: "15 min", d: "88", e: "Live", tone: "good", id: "m2" },
-  { a: "Post-Workout Nutrition", b: "Nutrition", c: "18 min", d: "18", e: "Live", tone: "good", id: "m3" },
-  { a: "Sleep and Recovery", b: "Science", c: "24 min", d: "0", e: "Draft", tone: "warn", id: "m4" },
-  { a: "Protein Without Meat", b: "Nutrition", c: "22 min", d: "0", e: "Draft", tone: "warn", id: "m5" },
-];
+const statusTone = (status) => (String(status).toLowerCase() === "live" ? "good" : "warn");
+
+const normalizeDuration = (value) => {
+  const raw = String(value || "").trim();
+  if (!raw) return "Not set";
+  if (/min$/i.test(raw)) return raw;
+  if (/^\d+$/.test(raw)) return `${raw} min`;
+  const timeMatch = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (timeMatch) {
+    return `${Math.max(1, Number(timeMatch[1]))} min`;
+  }
+  return raw;
+};
+
+const buildRow = (item) => {
+  const status = String(item.status || "").trim() || (item.videoUrl ? "Live" : "Draft");
+  return {
+    id: item.id,
+    a: item.title || "Untitled masterclass",
+    b: item.category || "Uncategorised",
+    c: normalizeDuration(item.duration),
+    d: String(Number(item.watchCount || 0)),
+    e: status,
+    tone: statusTone(status),
+    rawData: item,
+  };
+};
+
+const buildDrawerPayload = (row, onSaved) => {
+  if (!row) {
+    return {
+      onSaved,
+      PURPOSE: "Strength",
+      LENGTH: "15 min",
+      EQUIPMENT: "Bodyweight",
+      LEVEL: "Intermediate",
+      "TIER ACCESS": "Gold and up",
+      MOVEMENTS: [],
+      videoSource: "VIMEO",
+    };
+  }
+  const item = row?.raw?.rawData || row?.rawData || row || {};
+  return {
+    id: item.id,
+    TITLE: item.title || row?.a || "",
+    PURPOSE: item.category || row?.b || "Strength",
+    LENGTH: item.duration || row?.c || "",
+    STATUS: item.status || row?.e || "Draft",
+    EQUIPMENT: item.equipment || "Bodyweight",
+    LEVEL: item.level || "Intermediate",
+    "TIER ACCESS": item.tierAccess || "Gold and up",
+    MOVEMENTS: Array.isArray(item.movements) ? item.movements : [],
+    "COACH NOTE": item.coachNote || item.description || "",
+    videoSource: item.videoSource || "VIMEO",
+    videoUrl: item.videoUrl || "",
+    vimeoId: String(item.videoUrl || "").match(/vimeo(?:\.com\/|\.com\/video\/)(\d+)/)?.[1] || "",
+    "AUDIO URL": item.audioUrl || "",
+    DESCRIPTION: item.description || "",
+    "EDUCATIONAL CONTENT": item.educationalContent || "",
+    "THUMBNAIL URL": item.thumbnailUrl || "",
+    WATCHED: String(Number(item.watchCount || row?.d || 0)),
+    "FINISH RATE": String(Number(item.finishRatePct || 0)),
+    "RETENTION LIFT": String(Number(item.retentionLiftPoints || 0)),
+    rawData: item,
+    onSaved,
+  };
+};
 
 export default function Masterclasses() {
   const { openDrawer, showToast } = useAdminDrawer();
   const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState(BASE_ROWS);
+  const [rows, setRows] = useState([]);
+
+  const loadMasterclasses = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await listAdminMasterclasses();
+      const items = Array.isArray(data?.items) ? data.items : [];
+      setRows(items.map(buildRow));
+    } catch (error) {
+      showToast(`Failed: ${error?.message || "Could not load masterclasses."}`);
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
 
   useEffect(() => {
-    listAdminWorkouts()
-      .then((data) => {
-        const list = Array.isArray(data) ? data : data?.workouts || [];
-        const mc = list.filter((w) => w.type === "MASTERCLASS" || w.category === "Masterclass");
-        if (mc.length > 0) {
-          setRows(
-            mc.map((w) => ({
-              id: w._id || w.id,
-              a: w.title,
-              b: w.category || "Science",
-              c: `${w.duration || 20} min`,
-              d: String(w.viewsCount || 0),
-              e: w.isPublished ? "Live" : "Draft",
-              tone: w.isPublished ? "good" : "warn",
-              rawData: w,
-            }))
-          );
-        }
-      })
-      .catch(() => null)
-      .finally(() => setLoading(false));
-  }, []);
+    loadMasterclasses();
+  }, [loadMasterclasses]);
+
+  const stats = useMemo(() => {
+    const liveRows = rows.filter((row) => String(row.e).toLowerCase() === "live");
+    const watched = rows.reduce((sum, row) => sum + Number(row.rawData?.watchCount || 0), 0);
+    const finishRows = rows.filter((row) => Number(row.rawData?.finishRatePct || 0) > 0);
+    const liftRows = rows.filter((row) => Number(row.rawData?.retentionLiftPoints || 0) !== 0);
+    const avgFinish = finishRows.length
+      ? Math.round(finishRows.reduce((sum, row) => sum + Number(row.rawData.finishRatePct || 0), 0) / finishRows.length)
+      : 0;
+    const avgLift = liftRows.length
+      ? Math.round(liftRows.reduce((sum, row) => sum + Number(row.rawData.retentionLiftPoints || 0), 0) / liftRows.length)
+      : 0;
+    const liveCategories = [...new Set(liveRows.map((row) => row.b).filter(Boolean))].join(", ") || "No live categories";
+
+    return [
+      { k: "LIVE", v: String(liveRows.length), note: liveCategories },
+      { k: "WATCHED", v: String(watched), note: "Sessions started" },
+      { k: "FINISH RATE", v: `${avgFinish}%`, note: finishRows.length ? "Average from backend" : "No completion data yet" },
+      { k: "RETENTION LIFT", v: `${avgLift >= 0 ? "+" : ""}${avgLift} pts`, note: liftRows.length ? "Backend retention signal" : "No retention data yet" },
+    ];
+  }, [rows]);
+
+  const pageKicker = `${rows.filter((row) => String(row.e).toLowerCase() === "live").length} LIVE · BACKEND`;
+
+  const openMasterclassDrawer = (row = null) => {
+    openDrawer("masterclass", buildDrawerPayload(row, loadMasterclasses));
+  };
+
+  const handleDelete = async (row) => {
+    const confirmed = window.confirm(`Delete "${row.a}" from masterclasses?`);
+    if (!confirmed) return;
+    try {
+      await deleteAdminMasterclass(row.id);
+      await loadMasterclasses();
+      showToast(`Masterclass "${row.a}" deleted.`);
+    } catch (error) {
+      showToast(`Failed: ${error?.message || "Could not delete masterclass."}`);
+    }
+  };
 
   return (
     <ClaudeAdminTable
-      pageKicker="3 LIVE · VIMEO"
+      pageKicker={pageKicker}
       pageTitle="Masterclasses"
       pageSub="Long-form teaching from Victor. Gold and above. Members who watch one retain noticeably better than those who never do."
       pagePrimary="+ Add masterclass"
       pageSecondary="Import from Vimeo"
-      onPrimary={() => openDrawer("workout")}
-      onSecondary={() => openDrawer("vimeo")}
-      pageStats={[
-        { k: "LIVE", v: "3", note: "Nutrition, Science, Recovery" },
-        { k: "WATCHED", v: "148", note: "Sessions started" },
-        { k: "FINISH RATE", v: "54%", note: "Drops sharply past 30 min" },
-        { k: "RETENTION LIFT", v: "+19 pts", note: "Watchers vs non-watchers" },
-      ]}
-      pageAdvice="Only three are live and none has been announced since May. A masterclass is the cheapest Platinum justification you have."
+      onPrimary={() => openMasterclassDrawer()}
+      onSecondary={() =>
+        openDrawer("masterclass", {
+          ...buildDrawerPayload(null, loadMasterclasses),
+          "VIDEO SOURCE": "VIMEO",
+        })
+      }
+      pageStats={stats}
+      pageAdvice="Only live masterclasses are visible to members. Keep drafts until the video, lesson copy and thumbnail are ready."
       pageAdviceDone="Announce one to Gold"
       onAdvice={() => openDrawer("broadcast", { TARGET: "Gold" })}
       filters={["All", "Nutrition", "Science", "Training", "Draft"]}
       cols={["TITLE", "CATEGORY", "LENGTH", "WATCHED", "STATUS"]}
       rows={rows}
       isLoading={loading}
-      onEditRow={(row) => openDrawer("workout", { TITLE: row.a, PURPOSE: row.b })}
-      onDeleteRow={(row) => {
-        setRows((prev) => prev.filter((r) => r.id !== row.id));
-        showToast(`Masterclass "${row.a}" removed.`);
-      }}
-      onRowClick={(row) => openDrawer("workout", { TITLE: row.a, PURPOSE: row.b })}
+      onEditRow={openMasterclassDrawer}
+      onDeleteRow={handleDelete}
+      onRowClick={openMasterclassDrawer}
     />
   );
 }

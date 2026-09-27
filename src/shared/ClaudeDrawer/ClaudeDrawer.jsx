@@ -124,6 +124,27 @@ const DRAWER_CONFIGS = {
       { k: "COACH NOTE", type: "input", initial: "Keep the shoulders down on the press. Stop two reps short of failure.", hint: "shown before the first set" },
     ],
   },
+  masterclass: {
+    kicker: "WORKOUT EDITOR",
+    title: "Edit workout",
+    sub: "Every field here is something the Train screen reads. Purpose, length and equipment are the three filters members actually use — a workout without them is invisible.",
+    mediaLabel: "VIDEO SOURCE",
+    mediaKinds: ["Vimeo ID", "Upload file", "YouTube"],
+    mediaHint: "vimeo.com/912… · 360p fallback for 3G",
+    cta: "Save and publish",
+    alt: "Save draft",
+    note: "Members filter by purpose, then by time. If you leave either blank this workout never appears in a filtered list — only in search.",
+    fields: [
+      { k: "TITLE", type: "text", initial: "New workout", hint: "shown on the card" },
+      { k: "PURPOSE", type: "chips", initial: "Mobility", options: ["Strength", "Mobility", "Core", "Conditioning", "Recovery", "Lower body", "Upper body"] },
+      { k: "LENGTH", type: "chips", initial: "15 min", options: ["10 min", "15 min", "25 min", "38 min", "45 min", "60 min"] },
+      { k: "EQUIPMENT", type: "chips", initial: "Bodyweight", options: ["Bodyweight", "Dumbbells", "Barbell", "Kettlebell", "Pull-up bar", "Bands", "Full gym"] },
+      { k: "LEVEL", type: "chips", initial: "Intermediate", options: ["Beginner", "Intermediate", "Advanced"] },
+      { k: "TIER ACCESS", type: "chips", initial: "All tiers", options: ["All tiers", "Gold and up", "Platinum and up", "Inner Circle"] },
+      { k: "MOVEMENTS", type: "movements", initial: [], hint: "drives the in-session set list" },
+      { k: "COACH NOTE", type: "input", initial: "Keep the shoulders down on the press. Stop two reps short of failure.", hint: "shown before the first set" },
+    ],
+  },
   vimeo: {
     kicker: "IMPORT AND CATEGORISE",
     title: "Import from Vimeo",
@@ -814,6 +835,64 @@ export default function ClaudeDrawer() {
     closeDrawer();
   };
 
+  const saveMasterclass = async (statusOverride = "Live") => {
+    const title = String(formValues.TITLE || "").trim();
+    const source = String(formValues.videoSource || "VIMEO").trim().toUpperCase();
+    const typedVideo = String(formValues.videoUrl || "").trim();
+    const vimeoId = String(formValues.vimeoId || "").replace(/\D/g, "");
+    const videoUrl = typedVideo || (source === "VIMEO" && vimeoId ? `https://vimeo.com/${vimeoId}` : "");
+    if (!title) {
+      throw new Error("Masterclass title is required.");
+    }
+    if (!videoUrl) {
+      throw new Error("Masterclass video URL is required.");
+    }
+    const requestPayload = {
+      title,
+      category: String(formValues.PURPOSE || "Strength").trim(),
+      duration: String(formValues.LENGTH || "Not set").trim(),
+      description: String(formValues["COACH NOTE"] || title).trim(),
+      videoUrl,
+      videoSource: ["VIMEO", "YOUTUBE", "UPLOAD"].includes(source) ? source : "VIMEO",
+      audioUrl: String(formValues["AUDIO URL"] || "").trim(),
+      educationalContent: String(formValues["COACH NOTE"] || "").trim(),
+      thumbnailUrl: String(formValues.thumbnail || payload?.rawData?.thumbnailUrl || "").trim(),
+      status: statusOverride,
+      equipment: String(formValues.EQUIPMENT || "").trim(),
+      level: String(formValues.LEVEL || "").trim(),
+      tierAccess: String(formValues["TIER ACCESS"] || "Gold and up").trim(),
+      coachNote: String(formValues["COACH NOTE"] || "").trim(),
+      movements: (Array.isArray(formValues.MOVEMENTS) ? formValues.MOVEMENTS : [])
+        .map((movement, index) => ({
+          name: String(movement.name || "").trim(),
+          sets: normalizePositiveIntegerInput(movement.sets, "1"),
+          reps: String(movement.reps || "").trim(),
+          load: String(movement.load || "").trim(),
+          equipment: String(movement.equipment || "").trim(),
+          restSeconds: Number(movement.restSeconds || 0),
+          notes: String(movement.notes || "").trim(),
+          order: index,
+        }))
+        .filter((movement) => movement.name),
+      watchCount: Math.max(0, Number(String(formValues.WATCHED || "0").match(/\d+/)?.[0] || 0)),
+      finishRatePct: Math.max(0, Math.min(Number(String(formValues["FINISH RATE"] || "0").match(/\d+/)?.[0] || 0), 100)),
+      retentionLiftPoints: Math.max(
+        -100,
+        Math.min(Number(String(formValues["RETENTION LIFT"] || "0").match(/-?\d+/)?.[0] || 0), 100)
+      ),
+    };
+    const masterclassId = payload?.id;
+    const saved = await adminApiRequest(masterclassId ? `/admin/masterclasses/${masterclassId}` : "/admin/masterclasses", {
+      method: masterclassId ? "PATCH" : "POST",
+      body: requestPayload,
+    });
+    if (typeof payload?.onSaved === "function") {
+      await payload.onSaved(saved);
+    }
+    showToast(`Masterclass "${saved?.title || requestPayload.title}" saved.`);
+    closeDrawer();
+  };
+
   const saveUser = async () => {
     const fullName = String(formValues["FULL NAME"] || "").trim();
     const email = String(formValues.EMAIL || "").trim().toLowerCase();
@@ -857,6 +936,9 @@ export default function ClaudeDrawer() {
 
       if (type === "workout") {
         await saveWorkout("Published");
+        return;
+      } else if (type === "masterclass") {
+        await saveMasterclass("Live");
         return;
       } else if (type === "user") {
         await saveUser();
@@ -911,6 +993,18 @@ export default function ClaudeDrawer() {
       return;
     }
 
+    if (type === "masterclass") {
+      setIsSubmitting(true);
+      try {
+        await saveMasterclass("Draft");
+      } catch (err) {
+        showToast(`Failed: ${err?.message || "Operation could not be completed."}`);
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
     if (type !== "workout") {
       closeDrawer();
       return;
@@ -928,6 +1022,7 @@ export default function ClaudeDrawer() {
   const activeStarter = STARTERS[selectedStarterIdx] || STARTERS[0];
   const siblingCount = STARTERS.filter((x) => x[1] === activeStarter[1]).length;
   const drawerAudit = payload?.audit || config?.audit;
+  const isVideoEditor = type === "workout" || type === "masterclass";
 
   return (
     <div
@@ -982,7 +1077,7 @@ export default function ClaudeDrawer() {
                 <div className="text-[10px] font-medium tracking-[0.14em] text-[#C9943A] uppercase">
                   {config.mediaLabel}
                 </div>
-                {type === "workout" && resolveWorkoutPreviewUrl() && (
+                {isVideoEditor && resolveWorkoutPreviewUrl() && (
                   <span className="text-[9.5px] font-mono tracking-wider font-semibold px-2 py-0.5 rounded-full bg-[#C9943A]/20 text-[#C9943A] border border-[#C9943A]/30">
                     16:9 PREVIEW
                   </span>
@@ -997,7 +1092,7 @@ export default function ClaudeDrawer() {
                     type="button"
                     onClick={() => {
                       setActiveMediaKind(idx);
-                      if (type === "workout") {
+                      if (isVideoEditor) {
                         setFormValues((prev) => ({
                           ...prev,
                           videoSource: idx === 1 ? "UPLOAD" : idx === 2 ? "YOUTUBE" : "VIMEO",
@@ -1015,8 +1110,8 @@ export default function ClaudeDrawer() {
                 ))}
               </div>
 
-              {/* Source inputs for workout videos */}
-              {type === "workout" && (
+              {/* Source inputs for video editors */}
+              {isVideoEditor && (
                 <div className="mb-3">
                   {activeMediaKind === 0 && (
                     <div className="flex items-center gap-2">
@@ -1064,7 +1159,10 @@ export default function ClaudeDrawer() {
                             const durationLabel = formatDurationLabelFromSeconds(durationSeconds);
                             showToast(`Uploading ${file.name}${durationLabel ? ` (${durationLabel})` : ""}...`);
                             try {
-                              const uploadedUrl = await uploadAdminWorkoutVideo(file);
+                              const uploadedUrl = await uploadAdminWorkoutVideo(
+                                file,
+                                type === "masterclass" ? "MASTERCLASS_VIDEO" : "WORKOUT_VIDEO"
+                              );
                               setFormValues((prev) => ({
                                 ...prev,
                                 videoSource: "UPLOAD",
@@ -1112,7 +1210,7 @@ export default function ClaudeDrawer() {
               )}
 
               {/* Video Player / Preview Frame */}
-              {type === "workout" && resolveWorkoutPreviewUrl() ? (
+              {isVideoEditor && resolveWorkoutPreviewUrl() ? (
                 <div
                   className="w-full aspect-video rounded-xl border border-[#F7F3EE]/15 bg-black overflow-hidden shadow-2xl relative flex items-center justify-center"
                   style={{ backgroundColor: "#000000" }}
@@ -1120,7 +1218,7 @@ export default function ClaudeDrawer() {
                   {/player\.vimeo\.com|youtube\.com\/embed/.test(resolveWorkoutPreviewUrl()) ? (
                     <iframe
                       src={resolveWorkoutPreviewUrl()}
-                      title={`${formValues.TITLE || "Workout"} preview`}
+                      title={`${formValues.TITLE || (type === "masterclass" ? "Masterclass" : "Workout")} preview`}
                       allow="autoplay; fullscreen; picture-in-picture"
                       allowFullScreen
                       className="w-full h-full"
@@ -1162,7 +1260,7 @@ export default function ClaudeDrawer() {
                     <div className="w-0 h-0 border-l-[10px] border-l-[#0D0D0D] border-y-[6px] border-y-transparent ml-1" />
                   </div>
                   <span className="text-[11px] font-mono text-[#F7F3EE]/45">
-                    {type === "workout" ? "No video connected yet" : config.mediaHint}
+                    {isVideoEditor ? "No video connected yet" : config.mediaHint}
                   </span>
                 </div>
               )}
