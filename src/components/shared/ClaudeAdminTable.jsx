@@ -102,6 +102,7 @@ export default function ClaudeAdminTable({
   pageAdvice,
   pageAdviceDone,
   onAdvice,
+  adviceAudit,
   rail,
   filters = ["All"],
   cols = ["NAME", "TIER", "MARKET", "LAST ACTIVE", "STATUS"],
@@ -478,53 +479,70 @@ export default function ClaudeAdminTable({
       )}
 
       {/* Actionable Advice Banner (lines 417-423 & 1911-1921) */}
-      {pageAdvice && (
-        <div
-          style={{
-            background: t.cardBg,
-            borderRadius: "20px",
-            borderLeft: "4px solid #B5651D",
-            border: `1px solid ${t.cardBorder}`,
-            boxShadow: t.cardShadow,
-            padding: "18px 20px",
-            marginBottom: "18px",
-            display: "flex",
-            alignItems: "center",
-            gap: "14px",
-            flexWrap: "wrap",
-            boxSizing: "border-box",
-          }}
-        >
-          <div style={{ flex: "1 1 240px", minWidth: "240px" }}>
-            <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".14em", color: "#C9943A", marginBottom: "5px" }}>
-              WHAT TO DO ON THIS PAGE
-            </div>
-            <div style={{ font: "400 14px/1.55 'Inter', sans-serif", color: isDark ? "rgba(247,243,238,.8)" : "rgba(13,43,69,.8)", textWrap: "pretty" }}>
-              {pageAdvice}
-            </div>
-          </div>
+      {pageAdvice && (() => {
+        const adviceCard = (
           <div
-            onClick={handleAdviceClick}
             style={{
-              height: "44px",
-              padding: "0 18px",
-              borderRadius: "12px",
-              boxSizing: "border-box",
-              font: "700 13.5px 'DM Sans', sans-serif",
+              background: t.cardBg,
+              borderRadius: "20px",
+              borderLeft: "4px solid #B5651D",
+              border: `1px solid ${t.cardBorder}`,
+              boxShadow: t.cardShadow,
+              padding: "18px 20px",
+              marginBottom: adviceAudit ? "0" : "18px",
               display: "flex",
               alignItems: "center",
-              cursor: "pointer",
-              flex: "none",
-              userSelect: "none",
-              ...(adviceAcknowledged
-                ? { border: "1.5px solid rgba(95,196,142,.6)", color: "#5FC48E", background: "transparent" }
-                : { background: "#C9943A", color: "#0D0D0D", border: "1.5px solid #C9943A" }),
+              gap: "14px",
+              flexWrap: "wrap",
+              boxSizing: "border-box",
             }}
           >
-            {adviceAcknowledged ? "Done — added to today's queue" : (pageAdviceDone || "Execute recommendation →")}
+            <div style={{ flex: "1 1 240px", minWidth: "240px" }}>
+              <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".14em", color: "#C9943A", marginBottom: "5px" }}>
+                WHAT TO DO ON THIS PAGE
+              </div>
+              <div style={{ font: "400 14px/1.55 'Inter', sans-serif", color: isDark ? "rgba(247,243,238,.8)" : "rgba(13,43,69,.8)", textWrap: "pretty" }}>
+                {pageAdvice}
+              </div>
+            </div>
+            <div
+              onClick={handleAdviceClick}
+              style={{
+                height: "44px",
+                padding: "0 18px",
+                borderRadius: "12px",
+                boxSizing: "border-box",
+                font: "700 13.5px 'DM Sans', sans-serif",
+                display: "flex",
+                alignItems: "center",
+                cursor: "pointer",
+                flex: "none",
+                userSelect: "none",
+                ...(adviceAcknowledged
+                  ? { border: "1.5px solid rgba(95,196,142,.6)", color: "#5FC48E", background: "transparent" }
+                  : { background: "#C9943A", color: "#0D0D0D", border: "1.5px solid #C9943A" }),
+              }}
+            >
+              {adviceAcknowledged ? "Done — added to today's queue" : (pageAdviceDone || "Execute recommendation →")}
+            </div>
           </div>
-        </div>
-      )}
+        );
+
+        if (adviceAudit) {
+          return (
+            <RequirementAuditBoundary
+              auditId={adviceAudit.auditId}
+              status={adviceAudit.status || "extra"}
+              label={adviceAudit.label}
+              className="mb-[18px]"
+            >
+              {adviceCard}
+            </RequirementAuditBoundary>
+          );
+        }
+
+        return adviceCard;
+      })()}
 
       {/* Mobile Mirror Rail (e.g. for Challenges, lines 425-448) */}
       {rail && rail.length > 0 && (

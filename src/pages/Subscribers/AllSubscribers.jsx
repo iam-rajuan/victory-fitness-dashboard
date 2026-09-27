@@ -63,6 +63,11 @@ export default function AllSubscribers() {
       pageAdvice="Five subscribers renew within 14 days and three of them have not trained in a week. A renewal is easiest to save before it is charged."
       pageAdviceDone="Warm up the five"
       onAdvice={() => openDrawer("message", { WHO: "5 subscribers renewing ≤14 days" })}
+      adviceAudit={{
+        auditId: "ADMIN-EXTRA-021",
+        status: "extra",
+        label: "NEW FEATURE - SUBSCRIBER CHURN NUDGE ADVICE NOT IN REQUIREMENT",
+      }}
       filters={["All", "Renewing soon", "At risk", "Yearly", "Monthly", "Lapsed"]}
       cols={["SUBSCRIBER", "TIER", "CYCLE", "RENEWS", "HEALTH"]}
       rows={rows}

@@ -86,6 +86,11 @@ export default function UserDetails() {
       pageAdvice="9 users have never opened a feature since registering. They are the cheapest churn you will ever prevent — one message each."
       pageAdviceDone="Message the 9"
       onAdvice={() => openDrawer("message")}
+      adviceAudit={{
+        auditId: "ADMIN-EXTRA-020",
+        status: "extra",
+        label: "NEW FEATURE - INACTIVE USER CHURN NUDGE ADVICE NOT IN REQUIREMENT",
+      }}
       filters={["All", "Paying", "On trial", "Beta testers", "At risk", "Never active"]}
       cols={["NAME", "TIER", "MARKET", "LAST ACTIVE", "STATUS"]}
       rows={rows}

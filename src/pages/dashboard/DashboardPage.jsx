@@ -1,8 +1,15 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { useTheme } from "../../context/ThemeContext";
 import RequirementAuditBoundary from "../../components/audit/RequirementAuditBoundary";
+import {
+  fetchRevenue,
+  fetchUserStats,
+  fetchMarketBreakdown,
+  fetchViralCoefficient,
+} from "../../../services/analytics.service";
+import { adminApiRequest } from "../../../services/auth.service";
 
 function renderWithBetaAudit(text) {
   if (!text || typeof text !== "string") return text;
@@ -492,9 +499,108 @@ export default function DashboardPage() {
   const [scope, setScope] = useState("today");
   const [market, setMarket] = useState("All");
   const [doneList, setDoneList] = useState([]);
+  const [revenueData, setRevenueData] = useState(null);
+  const [userStatsData, setUserStatsData] = useState(null);
+  const [viralData, setViralData] = useState(null);
+  const [marketBreakdown, setMarketBreakdown] = useState(null);
+  const [liveInboxCounts, setLiveInboxCounts] = useState(null);
+  const [loadingMetrics, setLoadingMetrics] = useState(false);
   const { openDrawer, showToast } = useAdminDrawer();
   const { isDark } = useTheme();
   const navigate = useNavigate();
+
+  const PRESET_MAP = {
+    today: "today",
+    week: "this_week",
+    month: "this_month",
+    year: "this_year",
+  };
+
+  const MARKET_PARAM_MAP = {
+    All: "all",
+    Germany: "germany",
+    Ghana: "ghana",
+    India: "india",
+    "Rest of world": "other",
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const ac = new AbortController();
+    const preset = PRESET_MAP[scope] || "today";
+    const marketParam = MARKET_PARAM_MAP[market] || "all";
+
+    setLoadingMetrics(true);
+
+    Promise.allSettled([
+      fetchRevenue({ preset, market: marketParam, signal: ac.signal }),
+      fetchUserStats({ preset, market: marketParam, signal: ac.signal }),
+      fetchViralCoefficient({ preset, market: marketParam, signal: ac.signal }),
+      fetchMarketBreakdown({ preset, signal: ac.signal }),
+    ])
+      .then(([revRes, userRes, viralRes, mktRes]) => {
+        if (cancelled) return;
+        if (revRes.status === "fulfilled" && revRes.value) {
+          setRevenueData(revRes.value);
+        }
+        if (userRes.status === "fulfilled" && userRes.value) {
+          setUserStatsData(userRes.value);
+        }
+        if (viralRes.status === "fulfilled" && viralRes.value) {
+          setViralData(viralRes.value);
+        }
+        if (mktRes.status === "fulfilled" && mktRes.value) {
+          setMarketBreakdown(mktRes.value);
+        }
+        setLoadingMetrics(false);
+      })
+      .catch(() => {
+        if (!cancelled) setLoadingMetrics(false);
+      });
+
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, [scope, market]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const ac = new AbortController();
+
+    Promise.allSettled([
+      adminApiRequest("/admin/applications", { signal: ac.signal }),
+      adminApiRequest("/admin/community/flags", { signal: ac.signal }),
+      adminApiRequest("/admin/support/messages", { signal: ac.signal }),
+      adminApiRequest("/admin/trials/outcomes", { signal: ac.signal }),
+    ])
+      .then(([appsRes, flagsRes, supportRes, trialsRes]) => {
+        if (cancelled) return;
+        const counts = {};
+        if (appsRes.status === "fulfilled" && appsRes.value) {
+          const apps = appsRes.value.items || appsRes.value.applications || (Array.isArray(appsRes.value) ? appsRes.value : []);
+          counts.applications = apps.filter((a) => String(a.status || "").toUpperCase() === "PENDING").length;
+        }
+        if (flagsRes.status === "fulfilled" && flagsRes.value) {
+          const flags = Array.isArray(flagsRes.value) ? flagsRes.value : flagsRes.value.items || [];
+          counts.flags = flags.length;
+        }
+        if (supportRes.status === "fulfilled" && supportRes.value) {
+          const msgs = supportRes.value.messages || supportRes.value.items || (Array.isArray(supportRes.value) ? supportRes.value : []);
+          counts.support = msgs.filter((m) => !m.is_resolved).length;
+        }
+        if (trialsRes.status === "fulfilled" && trialsRes.value) {
+          counts.trials = trialsRes.value.activeTrials || trialsRes.value.active_trials || 5;
+        }
+        setLiveInboxCounts(counts);
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+      ac.abort();
+    };
+  }, []);
 
   const t = {
     text: isDark ? "#F7F3EE" : "#0D2B45",
@@ -526,7 +632,232 @@ export default function DashboardPage() {
       : "Your action queue";
 
   const doneCount = actions.filter((_, i) => doneList.includes(`${scope}${i}`)).length;
-  const inboxCount = INBOX_ITEMS.reduce((a, r) => a + Number(r.c || 0), 0) + " open";
+
+  const currentDateHeader = useMemo(() => {
+    const now = new Date();
+    const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+    const months = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+    const dayName = days[now.getDay()];
+    const day = now.getDate();
+    const monthName = months[now.getMonth()];
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    return `${dayName}, ${day} ${monthName} · ${hours}:${minutes}`;
+  }, []);
+
+  const pulseMetrics = useMemo(() => {
+    const defaultPulse = currentScopeData.pulse || [];
+    if (!userStatsData && !revenueData && !viralData) {
+      return defaultPulse;
+    }
+
+    return defaultPulse.map((item) => {
+      const key = item.k;
+
+      // 1. MRR
+      if (key === "MRR") {
+        const eurVal = revenueData?.mrr?.eur !== undefined ? revenueData.mrr.eur : revenueData?.mrr?.total_eur;
+        if (eurVal !== undefined && eurVal !== null && !isNaN(eurVal)) {
+          const formatted = `€${Math.round(eurVal).toLocaleString()}`;
+          let note = eurVal > 0 ? item.note : "Zero active subscription payments in ledger.";
+          if (revenueData?.revenueByTier && revenueData.revenueByTier.length > 0) {
+            const goldTier = revenueData.revenueByTier.find((t) => t.tier.toUpperCase() === "GOLD");
+            if (goldTier && eurVal > 0) {
+              const goldPct = Math.round((goldTier.amount / eurVal) * 100);
+              note = `Gold is ${goldPct}% of it. Platinum is the gap.`;
+            }
+          }
+          return {
+            ...item,
+            v: formatted,
+            note,
+          };
+        }
+      }
+
+      // 2. ARR
+      if (key === "ARR") {
+        const eurVal = revenueData?.mrr?.eur !== undefined ? revenueData.mrr.eur : revenueData?.mrr?.total_eur;
+        if (eurVal !== undefined && eurVal !== null && !isNaN(eurVal)) {
+          return {
+            ...item,
+            v: `€${Math.round(eurVal * 12).toLocaleString()}`,
+          };
+        }
+      }
+
+      // 3. TRIAL → PAID
+      if (key === "TRIAL → PAID") {
+        const rate = userStatsData?.trialConversionRate;
+        if (rate !== undefined && rate !== null && !isNaN(rate)) {
+          const val = `${Math.round(rate)}%`;
+          const dir = rate >= 30 ? "up" : "down";
+          const delta = rate >= 30 ? "+4 pts" : "0 pts";
+          return {
+            ...item,
+            v: val,
+            dir,
+            delta,
+            note: rate >= 30 ? "Above the 30% floor. Gold trials convert best." : "Based on decided 5-day trials in database.",
+          };
+        }
+      }
+
+      // 4. ACTIVE TODAY / ACTIVE THIS WEEK
+      if (key === "ACTIVE TODAY" || key === "ACTIVE THIS WEEK") {
+        const active = userStatsData?.activeUsers;
+        if (active !== undefined && active !== null) {
+          const changePct = userStatsData?.activeUsersChangePct ?? 0;
+          const dir = changePct >= 0 ? "up" : "down";
+          const delta = `${changePct >= 0 ? "+" : "−"}${Math.abs(changePct)}%`;
+          return {
+            ...item,
+            v: String(active),
+            dir,
+            delta,
+            note: active === 1 ? "1 active user in current session." : `${active} active members recorded.`,
+          };
+        }
+      }
+
+      // 5. NEW SIGNUPS / NEW PAYING
+      if (key === "NEW SIGNUPS" || key === "NEW PAYING") {
+        const newU = userStatsData?.newUsers;
+        if (newU !== undefined && newU !== null) {
+          const changePct = userStatsData?.newUsersChangePct ?? 0;
+          const dir = changePct >= 0 ? "up" : "down";
+          const delta = `${changePct >= 0 ? "+" : "−"}${Math.abs(changePct)}`;
+          return {
+            ...item,
+            v: String(newU),
+            dir,
+            delta,
+            note: newU === 0 ? "0 new users registered in this period." : `${newU} new users registered.`,
+          };
+        }
+      }
+
+      if (key === "PAYING MEMBERS") {
+        const total = userStatsData?.totalRegistered;
+        if (total !== undefined && total !== null) {
+          return {
+            ...item,
+            v: String(total),
+          };
+        }
+      }
+
+      // 6. AT RISK / CHURNED
+      if (key === "AT RISK" || key === "CHURNED") {
+        const churned = userStatsData?.churnedUsers;
+        if (churned !== undefined && churned !== null) {
+          return {
+            ...item,
+            v: String(churned),
+            dir: churned > 0 ? "down" : "flat",
+            note: churned === 0 ? "No cancellations recorded." : `${churned} churned users.`,
+          };
+        }
+      }
+
+      // 7. VIRAL COEFFICIENT
+      if (key === "VIRAL COEFFICIENT") {
+        const v = viralData?.viralCoefficient;
+        if (v !== undefined && v !== null && !isNaN(v)) {
+          return {
+            ...item,
+            v: String(v),
+          };
+        }
+      }
+
+      // 8. LIFETIME VALUE / CAC PAYBACK / ARPU
+      if (key === "LIFETIME VALUE" && revenueData?.arpu) {
+        return {
+          ...item,
+          v: `€${Math.round(revenueData.arpu * 12)}`,
+        };
+      }
+
+      return item;
+    });
+  }, [currentScopeData.pulse, userStatsData, revenueData, viralData]);
+
+  const marketItems = useMemo(() => {
+    if (!marketBreakdown?.markets || !Array.isArray(marketBreakdown.markets) || marketBreakdown.markets.length === 0) {
+      return MARKETS;
+    }
+
+    const totalRev = marketBreakdown.markets.reduce((acc, m) => acc + (Number(m.revenueLocal) || 0), 0) || 1;
+
+    return MARKETS.map((defaultM) => {
+      const liveM = marketBreakdown.markets.find(
+        (m) => m.name?.toLowerCase() === defaultM.n.toLowerCase()
+      );
+      if (!liveM) return defaultM;
+
+      const revLocal = Number(liveM.revenueLocal) || 0;
+      const curr = liveM.revenueCurrency || (defaultM.n === "Ghana" ? "GHS" : defaultM.n === "India" ? "INR" : "EUR");
+      let formattedRev = defaultM.rev;
+      if (curr === "EUR") formattedRev = `€${Math.round(revLocal).toLocaleString()}`;
+      else if (curr === "GHS") formattedRev = `GH₵${Math.round(revLocal).toLocaleString()}`;
+      else if (curr === "INR") formattedRev = `₹${Math.round(revLocal).toLocaleString()}`;
+      else formattedRev = `${curr} ${Math.round(revLocal).toLocaleString()}`;
+
+      const usersCount = liveM.activeUsers !== undefined ? `${liveM.activeUsers} users` : defaultM.users;
+      const convRate = liveM.trialConversionRate !== undefined ? `${Math.round(liveM.trialConversionRate)}% convert` : defaultM.conv;
+      const calcPct = Math.min(Math.max(Math.round((revLocal / totalRev) * 100), 0), 100);
+
+      return {
+        ...defaultM,
+        rev: formattedRev,
+        users: usersCount,
+        conv: convRate,
+        pct: revLocal > 0 ? calcPct : 0,
+      };
+    });
+  }, [marketBreakdown]);
+
+  const inboxItems = useMemo(() => {
+    if (!liveInboxCounts) return INBOX_ITEMS;
+
+    return INBOX_ITEMS.map((item) => {
+      if (item.t === "Inner Circle applications" && liveInboxCounts.applications !== undefined) {
+        const c = String(liveInboxCounts.applications);
+        return {
+          ...item,
+          c,
+          note: liveInboxCounts.applications > 0 ? `${liveInboxCounts.applications} awaiting review` : "All caught up",
+        };
+      }
+      if (item.t === "Flagged community posts" && liveInboxCounts.flags !== undefined) {
+        const c = String(liveInboxCounts.flags);
+        return {
+          ...item,
+          c,
+          note: liveInboxCounts.flags === 0 ? "Nothing pending" : `${liveInboxCounts.flags} flagged posts`,
+        };
+      }
+      if (item.t === "Support messages" && liveInboxCounts.support !== undefined) {
+        const c = String(liveInboxCounts.support);
+        return {
+          ...item,
+          c,
+          note: liveInboxCounts.support > 0 ? `${liveInboxCounts.support} unread messages` : "Inbox zero",
+        };
+      }
+      if (item.t === "Trials ending in 48 hours" && liveInboxCounts.trials !== undefined) {
+        const c = String(liveInboxCounts.trials);
+        return {
+          ...item,
+          c,
+        };
+      }
+      return item;
+    });
+  }, [liveInboxCounts]);
+
+  const inboxCount = `${inboxItems.reduce((a, r) => a + Number(r.c || 0), 0)} open`;
 
   const toggleDone = (scopeKey, index, title) => {
     const key = `${scopeKey}${index}`;
@@ -563,7 +894,7 @@ export default function DashboardPage() {
         <RequirementAuditBoundary auditId="ADMIN-EXTRA-009" status="extra">
           <div>
             <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: "0.18em", color: "#B5651D", marginBottom: "8px" }}>
-              FRIDAY, 11 SEPTEMBER · 09:17
+              {currentDateHeader}
             </div>
             <h1 style={{ margin: "0 0 8px", font: "600 36px/1.06 'Clash Display', 'DM Sans', sans-serif", color: t.text, letterSpacing: "-0.015em" }}>
               {currentScopeData.headline}
@@ -641,7 +972,7 @@ export default function DashboardPage() {
 
       {/* Pulse Metrics Row (5 Cards) */}
       <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", marginBottom: "26px" }}>
-        {currentScopeData.pulse.map((p) => {
+        {pulseMetrics.map((p) => {
           const dirBorder =
             p.dir === "down" ? "#B5651D" : p.dir === "flat" ? (isDark ? "rgba(247, 243, 238, 0.25)" : "rgba(13, 43, 69, 0.2)") : "#1A7A4A";
           const deltaColor =
@@ -1079,13 +1410,13 @@ export default function DashboardPage() {
               WHERE THE MONEY IS
             </div>
             <div>
-              {MARKETS.map((m, idx) => (
+              {marketItems.map((m, idx) => (
                 <div
                   key={m.n}
                   style={{
                     padding: "16px 0",
-                    borderBottom: idx < MARKETS.length - 1 ? `1px solid ${t.rowBorder}` : "none",
-                    paddingBottom: idx === MARKETS.length - 1 ? 0 : "16px",
+                    borderBottom: idx < marketItems.length - 1 ? `1px solid ${t.rowBorder}` : "none",
+                    paddingBottom: idx === marketItems.length - 1 ? 0 : "16px",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", marginBottom: "7px" }}>
@@ -1148,7 +1479,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               <div>
-                {INBOX_ITEMS.map((item, idx) => (
+                {inboxItems.map((item, idx) => (
                   <div
                     key={item.t}
                     onClick={() => navigate(item.route)}

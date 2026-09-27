@@ -4,6 +4,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { adminApiRequest } from "../../../services/auth.service";
 import { previewAdminWorkoutSync, syncAdminWorkouts, uploadAdminWorkoutVideo } from "../../../services/admin-workouts.service";
 import ClaudeApplicationDrawer from "./ClaudeApplicationDrawer";
+import RequirementAuditBoundary from "../../components/audit/RequirementAuditBoundary";
 
 function readVideoDurationSeconds(file) {
   return new Promise((resolve) => {
@@ -163,6 +164,11 @@ const DRAWER_CONFIGS = {
     kicker: "DIRECT MESSAGE",
     title: "Message inactive users",
     sub: "Goes out as a WhatsApp message in Ghana and India, push in Germany, the UK and the US. Written once, delivered on each person's clock.",
+    audit: {
+      auditId: "ADMIN-EXTRA-019",
+      status: "extra",
+      label: "NEW FEATURE - DIRECT MESSAGING INACTIVE USERS NOT IN REQUIREMENT",
+    },
     mediaLabel: "ATTACH SOMETHING",
     mediaKinds: ["Text only", "Record a clip", "Upload video"],
     mediaHint: "record from your phone · 60s max · 360p",
@@ -401,6 +407,22 @@ const DRAWER_CONFIGS = {
     ],
   },
 };
+
+function DrawerAuditWrapper({ audit, children }) {
+  if (!audit) {
+    return <div className="flex-1 flex flex-col justify-between">{children}</div>;
+  }
+  return (
+    <RequirementAuditBoundary
+      auditId={audit.auditId}
+      status={audit.status || "extra"}
+      label={audit.label}
+      className="flex-1 flex flex-col justify-between"
+    >
+      <div className="flex-1 flex flex-col justify-between">{children}</div>
+    </RequirementAuditBoundary>
+  );
+}
 
 export default function ClaudeDrawer() {
   const { drawerState, closeDrawer, showToast, openDrawer } = useAdminDrawer();
@@ -858,6 +880,7 @@ export default function ClaudeDrawer() {
 
   const activeStarter = STARTERS[selectedStarterIdx] || STARTERS[0];
   const siblingCount = STARTERS.filter((x) => x[1] === activeStarter[1]).length;
+  const drawerAudit = payload?.audit || config?.audit;
 
   return (
     <div
@@ -877,6 +900,7 @@ export default function ClaudeDrawer() {
         onClick={(e) => e.stopPropagation()}
         role="document"
       >
+        <DrawerAuditWrapper audit={drawerAudit}>
         <div>
           {/* Header */}
           <div className="flex items-start justify-between gap-4 mb-6 pb-4 border-b border-[#F7F3EE]/10">
@@ -1497,6 +1521,7 @@ export default function ClaudeDrawer() {
             {config.alt || "Close"}
           </button>
         </div>
+        </DrawerAuditWrapper>
       </div>
     </div>
   );
