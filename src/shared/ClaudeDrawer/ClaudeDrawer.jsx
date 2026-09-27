@@ -440,7 +440,17 @@ const DRAWER_CONFIGS = {
       { k: "MARKET", type: "chips", initial: "All markets", options: ["All markets", "Germany", "Ghana", "India", "UK", "US"] },
       { k: "PURPOSE", type: "chips", initial: "Announcement", options: ["Announcement", "Offer", "Challenge launch", "Nutrition tip", "Masterclass"] },
       { k: "MESSAGE", type: "input", initial: "Clean Eating Fortnight opens Monday. Fourteen days, whole foods only. I am doing it with you.", hint: "0 / 600 characters" },
-      { k: "OFFER ATTACHED", type: "chips", initial: "None", options: ["None", "20% off Gold, 7 days", "First month free", "Beta price for testers"] },
+      {
+        k: "OFFER ATTACHED",
+        type: "chips",
+        initial: "None",
+        options: ["None", "20% off Gold, 7 days", "First month free", "Beta price for testers"],
+        audit: {
+          auditId: "ADMIN-EXTRA-023",
+          status: "extra",
+          label: "NEW FEATURE - PROMOTIONAL DISCOUNT OFFER ATTACHMENT NOT IN REQUIREMENT",
+        },
+      },
       { k: "PUBLISH", type: "chips", initial: "Now", options: ["Now", "Tonight 19:00", "Monday 08:00"] },
     ],
   },
@@ -458,6 +468,22 @@ function DrawerAuditWrapper({ audit, children }) {
       className="flex-1 flex flex-col justify-between"
     >
       <div className="flex-1 flex flex-col justify-between">{children}</div>
+    </RequirementAuditBoundary>
+  );
+}
+
+function DrawerFieldWrapper({ field, children }) {
+  if (!field?.audit) {
+    return children;
+  }
+  return (
+    <RequirementAuditBoundary
+      auditId={field.audit.auditId}
+      status={field.audit.status || "extra"}
+      label={field.audit.label}
+      className="mb-2.5"
+    >
+      {children}
     </RequirementAuditBoundary>
   );
 }
@@ -1354,13 +1380,13 @@ export default function ClaudeDrawer() {
           {/* Form fields (Obsidian #0D2B45 cards with DM Sans & JetBrains Mono) */}
           <div className="space-y-2.5">
             {(config.fields || []).map((field) => (
+              <DrawerFieldWrapper key={field.k} field={field}>
               <div
-                key={field.k}
                 style={{
                   backgroundColor: "#0D2B45",
                   borderRadius: "15px",
                   padding: "15px 17px",
-                  marginBottom: "9px",
+                  marginBottom: field.audit ? "0" : "9px",
                   boxSizing: "border-box",
                 }}
               >
@@ -1633,6 +1659,7 @@ export default function ClaudeDrawer() {
                   </div>
                 )}
               </div>
+              </DrawerFieldWrapper>
             ))}
           </div>
 

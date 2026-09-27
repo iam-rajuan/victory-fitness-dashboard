@@ -67,6 +67,11 @@ export default function Community() {
       pageAdvice="Silver has one post against Gold's thirteen. A member paying €199 is opening the quietest room in the app — seed three posts a week until it carries itself."
       pageAdviceDone="Seed the Silver feed"
       onAdvice={() => openDrawer("broadcast", { TARGET: "Silver" })}
+      adviceAudit={{
+        auditId: "ADMIN-EXTRA-022",
+        status: "extra",
+        label: "NEW FEATURE - COMMUNITY FEED SEEDING ADVICE NOT IN REQUIREMENT",
+      }}
       filters={["All tiers", "Global", "Silver", "Gold", "Platinum", "Inner Circle", "Flagged"]}
       cols={["AUTHOR", "FEED", "TYPE", "POSTED", "ENGAGEMENT"]}
       rows={rows}
