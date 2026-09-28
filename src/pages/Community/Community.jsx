@@ -30,8 +30,20 @@ const formatPostedAt = (value) => {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 };
 
+const formatBroadcastTiming = (post) => {
+  if (String(post?.publish_status || "").toLowerCase() === "scheduled") {
+    const scheduled = post?.scheduled_at ? new Date(post.scheduled_at) : null;
+    if (scheduled && !Number.isNaN(scheduled.getTime())) {
+      return `Scheduled ${scheduled.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ${scheduled.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`;
+    }
+    return `Scheduled · ${post?.publish_option || "Later"}`;
+  }
+  return formatPostedAt(post?.created_at);
+};
+
 const classifyPostType = (post) => {
   if (post.flagged) return "Flagged";
+  if (post.broadcast_format) return post.broadcast_format;
   if (post.video_url) return "Video";
   if (post.audio_url) return "Voice note";
   if (post.image_url) return "Photo";
@@ -47,7 +59,7 @@ const buildRow = (post) => {
     a: post.author_name || "Member",
     b: FEED_LABELS[String(post.audience || "ALL").toUpperCase()] || "Global",
     c: classifyPostType(post),
-    d: formatPostedAt(post.created_at),
+    d: formatBroadcastTiming(post),
     e: `${cheers} ${cheers === 1 ? "cheer" : "cheers"} · ${comments} comments`,
     tone: post.flagged ? "warn" : cheers > 5 ? "good" : "warn",
     rawData: post,
@@ -61,7 +73,11 @@ const buildBroadcastPayload = (row, onSaved) => {
     "TARGET FEEDS": FEED_LABELS[String(post.audience || "ALL").toUpperCase()] === "Global"
       ? "All tiers"
       : FEED_LABELS[String(post.audience || "ALL").toUpperCase()] || "All tiers",
+    FORMAT: post.broadcast_format || classifyPostType(post),
+    MARKET: post.market || "All markets",
     PURPOSE: classifyPostType(post) === "Text" ? "Announcement" : classifyPostType(post),
+    ...(post.purpose ? { PURPOSE: post.purpose } : {}),
+    PUBLISH: post.publish_option || "Now",
     MESSAGE: post.content || "",
     imageUrl: post.image_url || "",
     videoUrl: post.video_url || "",

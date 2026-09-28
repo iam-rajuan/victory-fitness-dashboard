@@ -562,8 +562,14 @@ export default function ClaudeDrawer() {
         });
       }
       setFormValues(initial);
-      const initialVideoSource = String(initial.videoSource || payload?.videoSource || "VIMEO").toUpperCase();
-      setActiveMediaKind(initialVideoSource === "UPLOAD" ? 1 : initialVideoSource === "YOUTUBE" ? 2 : 0);
+      if (type === "broadcast") {
+        const selectedFormat = String(initial.FORMAT || payload?.FORMAT || "Text").trim();
+        const formatIndex = (config.mediaKinds || []).findIndex((kind) => kind.toLowerCase() === selectedFormat.toLowerCase());
+        setActiveMediaKind(formatIndex >= 0 ? formatIndex : 0);
+      } else {
+        const initialVideoSource = String(initial.videoSource || payload?.videoSource || "VIMEO").toUpperCase();
+        setActiveMediaKind(initialVideoSource === "UPLOAD" ? 1 : initialVideoSource === "YOUTUBE" ? 2 : 0);
+      }
       setSelectedStarterIdx(0);
       setVimeoPreview(null);
     }
@@ -992,9 +998,19 @@ export default function ClaudeDrawer() {
   const buildBroadcastRequestPayload = () => {
     const target = String(formValues["TARGET FEEDS"] || payload?.["TARGET FEEDS"] || "All tiers").trim();
     const audience = target === "All tiers" ? "ALL" : target.toUpperCase().replace(/\s+/g, "_");
+    const selectedFormat = String(
+      formValues.FORMAT ||
+        payload?.FORMAT ||
+        DRAWER_CONFIGS.broadcast.mediaKinds?.[activeMediaKind] ||
+        "Text"
+    ).trim();
     return {
       content: String(formValues.MESSAGE || "").trim(),
       audience: ["ALL", "SILVER", "GOLD", "PLATINUM", "INNER_CIRCLE"].includes(audience) ? audience : "ALL",
+      broadcast_format: selectedFormat,
+      market: String(formValues.MARKET || payload?.MARKET || "All markets").trim(),
+      purpose: String(formValues.PURPOSE || payload?.PURPOSE || "Announcement").trim(),
+      publish_option: String(formValues.PUBLISH || payload?.PUBLISH || "Now").trim(),
       external_video_url: String(formValues.videoUrl || payload?.videoUrl || "").trim() || undefined,
       flagged: typeof payload?.flagged === "boolean" ? payload.flagged : undefined,
       flag_reason: payload?.flag_reason || undefined,
@@ -1192,6 +1208,11 @@ export default function ClaudeDrawer() {
                         setFormValues((prev) => ({
                           ...prev,
                           videoSource: idx === 1 ? "UPLOAD" : idx === 2 ? "YOUTUBE" : "VIMEO",
+                        }));
+                      } else if (type === "broadcast") {
+                        setFormValues((prev) => ({
+                          ...prev,
+                          FORMAT: kind,
                         }));
                       }
                     }}
