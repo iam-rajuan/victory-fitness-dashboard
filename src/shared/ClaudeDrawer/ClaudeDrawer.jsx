@@ -330,7 +330,17 @@ const DRAWER_CONFIGS = {
       { k: "WHAT IT CHANGES", type: "read", initial: "Replaces the MoMo checkout with a direct MTN API call instead of the hosted redirect. Meant to cut the drop-off between wallet prompt and confirmation." },
       { k: "RESULT SO FAR", type: "text", initial: "18 attempts · 3 failures · 0 completions", hint: "the old flow has no completions either" },
       { k: "OWNER", type: "text", initial: "Dev · reviewed by Victor Akko", hint: "changed today" },
-      { k: "ON ROLLBACK", type: "chips", initial: "Notify affected members", options: ["Notify affected members", "Silent rollback"] },
+      {
+        k: "ON ROLLBACK",
+        type: "chips",
+        initial: "Notify affected members",
+        options: ["Notify affected members", "Silent rollback"],
+        audit: {
+          auditId: "ADMIN-EXTRA-034",
+          status: "extra",
+          label: "NOT IN REQUIREMENT - MEMBER ROLLBACK NOTIFICATION DISPATCH",
+        },
+      },
     ],
   },
   newTemplate: {
@@ -354,7 +364,17 @@ const DRAWER_CONFIGS = {
       { k: "MESSAGE", type: "input", initial: "{first_name}, you are {grams} g short with the evening to go. One Greek yoghurt closes it.", hint: "{first_name} and {grams} fill in per member" },
       { k: "WHEN IT FIRES", type: "chips", initial: "16:00 local, if short", options: ["16:00 local, if short", "20:00 local, if short", "Never automatically"] },
       { k: "FREQUENCY CAP", type: "chips", initial: "1 / day", options: ["1 / day", "1 / 2 days", "2 / week", "1 / week"] },
-      { k: "WHO GETS IT", type: "chips", initial: "Gold and up", options: ["All tiers", "Gold and up", "Platinum and up", "Beta testers"] },
+      {
+        k: "WHO GETS IT",
+        type: "chips",
+        initial: "Gold and up",
+        options: ["All tiers", "Gold and up", "Platinum and up", "Beta testers"],
+        audit: {
+          auditId: "ADMIN-EXTRA-035",
+          status: "extra",
+          label: "NOT IN REQUIREMENT - TIER AND BETA AUDIENCE TARGETING FOR TEMPLATES",
+        },
+      },
       { k: "MEMBER CONTROL", type: "read", initial: "Members choose their channel and time themselves and can switch this reminder off. Your cap is the ceiling they cannot exceed; it is not a default they can raise. 214 have it on, 0 have received it." },
       { k: "NEVER SEND", type: "read", initial: "On a day the member has not logged any food, or the day after a missed workout. A nudge about a target they have already abandoned reads as a scold." },
       { k: "APPROVAL", type: "chips", initial: "Approve", options: ["Approve", "Approve for beta only", "Leave unapproved"] },
@@ -491,7 +511,17 @@ const DRAWER_CONFIGS = {
       { k: "AFFECTED", type: "text", initial: "0 existing members · 18 new subscriptions since", hint: "no member was re-charged" },
       { k: "BEFORE", type: "text", initial: "€279 / year · €34 / month" },
       { k: "AFTER", type: "text", initial: "€299 / year · €36 / month" },
-      { k: "RELATED ENTRIES", type: "text", initial: "Price offer created · today 09:12", hint: "same tier" },
+      {
+        k: "RELATED ENTRIES",
+        type: "text",
+        initial: "Price offer created · today 09:12",
+        hint: "same tier",
+        audit: {
+          auditId: "ADMIN-EXTRA-033",
+          status: "extra",
+          label: "NOT IN REQUIREMENT - AUTOMATED CORRELATED AUDIT EVENT TRACKING",
+        },
+      },
     ],
   },
   pricing: {
