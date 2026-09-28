@@ -34,6 +34,7 @@ const PAGE_MATCH = {
   "All users|Beta testers": (r) => Boolean(r.raw?.isBetaTester || r.raw?.rawData?.isBetaTester || r.raw?.rawData?.is_beta_tester),
   "All users|At risk": (r) => Boolean(r.raw?.isAtRisk || r.raw?.rawData?.isAtRisk),
   "All users|Never active": (r) => Boolean(r.raw?.neverActive || r.raw?.rawData?.neverActive),
+  "Community|Flagged": (r) => Boolean(r.raw?.rawData?.flagged || r.raw?.flagged),
   "Audit Logs|Broadcasts": (r) => /broadcast/i.test(r.c || ""),
   "Audit Logs|Pricing": (r) => /price|refund/i.test(r.c || ""),
   "Audit Logs|Content": (r) => /workout|challenge|masterclass|quote/i.test(r.c || ""),

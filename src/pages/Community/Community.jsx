@@ -1,72 +1,155 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { adminApiRequest } from "../../../services/auth.service";
 
-const BASE_ROWS = [
-  { a: "Victor Akko", b: "Global", c: "Announcement", d: "1 hr ago", e: "62 cheers", tone: "good", id: "cm1" },
-  { a: "Lena Meyer", b: "Gold", c: "Photo", d: "3 hrs ago", e: "21 cheers", tone: "good", id: "cm2" },
-  { a: "Anna Reinhardt", b: "Silver", c: "Completion", d: "Today", e: "14 cheers", tone: "good", id: "cm3" },
-  { a: "Test A", b: "Platinum", c: "Challenge invite", d: "9 Sep", e: "0 cheers", tone: "warn", id: "cm4" },
-  { a: "Md Hasan Saon", b: "Gold", c: "Text", d: "8 Sep", e: "4 cheers", tone: "good", id: "cm5" },
-  { a: "test user five", b: "Gold", c: "Challenge invite", d: "8 Sep", e: "1 cheer", tone: "warn", id: "cm6" },
-  { a: "Kofi Mensah", b: "Gold", c: "YouTube link", d: "7 Sep", e: "9 cheers", tone: "good", id: "cm7" },
-  { a: "Member", b: "Global", c: "Text", d: "6 Sep", e: "2 cheers", tone: "warn", id: "cm8" },
-];
+const FEED_LABELS = {
+  ALL: "Global",
+  SILVER: "Silver",
+  GOLD: "Gold",
+  PLATINUM: "Platinum",
+  INNER_CIRCLE: "Inner Circle",
+};
+
+const toAudience = (label) => {
+  const normalized = String(label || "").trim().toUpperCase().replace(/\s+/g, "_");
+  if (normalized === "GLOBAL" || normalized === "ALL_TIERS" || normalized === "ALL") return "ALL";
+  return ["SILVER", "GOLD", "PLATINUM", "INNER_CIRCLE"].includes(normalized) ? normalized : "ALL";
+};
+
+const formatPostedAt = (value) => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return "Unknown";
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes < 60) return `${diffMinutes} min ago`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours} hr${diffHours === 1 ? "" : "s"} ago`;
+  if (diffHours < 48) return "Yesterday";
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+};
+
+const classifyPostType = (post) => {
+  if (post.flagged) return "Flagged";
+  if (post.video_url) return "Video";
+  if (post.audio_url) return "Voice note";
+  if (post.image_url) return "Photo";
+  if (post.is_admin_broadcast) return "Announcement";
+  return "Text";
+};
+
+const buildRow = (post) => {
+  const cheers = Number(post.like_count || 0);
+  const comments = Number(post.comment_count || 0);
+  return {
+    id: post.id,
+    a: post.author_name || "Member",
+    b: FEED_LABELS[String(post.audience || "ALL").toUpperCase()] || "Global",
+    c: classifyPostType(post),
+    d: formatPostedAt(post.created_at),
+    e: `${cheers} ${cheers === 1 ? "cheer" : "cheers"} · ${comments} comments`,
+    tone: post.flagged ? "warn" : cheers > 5 ? "good" : "warn",
+    rawData: post,
+  };
+};
+
+const buildBroadcastPayload = (row, onSaved) => {
+  const post = row?.raw?.rawData || row?.rawData || row || {};
+  return {
+    id: post.id,
+    "TARGET FEEDS": FEED_LABELS[String(post.audience || "ALL").toUpperCase()] === "Global"
+      ? "All tiers"
+      : FEED_LABELS[String(post.audience || "ALL").toUpperCase()] || "All tiers",
+    PURPOSE: classifyPostType(post) === "Text" ? "Announcement" : classifyPostType(post),
+    MESSAGE: post.content || "",
+    imageUrl: post.image_url || "",
+    videoUrl: post.video_url || "",
+    audioUrl: post.audio_url || "",
+    flagged: Boolean(post.flagged),
+    flag_reason: post.flag_reason || "",
+    rawData: post,
+    onSaved,
+  };
+};
 
 export default function Community() {
   const { openDrawer, showToast } = useAdminDrawer();
   const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState(BASE_ROWS);
+  const [rows, setRows] = useState([]);
+  const [total, setTotal] = useState(0);
+
+  const loadCommunity = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await adminApiRequest("/admin/community/posts?limit=100");
+      const posts = Array.isArray(data?.posts) ? data.posts : [];
+      setRows(posts.map(buildRow));
+      setTotal(Number(data?.total || posts.length));
+    } catch (error) {
+      showToast(`Failed: ${error?.message || "Could not load community posts."}`);
+      setRows([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
 
   useEffect(() => {
-    adminApiRequest("/community/posts")
-      .then((data) => {
-        const list = Array.isArray(data) ? data : data?.items || [];
-        if (list.length > 0) {
-          setRows(
-            list.map((p) => ({
-              id: p._id || p.id,
-              a: p.authorName || p.author || "Member",
-              b: p.feedTier || p.tier || "Global",
-              c: p.postType || "Text",
-              d: "Today",
-              e: `${p.cheersCount || p.likesCount || 0} cheers`,
-              tone: (p.cheersCount || 0) > 5 ? "good" : "warn",
-              rawData: p,
-            }))
-          );
-        }
-      })
-      .catch(() => null)
-      .finally(() => setLoading(false));
-  }, []);
+    loadCommunity();
+  }, [loadCommunity]);
 
-  const handleDelete = (row) => {
-    if (window.confirm(`Delete post from ${row.a}?`)) {
-      setRows((prev) => prev.filter((r) => r.id !== row.id));
-      showToast(`Removed post from ${row.a}.`);
+  const stats = useMemo(() => {
+    const cheers = rows.reduce((sum, row) => sum + Number(row.rawData?.like_count || 0), 0);
+    const flagged = rows.filter((row) => row.rawData?.flagged).length;
+    const silver = rows.filter((row) => String(row.rawData?.audience || "").toUpperCase() === "SILVER").length;
+    const feedCount = new Set(rows.map((row) => String(row.rawData?.audience || "ALL").toUpperCase())).size;
+    const silverPct = total > 0 ? Math.round((silver / total) * 100) : 0;
+
+    return [
+      { k: "POSTS", v: String(total), note: `Across ${feedCount || 0} feeds` },
+      { k: "CHEERS", v: String(cheers), note: "Across loaded posts" },
+      { k: "FLAGGED", v: String(flagged), note: flagged ? "Awaiting review" : "Nothing awaiting review" },
+      { k: "SILVER FEED", v: `${silver} ${silver === 1 ? "post" : "posts"}`, note: `${silverPct}% of all activity` },
+    ];
+  }, [rows, total]);
+
+  const handleDelete = async (row) => {
+    const post = row?.raw?.rawData || row?.rawData || row;
+    const confirmed = window.confirm(`Delete post from ${post.author_name || row.a}?`);
+    if (!confirmed) return;
+    try {
+      await adminApiRequest(`/admin/community/posts/${post.id || row.id}`, { method: "DELETE" });
+      await loadCommunity();
+      showToast(`Removed post from ${post.author_name || row.a}.`);
+    } catch (error) {
+      showToast(`Failed: ${error?.message || "Could not delete community post."}`);
     }
   };
 
+  const openBroadcastDrawer = (row = null) => {
+    openDrawer("broadcast", buildBroadcastPayload(row, loadCommunity));
+  };
+
+  const flaggedCount = rows.filter((row) => row.rawData?.flagged).length;
+
   return (
     <ClaudeAdminTable
-      pageKicker="21 POSTS · 5 FEEDS"
+      pageKicker={`${total} POSTS · BACKEND LIVE`}
       pageTitle="Community"
       pageSub="One feed per tier plus a global broadcast. Verified announcements from you carry a badge members can see."
       pagePrimary="New broadcast"
       pageSecondary="Moderation queue"
-      onPrimary={() => openDrawer("broadcast")}
-      onSecondary={() => showToast("Moderation queue clear — 0 flagged items.")}
-      pageStats={[
-        { k: "POSTS", v: "21", note: "Across all feeds" },
-        { k: "CHEERS", v: "184", note: "Best day: challenge announcement" },
-        { k: "FLAGGED", v: "0", note: "Nothing awaiting review" },
-        { k: "SILVER FEED", v: "1 post", note: "5% of all activity" },
-      ]}
+      onPrimary={() => openBroadcastDrawer()}
+      onSecondary={() =>
+        flaggedCount
+          ? showToast(`${flaggedCount} flagged ${flaggedCount === 1 ? "post" : "posts"} shown with the Flagged filter.`)
+          : showToast("Moderation queue clear — 0 flagged items.")
+      }
+      pageStats={stats}
       pageAdvice="Silver has one post against Gold's thirteen. A member paying €199 is opening the quietest room in the app — seed three posts a week until it carries itself."
       pageAdviceDone="Seed the Silver feed"
-      onAdvice={() => openDrawer("broadcast", { TARGET: "Silver" })}
+      onAdvice={() => openDrawer("broadcast", { "TARGET FEEDS": "Silver", onSaved: loadCommunity })}
       adviceAudit={{
         auditId: "ADMIN-EXTRA-022",
         status: "extra",
@@ -76,9 +159,9 @@ export default function Community() {
       cols={["AUTHOR", "FEED", "TYPE", "POSTED", "ENGAGEMENT"]}
       rows={rows}
       isLoading={loading}
-      onEditRow={(row) => openDrawer("broadcast", { HEADLINE: row.a })}
+      onEditRow={openBroadcastDrawer}
       onDeleteRow={handleDelete}
-      onRowClick={(row) => openDrawer("broadcast", { HEADLINE: row.a })}
+      onRowClick={openBroadcastDrawer}
     />
   );
 }

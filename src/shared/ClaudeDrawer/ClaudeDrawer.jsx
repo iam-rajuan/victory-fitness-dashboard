@@ -946,6 +946,35 @@ export default function ClaudeDrawer() {
     closeDrawer();
   };
 
+  const buildBroadcastRequestPayload = () => {
+    const target = String(formValues["TARGET FEEDS"] || payload?.["TARGET FEEDS"] || "All tiers").trim();
+    const audience = target === "All tiers" ? "ALL" : target.toUpperCase().replace(/\s+/g, "_");
+    return {
+      content: String(formValues.MESSAGE || "").trim(),
+      audience: ["ALL", "SILVER", "GOLD", "PLATINUM", "INNER_CIRCLE"].includes(audience) ? audience : "ALL",
+      external_video_url: String(formValues.videoUrl || payload?.videoUrl || "").trim() || undefined,
+      flagged: typeof payload?.flagged === "boolean" ? payload.flagged : undefined,
+      flag_reason: payload?.flag_reason || undefined,
+    };
+  };
+
+  const saveBroadcast = async () => {
+    const requestPayload = buildBroadcastRequestPayload();
+    if (!requestPayload.content) {
+      throw new Error("Broadcast message is required.");
+    }
+    const postId = payload?.id;
+    const saved = await adminApiRequest(postId ? `/admin/community/posts/${postId}` : "/admin/community/broadcast", {
+      method: postId ? "PATCH" : "POST",
+      body: requestPayload,
+    });
+    if (typeof payload?.onSaved === "function") {
+      await payload.onSaved(saved);
+    }
+    showToast(`Broadcast ${postId ? "updated" : "published"}.`);
+    closeDrawer();
+  };
+
   const handleSave = async () => {
     setIsSubmitting(true);
     try {
@@ -991,10 +1020,8 @@ export default function ClaudeDrawer() {
           },
         }).catch(() => null);
       } else if (type === "broadcast") {
-        await adminApiRequest("/admin/content/broadcast", {
-          method: "POST",
-          body: formValues,
-        }).catch(() => null);
+        await saveBroadcast();
+        return;
       }
 
       showToast(`✓ ${config.title} saved successfully.`);
