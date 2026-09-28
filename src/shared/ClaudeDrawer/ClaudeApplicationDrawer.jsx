@@ -36,7 +36,7 @@ const APPLICANT_PROFILES = {
     contactHint: "best time to call: weekday evenings",
     defaultVerdict: "Book a call",
     defaultSlot: "Thu 19:00 CET",
-    slots: ["Thu 19:00 CET", "Thu 20:00 CET", "Mon 19:00 CET", "Send my calendar link"],
+    slots: ["Thu 19:00 CET", "Thu 20:00 CET", "Mon 19:00 CET"],
     draftMessages: {
       "Book a call":
         "Ingrid — read all five, and the restraint answer is the one that decided it. Thursday 19:00 CET works for a call. Thirty minutes, no pitch.",
@@ -82,7 +82,7 @@ const APPLICANT_PROFILES = {
     contactHint: "best time to call: weekend mornings",
     defaultVerdict: "Book a call",
     defaultSlot: "Mon 19:00 CET",
-    slots: ["Thu 19:00 CET", "Thu 20:00 CET", "Mon 19:00 CET", "Send my calendar link"],
+    slots: ["Thu 19:00 CET", "Thu 20:00 CET", "Mon 19:00 CET"],
     draftMessages: {
       "Book a call":
         "Ravi — reviewed your meniscus recovery timeline. Monday 19:00 CET (23:30 IST) works for a call. Thirty minutes, focused purely on your athletic ramp-up.",
@@ -128,7 +128,7 @@ const APPLICANT_PROFILES = {
     contactHint: "best time to call: early mornings GMT",
     defaultVerdict: "Book a call",
     defaultSlot: "Thu 19:00 CET",
-    slots: ["Thu 19:00 CET", "Thu 20:00 CET", "Mon 19:00 CET", "Send my calendar link"],
+    slots: ["Thu 19:00 CET", "Thu 20:00 CET", "Mon 19:00 CET"],
     draftMessages: {
       "Book a call":
         "Nana — call is confirmed for Thursday 19:00 CET (18:00 GMT). Check your calendar for the direct link. Thirty minutes, no pitch.",
@@ -152,7 +152,7 @@ const VERDICT_OPTIONS = [
   "Decline · offer Gold",
 ];
 
-const DEFAULT_SLOTS = ["Thu 19:00 CET", "Thu 20:00 CET", "Mon 19:00 CET", "Send my calendar link"];
+const DEFAULT_SLOTS = ["Thu 19:00 CET", "Thu 20:00 CET", "Mon 19:00 CET"];
 
 export default function ClaudeApplicationDrawer({ isOpen, onClose, payload }) {
   const { showToast } = useAdminDrawer();
@@ -173,16 +173,23 @@ export default function ClaudeApplicationDrawer({ isOpen, onClose, payload }) {
 
     // If custom applicant from API
     if (payload && (payload.a || payload.fullName || payload.rawData)) {
-      const name = payload.a || payload.fullName || payload.rawData?.first_name || "Applicant";
-      const email = payload.b || payload.email || payload.rawData?.email || "";
-      const phone = payload.phone || payload.rawData?.phone_number || "";
-      const country = payload.c || payload.country || "CET";
-      const goal = payload.d || payload.rawData?.goal || "High performance training";
-      const obstacle = payload.rawData?.obstacle || "Past injuries and scheduling inconsistency.";
-      const commitment = payload.rawData?.commitment || "5 hours per week";
-      const investment = payload.rawData?.investment || "Full focus on sustainable progress";
-      const submittedAnswers = Array.isArray(payload.rawData?.question_answers)
-        ? payload.rawData.question_answers
+      const raw = payload.rawData || {};
+      const name =
+        raw.full_name ||
+        payload.a ||
+        payload.fullName ||
+        raw.applicant_user_name ||
+        raw.first_name ||
+        "Applicant";
+      const email = raw.email || payload.email || raw.applicant_user_email || "";
+      const phone = payload.phone || raw.phone_number || "";
+      const country = raw.market || raw.country || raw.applicant_user_country || payload.country || "Not set";
+      const goal = raw.goal || "High performance training";
+      const obstacle = raw.obstacle || "Past injuries and scheduling inconsistency.";
+      const commitment = raw.commitment || "5 hours per week";
+      const investment = raw.investment || "Full focus on sustainable progress";
+      const submittedAnswers = Array.isArray(raw.question_answers)
+        ? raw.question_answers
             .filter((item) => item?.question || item?.answer)
             .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
             .map((item, idx) => ({
@@ -250,16 +257,10 @@ export default function ClaudeApplicationDrawer({ isOpen, onClose, payload }) {
   const handleSelectSlot = (slot) => {
     setSelectedSlot(slot);
     if (verdict === "Book a call") {
-      if (slot === "Send my calendar link") {
-        setMessage(
-          `${profile.name.split(" ")[0]} — read all five answers and would love to connect. Here is my private calendar link to pick a slot that works best: victoryfitness.de/calendar/victor-akko`
-        );
-      } else {
-        const dayTime = slot.replace(" CET", "");
-        setMessage(
-          `${profile.name.split(" ")[0]} — read all five, and the restraint answer is the one that decided it. ${dayTime} CET works for a call. Thirty minutes, no pitch.`
-        );
-      }
+      const dayTime = slot.replace(" CET", "");
+      setMessage(
+        `${profile.name.split(" ")[0]} — read all five, and the restraint answer is the one that decided it. ${dayTime} CET works for a call. Thirty minutes, no pitch.`
+      );
     }
   };
 
@@ -284,14 +285,17 @@ export default function ClaudeApplicationDrawer({ isOpen, onClose, payload }) {
           "Decline · offer Platinum": "REJECTED",
           "Decline · offer Gold": "REJECTED",
         };
-        await updateAdminApplication(applicationId, {
+        const updatedApplication = await updateAdminApplication(applicationId, {
           status: statusMap[verdict] || "REVIEWING",
           admin_notes: `Verdict: ${verdict} | Slot: ${selectedSlot} | Message: ${message}`,
           admin_verdict: verdict,
           call_slot: selectedSlot,
           admin_reply: message,
           notify_applicant: true,
-        }).catch(() => null);
+        });
+        if (typeof payload?.onSaved === "function") {
+          await payload.onSaved(updatedApplication);
+        }
       }
 
       if (verdict === "Book a call") {
@@ -303,8 +307,10 @@ export default function ClaudeApplicationDrawer({ isOpen, onClose, payload }) {
       }
       onClose();
     } catch (err) {
-      showToast(`Action recorded: ${err?.message || "Success"}`);
-      onClose();
+      if (String(err?.message || "").includes("Application saved") && typeof payload?.onSaved === "function") {
+        await payload.onSaved();
+      }
+      showToast(`Failed: ${err?.message || "Could not send applicant email."}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -316,19 +322,24 @@ export default function ClaudeApplicationDrawer({ isOpen, onClose, payload }) {
     try {
       const applicationId = payload?.id || payload?._id || payload?.rawData?._id;
       if (applicationId) {
-        await updateAdminApplication(applicationId, {
+        const updatedApplication = await updateAdminApplication(applicationId, {
           status: "REJECTED",
           admin_notes: `Declined kindly with Platinum referral.`,
           admin_verdict: "Decline kindly",
           admin_reply: message,
           notify_applicant: true,
-        }).catch(() => null);
+        });
+        if (typeof payload?.onSaved === "function") {
+          await payload.onSaved(updatedApplication);
+        }
       }
       showToast(`✓ Application declined kindly. Respectful offer sent to ${profile.name}.`);
       onClose();
-    } catch {
-      showToast(`✓ Application declined kindly for ${profile.name}.`);
-      onClose();
+    } catch (err) {
+      if (String(err?.message || "").includes("Application saved") && typeof payload?.onSaved === "function") {
+        await payload.onSaved();
+      }
+      showToast(`Failed: ${err?.message || "Could not send applicant email."}`);
     } finally {
       setIsSubmitting(false);
     }

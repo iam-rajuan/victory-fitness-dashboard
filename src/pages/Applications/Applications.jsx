@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import InnerCircleQuestionsModal from "./InnerCircleQuestionsModal";
@@ -72,36 +72,191 @@ const normalizeQuestionSet = (data) => ({
       : DEFAULT_QUESTIONS,
 });
 
+const statusLabel = (value) => {
+  const status = String(value || "NEW").trim().toUpperCase();
+  if (status === "NEW") return "Waiting";
+  if (status === "REVIEWING") return "Call booked";
+  if (status === "APPROVED") return "Accepted";
+  if (status === "REJECTED") return "Declined";
+  return status;
+};
+
+const toneForStatus = (value) => {
+  const status = String(value || "NEW").trim().toUpperCase();
+  if (status === "APPROVED" || status === "REVIEWING") return "good";
+  if (status === "REJECTED") return "warn";
+  return "bad";
+};
+
+const marketFromApplication = (application) => {
+  if (!application) return "Not set";
+  const explicit = String(application.country || application.market || "").trim();
+  if (explicit) return explicit;
+  const phone = String(application.phone_number || "").trim();
+  if (phone.startsWith("+49")) return "Germany";
+  if (phone.startsWith("+233")) return "Ghana";
+  if (phone.startsWith("+91")) return "India";
+  if (phone.startsWith("+44")) return "UK";
+  if (phone.startsWith("+1")) return "US";
+  return "Not set";
+};
+
+const waitingLabel = (application) => {
+  if (!application) return "Today";
+  const status = String(application.status || "NEW").trim().toUpperCase();
+  if (status === "REVIEWING" && application.call_slot) return application.call_slot;
+  if (status === "APPROVED" || status === "REJECTED") return "—";
+  const created = application.created_at ? new Date(application.created_at) : null;
+  if (!created || Number.isNaN(created.getTime())) return "Today";
+  const diffDays = Math.max(0, Math.floor((Date.now() - created.getTime()) / 86400000));
+  if (diffDays <= 0) return "Today";
+  return `${diffDays} day${diffDays === 1 ? "" : "s"}`;
+};
+
+const goalFromApplication = (application) => {
+  if (!application) return "Coaching";
+  const firstAnswer = Array.isArray(application.question_answers)
+    ? application.question_answers.find((item) => Number(item.order || 0) === 1)?.answer
+    : "";
+  return String(firstAnswer || application.goal || "Coaching").trim() || "Coaching";
+};
+
+const csvCell = (value) => {
+  const text = value === null || value === undefined ? "" : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+};
+
+const downloadCsv = (filename, rowsToExport) => {
+  const csv = rowsToExport.map((row) => row.map(csvCell).join(",")).join("\r\n");
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+const buildApplicationExportRows = (applications) => {
+  const normalized = applications.filter(Boolean);
+  const maxAnswers = Math.max(
+    0,
+    ...normalized.map((application) =>
+      Array.isArray(application.question_answers) ? application.question_answers.length : 0
+    )
+  );
+  const answerHeaders = Array.from({ length: maxAnswers }, (_, idx) => [
+    `Question ${idx + 1}`,
+    `Answer ${idx + 1}`,
+  ]).flat();
+
+  return [
+    [
+      "Applicant",
+      "Market",
+      "Email",
+      "Phone",
+      "Account email",
+      "Status",
+      "Call slot",
+      "Submitted at",
+      "Goal",
+      "Obstacle",
+      "Investment",
+      "Commitment",
+      "Injury",
+      "Additional notes",
+      "Admin verdict",
+      "Admin reply",
+      ...answerHeaders,
+    ],
+    ...normalized.map((application) => {
+      const answers = Array.isArray(application.question_answers)
+        ? [...application.question_answers].sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+        : [];
+      const answerCells = Array.from({ length: maxAnswers }, (_, idx) => {
+        const item = answers[idx] || {};
+        return [item.question || "", item.answer || ""];
+      }).flat();
+      return [
+        application.full_name || `${application.first_name || ""} ${application.last_name || ""}`.trim(),
+        marketFromApplication(application),
+        application.email || "",
+        application.phone_number || "",
+        application.applicant_user_email || "",
+        statusLabel(application.status),
+        application.call_slot || "",
+        application.created_at || "",
+        application.goal || "",
+        application.obstacle || "",
+        application.investment || "",
+        application.commitment || "",
+        application.injury || "",
+        application.additional_notes || "",
+        application.admin_verdict || "",
+        application.admin_reply || "",
+        ...answerCells,
+      ];
+    }),
+  ];
+};
+
+const mapApplicationRow = (application) => {
+  const fullName =
+    application.full_name ||
+    application.fullName ||
+    `${application.first_name || ""} ${application.last_name || ""}`.trim() ||
+    application.email ||
+    "Applicant";
+  const status = statusLabel(application.status);
+  const market = marketFromApplication(application);
+  const email = String(application.email || "").trim();
+  return {
+    id: application.id || application._id,
+    a: fullName,
+    b: email ? `${market} · ${email}` : market,
+    c: goalFromApplication(application),
+    d: waitingLabel(application),
+    e: status,
+    tone: toneForStatus(application.status),
+    rawData: application,
+  };
+};
+
 export default function Applications() {
   const { openDrawer, showToast } = useAdminDrawer();
   const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState(BASE_ROWS);
+  const [rows, setRows] = useState([]);
   const [questionDraft, setQuestionDraft] = useState(() => normalizeQuestionSet(null));
+  const [summary, setSummary] = useState(null);
   const [isQuestionsModalOpen, setIsQuestionsModalOpen] = useState(false);
   const [savingQuestions, setSavingQuestions] = useState(false);
 
-  useEffect(() => {
-    listAdminApplications()
+  const loadApplications = useCallback(() => {
+    setLoading(true);
+    return listAdminApplications()
       .then((data) => {
         const list = Array.isArray(data) ? data : data?.applications || data?.items || [];
-        if (list.length > 0) {
-          setRows(
-            list.map((a) => ({
-              id: a.id || a._id,
-              a: a.full_name || a.fullName || a.applicantName || `${a.first_name || ""} ${a.last_name || ""}`.trim() || "Applicant",
-              b: a.email || "",
-              c: a.country || "Member",
-              d: `${a.goal || "Coaching"} · ${a.status || "NEW"}`,
-              e: a.status || "NEW",
-              tone: a.status === "APPROVED" ? "good" : a.status === "NEW" ? "bad" : "warn",
-              rawData: a,
-            }))
-          );
-        }
+        setSummary(data?.summary || null);
+        setRows(list.map(mapApplicationRow));
       })
-      .catch(() => null)
+      .catch(() => {
+        setRows([]);
+        setSummary(null);
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  const openApplicationDrawer = useCallback((row) => {
+    if (!row) return;
+    openDrawer("application", { ...row, onSaved: loadApplications });
+  }, [loadApplications, openDrawer]);
+
+  useEffect(() => {
+    loadApplications();
+  }, [loadApplications]);
 
   useEffect(() => {
     getInnerCircleApplicationQuestions()
@@ -149,6 +304,52 @@ export default function Applications() {
     }
   };
 
+  const exportAnswers = async () => {
+    try {
+      const data = await listAdminApplications({ limit: 1000 });
+      const applications = Array.isArray(data) ? data : data?.applications || data?.items || [];
+      if (!applications.length) {
+        showToast("No applications to export.");
+        return;
+      }
+      const today = new Date().toISOString().slice(0, 10);
+      downloadCsv(`inner-circle-applications-${today}.csv`, buildApplicationExportRows(applications));
+      showToast(`✓ Exported ${applications.length} application${applications.length === 1 ? "" : "s"}.`);
+    } catch (error) {
+      showToast(error.message || "Unable to export application answers.");
+    }
+  };
+
+  const pageStats = useMemo(() => {
+    const waitingRows = rows.filter((row) => String(row.rawData?.status || "NEW").toUpperCase() === "NEW");
+    const reviewingRows = rows.filter((row) => String(row.rawData?.status || "").toUpperCase() === "REVIEWING");
+    const accepted = summary?.approvedApplications ?? rows.filter((row) => String(row.rawData?.status || "").toUpperCase() === "APPROVED").length;
+    const declined = summary?.rejectedApplications ?? rows.filter((row) => String(row.rawData?.status || "").toUpperCase() === "REJECTED").length;
+    const oldestWaiting = waitingRows
+      .map((row) => waitingLabel(row.rawData))
+      .find((label) => label && label !== "Today") || "Today";
+    return [
+      { k: "WAITING", v: String(summary?.newApplications ?? waitingRows.length), note: `Oldest: ${oldestWaiting}` },
+      { k: "CALLS BOOKED", v: String(summary?.reviewingApplications ?? reviewingRows.length), note: reviewingRows[0]?.rawData?.call_slot || "No slot selected" },
+      { k: "ACCEPTED", v: String(accepted), note: "Current Inner Circle size" },
+      { k: "DECLINED", v: String(declined), note: "Alternative offer sent" },
+    ];
+  }, [rows, summary]);
+
+  const nextUnbookedRow = useMemo(
+    () => rows.find((row) => String(row.rawData?.status || "NEW").toUpperCase() === "NEW") || null,
+    [rows]
+  );
+  const unbookedCount = useMemo(
+    () => rows.filter((row) => String(row.rawData?.status || "NEW").toUpperCase() === "NEW").length,
+    [rows]
+  );
+  const bookCallStatus = unbookedCount > 0
+    ? `${unbookedCount} waiting for call`
+    : rows.length > 0
+      ? "Call booked for everyone"
+      : "No applications yet";
+
   return (
     <div>
       <ClaudeAdminTable
@@ -158,55 +359,76 @@ export default function Applications() {
         pagePrimary="Book a call"
         pageSecondary="Export answers"
         extraHeaderActions={
-          <button
-            type="button"
-            onClick={() => setIsQuestionsModalOpen(true)}
-            style={{
-              height: "44px",
-              padding: "0 18px",
-              borderRadius: "12px",
-              boxSizing: "border-box",
-              border: "1.5px solid rgba(201, 148, 58, 0.4)",
-              background: "rgba(201, 148, 58, 0.08)",
-              color: "#C9943A",
-              font: "700 13.5px 'DM Sans', sans-serif",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              cursor: "pointer",
-              userSelect: "none",
-              transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(201, 148, 58, 0.16)";
-              e.currentTarget.style.borderColor = "#C9943A";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(201, 148, 58, 0.08)";
-              e.currentTarget.style.borderColor = "rgba(201, 148, 58, 0.4)";
-            }}
-          >
-            <span style={{ fontSize: "14px", lineHeight: 1 }}>✎</span>
-            <span>Question set</span>
-          </button>
+          <>
+            <div
+              style={{
+                height: "44px",
+                padding: "0 12px",
+                borderRadius: "12px",
+                boxSizing: "border-box",
+                border: unbookedCount > 0 ? "1.5px solid rgba(201, 148, 58, 0.28)" : "1.5px solid rgba(95, 196, 142, 0.38)",
+                background: unbookedCount > 0 ? "rgba(201, 148, 58, 0.06)" : "rgba(95, 196, 142, 0.1)",
+                color: unbookedCount > 0 ? "#C9943A" : "#5FC48E",
+                font: "700 12px 'DM Sans', sans-serif",
+                display: "flex",
+                alignItems: "center",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {bookCallStatus}
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsQuestionsModalOpen(true)}
+              style={{
+                height: "44px",
+                padding: "0 18px",
+                borderRadius: "12px",
+                boxSizing: "border-box",
+                border: "1.5px solid rgba(201, 148, 58, 0.4)",
+                background: "rgba(201, 148, 58, 0.08)",
+                color: "#C9943A",
+                font: "700 13.5px 'DM Sans', sans-serif",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                cursor: "pointer",
+                userSelect: "none",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(201, 148, 58, 0.16)";
+                e.currentTarget.style.borderColor = "#C9943A";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(201, 148, 58, 0.08)";
+                e.currentTarget.style.borderColor = "rgba(201, 148, 58, 0.4)";
+              }}
+            >
+              <span style={{ fontSize: "14px", lineHeight: 1 }}>✎</span>
+              <span>Question set</span>
+            </button>
+          </>
         }
-        onPrimary={() => openDrawer("application", rows[0])}
-        pageStats={[
-          { k: "WAITING", v: "2", note: "Oldest: 4 days" },
-          { k: "CALLS BOOKED", v: "1", note: "Thursday 19:00 CET" },
-          { k: "ACCEPTED", v: "4", note: "Current Inner Circle size" },
-          { k: "DECLINED", v: "3", note: "All pointed at Platinum instead" },
-        ]}
-        pageAdvice="Two applications have been waiting four days. The screen promises a reply within three — the oldest one is already past that."
+        onPrimary={() => {
+          if (nextUnbookedRow) {
+            openApplicationDrawer(nextUnbookedRow);
+            return;
+          }
+          showToast(rows.length > 0 ? "✓ Call booked for everyone." : "No applications to book.");
+        }}
+        onSecondary={exportAnswers}
+        pageStats={pageStats}
+        pageAdvice={`${pageStats[0].v} ${pageStats[0].v === "1" ? "application is" : "applications are"} waiting for a decision. Open the oldest one, read the answers, then send the applicant a real reply.`}
         pageAdviceDone="Read them now"
-        onAdvice={() => openDrawer("application", rows[0])}
+        onAdvice={() => openApplicationDrawer(nextUnbookedRow || rows[0])}
         filters={["All", "Waiting", "Call booked", "Accepted", "Declined"]}
         cols={["APPLICANT", "MARKET", "GOAL", "WAITING", "STATUS"]}
         rows={rows}
         isLoading={loading}
-        onEditRow={(row) => openDrawer("application", row)}
+        onEditRow={openApplicationDrawer}
         onDeleteRow={(row) => showToast(`Archived application from ${row.a}.`)}
-        onRowClick={(row) => openDrawer("application", row)}
+        onRowClick={openApplicationDrawer}
       />
 
       <InnerCircleQuestionsModal
