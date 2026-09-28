@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { listAdminHomepageQuotes, replaceAdminHomepageQuotes } from "../../../services/admin-content.service";
-import RequirementAuditBoundary from "../../components/audit/RequirementAuditBoundary";
 
 const BASE_ROWS = [
   { a: "Every rep is a reminder that growth takes patience.", b: "Victor Akko", c: "Today", d: "11 days", e: "Live", tone: "good", id: "q1" },
@@ -47,32 +46,30 @@ export default function Homepage() {
   };
 
   return (
-    <RequirementAuditBoundary auditId="ADMIN-EXTRA-002" status="extra">
-      <ClaudeAdminTable
-        pageKicker="APP HOME SCREEN"
-        pageTitle="Daily inspiration"
-        pageSub="One quote is live on every member's home screen at a time. Set live, or delete — the change reaches the app immediately."
-        pagePrimary="+ Add quote"
-        pageSecondary="Shuffle daily"
-        onPrimary={() => openDrawer("quote")}
-        onSecondary={() => showToast("Shuffled daily rotation")}
-        pageStats={[
-          { k: "IN LIBRARY", v: "7", note: "All by Victor Akko" },
-          { k: "LIVE NOW", v: "1", note: "Unchanged for 11 days" },
-          { k: "SEEN TODAY", v: "38", note: "Every home-screen open" },
-          { k: "ROTATION", v: "Manual", note: "No automatic schedule" },
-        ]}
-        pageAdvice="The same quote has been live for eleven days. Members who open the app daily have read it eleven times."
-        pageAdviceDone="Set a new one live"
-        onAdvice={() => openDrawer("quote", { "THE QUOTE": "Consistency is what transforms average into excellence." })}
-        filters={["All", "Live", "Unused"]}
-        cols={["QUOTE", "AUTHOR", "LAST LIVE", "TIMES USED", "STATUS"]}
-        rows={rows}
-        isLoading={loading}
-        onEditRow={(row) => openDrawer("quote", { "THE QUOTE": row.a, AUTHOR: row.b })}
-        onDeleteRow={handleDelete}
-        onRowClick={(row) => openDrawer("quote", { "THE QUOTE": row.a, AUTHOR: row.b })}
-      />
-    </RequirementAuditBoundary>
+    <ClaudeAdminTable
+      pageKicker="APP HOME SCREEN"
+      pageTitle="Daily inspiration"
+      pageSub="One quote is live on every member's home screen at a time. Set live, or delete — the change reaches the app immediately."
+      pagePrimary="+ Add quote"
+      pageSecondary="Shuffle daily"
+      onPrimary={() => openDrawer("quote")}
+      onSecondary={() => showToast("Shuffled daily rotation")}
+      pageStats={[
+        { k: "IN LIBRARY", v: "7", note: "All by Victor Akko" },
+        { k: "LIVE NOW", v: "1", note: "Unchanged for 11 days" },
+        { k: "SEEN TODAY", v: "38", note: "Every home-screen open" },
+        { k: "ROTATION", v: "Manual", note: "No automatic schedule" },
+      ]}
+      pageAdvice="The same quote has been live for eleven days. Members who open the app daily have read it eleven times."
+      pageAdviceDone="Set a new one live"
+      onAdvice={() => openDrawer("quote", { "THE QUOTE": "Consistency is what transforms average into excellence." })}
+      filters={["All", "Live", "Unused"]}
+      cols={["QUOTE", "AUTHOR", "LAST LIVE", "TIMES USED", "STATUS"]}
+      rows={rows}
+      isLoading={loading}
+      onEditRow={(row) => openDrawer("quote", { "THE QUOTE": row.a, AUTHOR: row.b })}
+      onDeleteRow={handleDelete}
+      onRowClick={(row) => openDrawer("quote", { "THE QUOTE": row.a, AUTHOR: row.b })}
+    />
   );
 }

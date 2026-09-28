@@ -282,9 +282,39 @@ const DRAWER_CONFIGS = {
     fields: [
       { k: "THE QUOTE", type: "input", initial: "Every rep is a reminder that growth takes patience.", hint: "keep it under 90 characters" },
       { k: "AUTHOR", type: "text", initial: "Victor Akko", hint: "shown in copper beneath the line" },
-      { k: "WHEN IT SHOWS", type: "chips", initial: "Set live now", options: ["Set live now", "Tomorrow 05:00", "Into rotation only"] },
-      { k: "ROTATION", type: "chips", initial: "Manual", options: ["Manual", "Daily shuffle", "Weekly change"] },
-      { k: "WHO SEES IT", type: "chips", initial: "All tiers", options: ["All tiers", "Silver", "Gold and up", "Beta testers"] },
+      {
+        k: "WHEN IT SHOWS",
+        type: "chips",
+        initial: "Set live now",
+        options: ["Set live now", "Tomorrow 05:00", "Into rotation only"],
+        audit: {
+          auditId: "ADMIN-EXTRA-030",
+          status: "extra",
+          label: "NOT IN REQUIREMENT - SCHEDULED QUOTE RELEASE TIMING",
+        },
+      },
+      {
+        k: "ROTATION",
+        type: "chips",
+        initial: "Manual",
+        options: ["Manual", "Daily shuffle", "Weekly change"],
+        audit: {
+          auditId: "ADMIN-EXTRA-031",
+          status: "extra",
+          label: "NOT IN REQUIREMENT - AUTOMATED SHUFFLE / ROTATION CADENCE",
+        },
+      },
+      {
+        k: "WHO SEES IT",
+        type: "chips",
+        initial: "All tiers",
+        options: ["All tiers", "Silver", "Gold and up", "Beta testers"],
+        audit: {
+          auditId: "ADMIN-EXTRA-032",
+          status: "extra",
+          label: "NOT IN REQUIREMENT - TIER-BASED AUDIENCE TARGETING",
+        },
+      },
     ],
   },
   flag: {

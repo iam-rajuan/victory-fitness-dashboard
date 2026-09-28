@@ -68,7 +68,6 @@ const NAV_GROUPS = [
         to: "/quotes",
         label: "Quotes",
         icon: HiOutlineChatBubbleBottomCenterText,
-        audit: { auditId: "ADMIN-EXTRA-001", status: "extra" },
       },
     ],
   },
