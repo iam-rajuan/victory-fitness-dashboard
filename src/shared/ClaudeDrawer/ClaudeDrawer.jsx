@@ -2,9 +2,27 @@ import { useState, useEffect, useMemo } from "react";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { useTheme } from "../../context/ThemeContext";
 import { adminApiRequest } from "../../../services/auth.service";
-import { previewAdminWorkoutSync, syncAdminWorkouts, uploadAdminWorkoutVideo } from "../../../services/admin-workouts.service";
+import { previewAdminWorkoutSync, syncAdminWorkouts, uploadAdminCommunityVideo, uploadAdminWorkoutVideo } from "../../../services/admin-workouts.service";
+import { toBase64Payload } from "../../utils/imageUpload";
 import ClaudeApplicationDrawer from "./ClaudeApplicationDrawer";
 import RequirementAuditBoundary from "../../components/audit/RequirementAuditBoundary";
+import {
+  HiOutlineDocumentText,
+  HiOutlinePhoto,
+  HiOutlineVideoCamera,
+  HiOutlineMicrophone,
+  HiOutlineArrowUpTray,
+  HiOutlineTrash,
+  HiOutlineArrowPath,
+  HiOutlineCheckCircle,
+} from "react-icons/hi2";
+
+const BROADCAST_FORMAT_ICONS = {
+  Text: HiOutlineDocumentText,
+  Photo: HiOutlinePhoto,
+  Video: HiOutlineVideoCamera,
+  "Voice note": HiOutlineMicrophone,
+};
 
 function readVideoDurationSeconds(file) {
   return new Promise((resolve) => {
@@ -494,7 +512,17 @@ const DRAWER_CONFIGS = {
           label: "NEW FEATURE - PROMOTIONAL DISCOUNT OFFER ATTACHMENT NOT IN REQUIREMENT",
         },
       },
-      { k: "PUBLISH", type: "chips", initial: "Now", options: ["Now", "Tonight 19:00", "Monday 08:00"] },
+      {
+        k: "PUBLISH",
+        type: "chips",
+        initial: "Now",
+        options: ["Now", "Tonight 19:00", "Monday 08:00"],
+        audit: {
+          auditId: "ADMIN-EXTRA-029",
+          status: "extra",
+          label: "NEW FEATURE - SCHEDULED BROADCAST PUBLISHING NOT IN REQUIREMENT",
+        },
+      },
     ],
   },
 };
@@ -1011,7 +1039,14 @@ export default function ClaudeDrawer() {
       market: String(formValues.MARKET || payload?.MARKET || "All markets").trim(),
       purpose: String(formValues.PURPOSE || payload?.PURPOSE || "Announcement").trim(),
       publish_option: String(formValues.PUBLISH || payload?.PUBLISH || "Now").trim(),
-      external_video_url: String(formValues.videoUrl || payload?.videoUrl || "").trim() || undefined,
+      external_video_url: formValues.videoRemoved ? undefined : (String(formValues.videoUrl || payload?.videoUrl || "").trim() || undefined),
+      image_base64: formValues.imageRemoved ? undefined : (formValues.image_base64 || undefined),
+      image_url: formValues.imageRemoved ? null : undefined,
+      video_base64: formValues.videoRemoved ? undefined : (formValues.video_base64 || undefined),
+      audio_base64: formValues.audioRemoved ? undefined : (formValues.audio_base64 || undefined),
+      audio_url: formValues.audioRemoved ? null : undefined,
+      mime_type: formValues.mime_type || undefined,
+      file_name: formValues.file_name || undefined,
       flagged: typeof payload?.flagged === "boolean" ? payload.flagged : undefined,
       flag_reason: payload?.flag_reason || undefined,
     };
@@ -1021,6 +1056,19 @@ export default function ClaudeDrawer() {
     const requestPayload = buildBroadcastRequestPayload();
     if (!requestPayload.content) {
       throw new Error("Broadcast message is required.");
+    }
+    const hasPhoto = formValues.imageRemoved ? false : Boolean(requestPayload.image_base64 || payload?.imageUrl);
+    const hasVideo = formValues.videoRemoved ? false : Boolean(requestPayload.external_video_url || requestPayload.video_base64 || payload?.videoUrl);
+    const hasAudio = formValues.audioRemoved ? false : Boolean(requestPayload.audio_base64 || payload?.audioUrl);
+
+    if (requestPayload.broadcast_format === "Photo" && !hasPhoto) {
+      throw new Error("Attach a photo before publishing this broadcast.");
+    }
+    if (requestPayload.broadcast_format === "Video" && !hasVideo) {
+      throw new Error("Attach or link a video before publishing this broadcast.");
+    }
+    if (requestPayload.broadcast_format === "Voice note" && !hasAudio) {
+      throw new Error("Attach a voice note before publishing this broadcast.");
     }
     const postId = payload?.id;
     const saved = await adminApiRequest(postId ? `/admin/community/posts/${postId}` : "/admin/community/broadcast", {
@@ -1197,34 +1245,39 @@ export default function ClaudeDrawer() {
               </div>
 
               {/* Media source chips */}
-              <div className="flex gap-2 mb-3 flex-wrap">
-                {(config.mediaKinds || []).map((kind, idx) => (
-                  <button
-                    key={kind}
-                    type="button"
-                    onClick={() => {
-                      setActiveMediaKind(idx);
-                      if (isVideoEditor) {
-                        setFormValues((prev) => ({
-                          ...prev,
-                          videoSource: idx === 1 ? "UPLOAD" : idx === 2 ? "YOUTUBE" : "VIMEO",
-                        }));
-                      } else if (type === "broadcast") {
-                        setFormValues((prev) => ({
-                          ...prev,
-                          FORMAT: kind,
-                        }));
-                      }
-                    }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-colors ${
-                      idx === activeMediaKind
-                        ? "bg-[#C9943A] text-[#0D0D0D]"
-                        : "bg-[#F7F3EE]/10 text-[#F7F3EE]/70 hover:text-[#F7F3EE]"
-                    }`}
-                  >
-                    {kind}
-                  </button>
-                ))}
+              <div className={`gap-2 mb-4 ${type === "broadcast" ? "grid grid-cols-2 sm:grid-cols-4" : "flex gap-2 flex-wrap"}`}>
+                {(config.mediaKinds || []).map((kind, idx) => {
+                  const Icon = type === "broadcast" ? BROADCAST_FORMAT_ICONS[kind] : null;
+                  const isSelected = idx === activeMediaKind;
+                  return (
+                    <button
+                      key={kind}
+                      type="button"
+                      onClick={() => {
+                        setActiveMediaKind(idx);
+                        if (isVideoEditor) {
+                          setFormValues((prev) => ({
+                            ...prev,
+                            videoSource: idx === 1 ? "UPLOAD" : idx === 2 ? "YOUTUBE" : "VIMEO",
+                          }));
+                        } else if (type === "broadcast") {
+                          setFormValues((prev) => ({
+                            ...prev,
+                            FORMAT: kind,
+                          }));
+                        }
+                      }}
+                      className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-all duration-150 ${
+                        isSelected
+                          ? "bg-[#C9943A] text-[#0D0D0D] shadow-md shadow-[#C9943A]/20 font-bold"
+                          : "bg-[#07131E]/60 text-[#F7F3EE]/70 hover:text-[#F7F3EE] hover:bg-[#07131E] border border-[#F7F3EE]/10"
+                      }`}
+                    >
+                      {Icon && <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-[#0D0D0D]" : "text-[#C9943A]"}`} />}
+                      <span>{kind}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Source inputs for video editors */}
@@ -1326,60 +1379,402 @@ export default function ClaudeDrawer() {
                 </div>
               )}
 
-              {/* Video Player / Preview Frame */}
-              {isVideoEditor && resolveWorkoutPreviewUrl() ? (
-                <div
-                  className="w-full aspect-video rounded-xl border border-[#F7F3EE]/15 bg-black overflow-hidden shadow-2xl relative flex items-center justify-center"
-                  style={{ backgroundColor: "#000000" }}
-                >
-                  {/player\.vimeo\.com|youtube\.com\/embed/.test(resolveWorkoutPreviewUrl()) ? (
-                    <iframe
-                      src={resolveWorkoutPreviewUrl()}
-                      title={`${formValues.TITLE || (type === "masterclass" ? "Masterclass" : "Workout")} preview`}
-                      allow="autoplay; fullscreen; picture-in-picture"
-                      allowFullScreen
-                      className="w-full h-full"
-                      style={{
-                        border: 0,
-                        display: "block",
-                        backgroundColor: "#000000",
-                        width: "100%",
-                        height: "100%",
-                      }}
-                    />
-                  ) : (
-                    <video
-                      src={resolveWorkoutPreviewUrl()}
-                      controls
-                      playsInline
-                      className="w-full h-full object-contain bg-black"
-                      style={{ backgroundColor: "#000000" }}
-                      onLoadedMetadata={(event) => {
-                        const duration = Number(event.currentTarget.duration || 0);
-                        if (!Number.isFinite(duration) || duration <= 0) return;
-                        const durationSeconds = Math.round(duration);
-                        const durationMinutes = Math.max(1, Math.ceil(durationSeconds / 60));
-                        setFormValues((prev) => {
-                          if (Number(prev.durationSeconds || 0) > 0) return prev;
-                          return {
-                            ...prev,
-                            durationSeconds,
-                            LENGTH: `${durationMinutes} min`,
-                          };
-                        });
-                      }}
-                    />
+              {type === "broadcast" && (
+                <div className="mb-4">
+                  {/* TEXT FORMAT */}
+                  {activeMediaKind === 0 && (
+                    <div className="rounded-xl border border-[#F7F3EE]/15 bg-gradient-to-r from-[#07131E] to-[#0D2B45] p-3.5 flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-[#C9943A]/15 flex items-center justify-center shrink-0 mt-0.5">
+                        <HiOutlineDocumentText className="w-4 h-4 text-[#C9943A]" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-[#F7F3EE]">
+                          Text Announcement
+                        </div>
+                        <div className="text-[11.5px] text-[#F7F3EE]/60 mt-0.5 leading-relaxed">
+                          Your message will appear inline as a clean verified broadcast card with high visibility in member feeds.
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PHOTO FORMAT */}
+                  {activeMediaKind === 1 && (
+                    <div className="space-y-3">
+                      {(formValues.imagePreview || (!formValues.imageRemoved && payload?.imageUrl)) ? (
+                        <div className="rounded-2xl border border-[#F7F3EE]/15 bg-[#07131E] p-4 space-y-3 shadow-xl">
+                          <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-[#F7F3EE]/10">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-semibold bg-[#5FC48E]/15 text-[#5FC48E] border border-[#5FC48E]/30 font-mono">
+                                <HiOutlineCheckCircle className="w-3.5 h-3.5" />
+                                PHOTO ATTACHED
+                              </span>
+                              <span className="text-[11px] text-[#F7F3EE]/50 font-mono truncate max-w-[150px]">
+                                {formValues.file_name || "Feed photo"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#F7F3EE]/10 text-[#F7F3EE]/80 hover:text-[#F7F3EE] hover:bg-[#F7F3EE]/15 transition-colors cursor-pointer border border-[#F7F3EE]/10">
+                                <HiOutlineArrowPath className="w-3.5 h-3.5 text-[#C9943A]" />
+                                <span>Change</span>
+                                <input
+                                  type="file"
+                                  accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
+                                  className="hidden"
+                                  onChange={async (e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    showToast(`Attaching ${file.name}...`);
+                                    try {
+                                      const imagePayload = await toBase64Payload(file, "community-photo.jpg");
+                                      setFormValues((prev) => ({
+                                        ...prev,
+                                        FORMAT: "Photo",
+                                        image_base64: imagePayload.image_base64,
+                                        mime_type: imagePayload.mime_type,
+                                        file_name: imagePayload.file_name,
+                                        imagePreview: imagePayload.preview,
+                                        imageRemoved: false,
+                                        videoUrl: "",
+                                        audio_base64: "",
+                                        audioPreview: "",
+                                      }));
+                                      showToast(`Attached ${file.name}`);
+                                    } catch (err) {
+                                      showToast(`Failed: ${err?.message || "Photo attachment failed"}`);
+                                    }
+                                  }}
+                                />
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFormValues((prev) => ({
+                                    ...prev,
+                                    imagePreview: "",
+                                    image_base64: "",
+                                    file_name: "",
+                                    imageRemoved: true,
+                                  }));
+                                  showToast("Photo removed.");
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors cursor-pointer border border-red-500/20"
+                              >
+                                <HiOutlineTrash className="w-3.5 h-3.5" />
+                                <span>Remove</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="relative w-full max-h-56 rounded-xl overflow-hidden border border-[#F7F3EE]/10 bg-[#050D14] flex items-center justify-center p-2">
+                            <img
+                              src={formValues.imagePreview || payload?.imageUrl}
+                              alt="Broadcast photo preview"
+                              className="max-h-52 w-auto max-w-full object-contain rounded-lg shadow-md"
+                            />
+                          </div>
+                          <div className="text-[10.5px] font-mono text-[#F7F3EE]/40 text-center">
+                            Shown inline at full resolution in member community feeds
+                          </div>
+                        </div>
+                      ) : (
+                        <label className="group relative flex flex-col items-center justify-center p-7 rounded-2xl border-2 border-dashed border-[#C9943A]/40 bg-[#07131E]/60 hover:bg-[#07131E] hover:border-[#C9943A] transition-all cursor-pointer text-center">
+                          <div className="w-12 h-12 rounded-full bg-[#C9943A]/15 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                            <HiOutlinePhoto className="w-6 h-6 text-[#C9943A]" />
+                          </div>
+                          <div className="text-xs font-semibold text-[#F7F3EE] mb-1">
+                            Click to upload photo or drag & drop
+                          </div>
+                          <div className="text-[11px] text-[#F7F3EE]/50 font-mono">
+                            JPG, PNG, WEBP, GIF, HEIC (Max 10MB)
+                          </div>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              showToast(`Attaching ${file.name}...`);
+                              try {
+                                const imagePayload = await toBase64Payload(file, "community-photo.jpg");
+                                setFormValues((prev) => ({
+                                  ...prev,
+                                  FORMAT: "Photo",
+                                  image_base64: imagePayload.image_base64,
+                                  mime_type: imagePayload.mime_type,
+                                  file_name: imagePayload.file_name,
+                                  imagePreview: imagePayload.preview,
+                                  imageRemoved: false,
+                                  videoUrl: "",
+                                  audio_base64: "",
+                                  audioPreview: "",
+                                }));
+                                showToast(`Attached ${file.name}`);
+                              } catch (err) {
+                                showToast(`Failed: ${err?.message || "Photo attachment failed"}`);
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  )}
+
+                  {/* VIDEO FORMAT */}
+                  {activeMediaKind === 2 && (
+                    <div className="space-y-3">
+                      {(formValues.videoUrl || (!formValues.videoRemoved && payload?.videoUrl)) ? (
+                        <div className="rounded-2xl border border-[#F7F3EE]/15 bg-[#07131E] p-4 space-y-3 shadow-xl">
+                          <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-[#F7F3EE]/10">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-semibold bg-[#5FC48E]/15 text-[#5FC48E] border border-[#5FC48E]/30 font-mono">
+                              <HiOutlineCheckCircle className="w-3.5 h-3.5" />
+                              VIDEO ATTACHED
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormValues((prev) => ({
+                                  ...prev,
+                                  videoUrl: "",
+                                  video_base64: "",
+                                  videoRemoved: true,
+                                }));
+                                showToast("Video removed.");
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors cursor-pointer border border-red-500/20"
+                            >
+                              <HiOutlineTrash className="w-3.5 h-3.5" />
+                              <span>Remove</span>
+                            </button>
+                          </div>
+                          <div className="w-full aspect-video rounded-xl overflow-hidden border border-[#F7F3EE]/10 bg-black flex items-center justify-center">
+                            {/player\.vimeo\.com|youtube\.com\/embed/.test(formValues.videoUrl || payload?.videoUrl) ? (
+                              <iframe
+                                src={formValues.videoUrl || payload?.videoUrl}
+                                title="Broadcast video preview"
+                                className="w-full h-full border-0"
+                                allowFullScreen
+                              />
+                            ) : (
+                              <video
+                                src={formValues.videoUrl || payload?.videoUrl}
+                                controls
+                                playsInline
+                                className="w-full h-full object-contain"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <label className="group relative flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-[#C9943A]/40 bg-[#07131E]/60 hover:bg-[#07131E] hover:border-[#C9943A] transition-all cursor-pointer text-center">
+                            <div className="w-12 h-12 rounded-full bg-[#C9943A]/15 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                              <HiOutlineVideoCamera className="w-6 h-6 text-[#C9943A]" />
+                            </div>
+                            <div className="text-xs font-semibold text-[#F7F3EE] mb-1">
+                              Upload Video File
+                            </div>
+                            <div className="text-[11px] text-[#F7F3EE]/50 font-mono">
+                              MP4, MOV, WebM (Max 500MB)
+                            </div>
+                            <input
+                              type="file"
+                              accept="video/mp4,video/quicktime,video/webm"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                const blobUrl = URL.createObjectURL(file);
+                                setFormValues((prev) => ({
+                                  ...prev,
+                                  FORMAT: "Video",
+                                  videoUrl: blobUrl,
+                                  videoRemoved: false,
+                                  image_base64: "",
+                                  audio_base64: "",
+                                  audioPreview: "",
+                                }));
+                                showToast(`Uploading ${file.name}...`);
+                                try {
+                                  const uploadedUrl = await uploadAdminCommunityVideo(file);
+                                  setFormValues((prev) => ({
+                                    ...prev,
+                                    FORMAT: "Video",
+                                    videoUrl: uploadedUrl,
+                                    videoRemoved: false,
+                                    image_base64: "",
+                                    audio_base64: "",
+                                    audioPreview: "",
+                                  }));
+                                  showToast(`Uploaded ${file.name}`);
+                                } catch (err) {
+                                  setFormValues((prev) => ({ ...prev, videoUrl: "" }));
+                                  showToast(`Failed: ${err?.message || "Video upload failed"}`);
+                                } finally {
+                                  URL.revokeObjectURL(blobUrl);
+                                }
+                              }}
+                            />
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Or paste Vimeo, YouTube, or direct video URL"
+                            value={formValues.videoUrl || ""}
+                            onChange={(e) => {
+                              setFormValues((prev) => ({
+                                ...prev,
+                                FORMAT: "Video",
+                                videoUrl: e.target.value.trim(),
+                                videoRemoved: false,
+                                image_base64: "",
+                                audio_base64: "",
+                              }));
+                            }}
+                            className="w-full px-3.5 py-2.5 text-xs font-mono bg-[#07131E] border border-[#F7F3EE]/15 rounded-xl text-[#F7F3EE] placeholder-[#F7F3EE]/40 focus:outline-none focus:border-[#C9943A] transition-colors"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* VOICE NOTE FORMAT */}
+                  {activeMediaKind === 3 && (
+                    <div className="space-y-3">
+                      {(formValues.audioPreview || (!formValues.audioRemoved && payload?.audioUrl)) ? (
+                        <div className="rounded-2xl border border-[#F7F3EE]/15 bg-[#07131E] p-4 space-y-3 shadow-xl">
+                          <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-[#F7F3EE]/10">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-semibold bg-[#5FC48E]/15 text-[#5FC48E] border border-[#5FC48E]/30 font-mono">
+                              <HiOutlineCheckCircle className="w-3.5 h-3.5" />
+                              VOICE NOTE ATTACHED
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormValues((prev) => ({
+                                  ...prev,
+                                  audioPreview: "",
+                                  audio_base64: "",
+                                  audioRemoved: true,
+                                }));
+                                showToast("Voice note removed.");
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors cursor-pointer border border-red-500/20"
+                            >
+                              <HiOutlineTrash className="w-3.5 h-3.5" />
+                              <span>Remove</span>
+                            </button>
+                          </div>
+                          <audio
+                            controls
+                            src={formValues.audioPreview || payload?.audioUrl}
+                            className="w-full rounded-lg"
+                          />
+                        </div>
+                      ) : (
+                        <label className="group relative flex flex-col items-center justify-center p-7 rounded-2xl border-2 border-dashed border-[#C9943A]/40 bg-[#07131E]/60 hover:bg-[#07131E] hover:border-[#C9943A] transition-all cursor-pointer text-center">
+                          <div className="w-12 h-12 rounded-full bg-[#C9943A]/15 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                            <HiOutlineMicrophone className="w-6 h-6 text-[#C9943A]" />
+                          </div>
+                          <div className="text-xs font-semibold text-[#F7F3EE] mb-1">
+                            Click to upload voice note
+                          </div>
+                          <div className="text-[11px] text-[#F7F3EE]/50 font-mono">
+                            MP3, M4A, WAV, WEBM
+                          </div>
+                          <input
+                            type="file"
+                            accept="audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/webm,audio/ogg"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              showToast(`Attaching ${file.name}...`);
+                              try {
+                                const audioPayload = await toBase64Payload(file, "community-voice-note.m4a", {
+                                  base64Key: "audio_base64",
+                                });
+                                setFormValues((prev) => ({
+                                  ...prev,
+                                  FORMAT: "Voice note",
+                                  audio_base64: audioPayload.audio_base64,
+                                  mime_type: audioPayload.mime_type,
+                                  file_name: audioPayload.file_name,
+                                  audioPreview: audioPayload.preview,
+                                  audioRemoved: false,
+                                  image_base64: "",
+                                  imagePreview: "",
+                                  videoUrl: "",
+                                }));
+                                showToast(`Attached ${file.name}`);
+                              } catch (err) {
+                                showToast(`Failed: ${err?.message || "Voice note attachment failed"}`);
+                              }
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
                   )}
                 </div>
-              ) : (
-                <div className="h-32 rounded-xl flex flex-col items-center justify-center gap-2 border bg-gradient-to-br from-[#12314c] to-[#0a2439] border-[#F7F3EE]/10">
-                  <div className="w-10 h-8 rounded-lg bg-[#C9943A] flex items-center justify-center shadow-md">
-                    <div className="w-0 h-0 border-l-[10px] border-l-[#0D0D0D] border-y-[6px] border-y-transparent ml-1" />
+              )}
+
+              {/* Video Player / Preview Frame — ONLY for video editors */}
+              {isVideoEditor && (
+                resolveWorkoutPreviewUrl() ? (
+                  <div
+                    className="w-full aspect-video rounded-xl border border-[#F7F3EE]/15 bg-black overflow-hidden shadow-2xl relative flex items-center justify-center"
+                    style={{ backgroundColor: "#000000" }}
+                  >
+                    {/player\.vimeo\.com|youtube\.com\/embed/.test(resolveWorkoutPreviewUrl()) ? (
+                      <iframe
+                        src={resolveWorkoutPreviewUrl()}
+                        title={`${formValues.TITLE || (type === "masterclass" ? "Masterclass" : "Workout")} preview`}
+                        allow="autoplay; fullscreen; picture-in-picture"
+                        allowFullScreen
+                        className="w-full h-full"
+                        style={{
+                          border: 0,
+                          display: "block",
+                          backgroundColor: "#000000",
+                          width: "100%",
+                          height: "100%",
+                        }}
+                      />
+                    ) : (
+                      <video
+                        src={resolveWorkoutPreviewUrl()}
+                        controls
+                        playsInline
+                        className="w-full h-full object-contain bg-black"
+                        style={{ backgroundColor: "#000000" }}
+                        onLoadedMetadata={(event) => {
+                          const duration = Number(event.currentTarget.duration || 0);
+                          if (!Number.isFinite(duration) || duration <= 0) return;
+                          const durationSeconds = Math.round(duration);
+                          const durationMinutes = Math.max(1, Math.ceil(durationSeconds / 60));
+                          setFormValues((prev) => {
+                            if (Number(prev.durationSeconds || 0) > 0) return prev;
+                            return {
+                              ...prev,
+                              durationSeconds,
+                              LENGTH: `${durationMinutes} min`,
+                            };
+                          });
+                        }}
+                      />
+                    )}
                   </div>
-                  <span className="text-[11px] font-mono text-[#F7F3EE]/45">
-                    {isVideoEditor ? "No video connected yet" : config.mediaHint}
-                  </span>
-                </div>
+                ) : (
+                  <div className="h-32 rounded-xl flex flex-col items-center justify-center gap-2 border bg-gradient-to-br from-[#12314c] to-[#0a2439] border-[#F7F3EE]/10">
+                    <div className="w-10 h-8 rounded-lg bg-[#C9943A] flex items-center justify-center shadow-md">
+                      <div className="w-0 h-0 border-l-[10px] border-l-[#0D0D0D] border-y-[6px] border-y-transparent ml-1" />
+                    </div>
+                    <span className="text-[11px] font-mono text-[#F7F3EE]/45">
+                      No video connected yet
+                    </span>
+                  </div>
+                )
               )}
             </div>
           )}
