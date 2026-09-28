@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
+import RequirementAuditBoundary from "../../components/audit/RequirementAuditBoundary";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { listAdminSupportMessages } from "../../../services/admin-support.service";
 
@@ -41,30 +42,36 @@ export default function SupportInbox() {
   }, []);
 
   return (
-    <ClaudeAdminTable
-      pageKicker="SUPPORT OPERATIONS"
-      pageTitle="Help & support"
-      pageSub="Every message a member sends, with its triage state. The promise on the profile screen is a reply within a day."
-      pagePrimary="Reply to oldest"
-      pageSecondary="Canned replies"
-      onPrimary={() => openDrawer("support")}
-      onSecondary={() => openDrawer("support")}
-      pageStats={[
-        { k: "OPEN", v: "3", note: "Awaiting first reply" },
-        { k: "IN PROGRESS", v: "1", note: "Being worked on" },
-        { k: "RESOLVED, 7 DAYS", v: "14", note: "Median 4 hours" },
-        { k: "OLDEST OPEN", v: "31 hr", note: "Past the one-day promise" },
-      ]}
-      pageAdvice="One message has been open for 31 hours, past the one-day promise you make in the app. Answer it before anything else on this page."
-      pageAdviceDone="Open the oldest"
-      onAdvice={() => openDrawer("support", { MEMBER: "Kofi Mensah" })}
-      filters={["All", "Open", "In progress", "Resolved", "Payment", "Technical"]}
-      cols={["MEMBER", "SUBJECT", "TIER", "WAITING", "STATUS"]}
-      rows={rows}
-      isLoading={loading}
-      onEditRow={(row) => openDrawer("support", { MEMBER: row.a })}
-      onDeleteRow={(row) => showToast(`Ticket for ${row.a} marked resolved.`)}
-      onRowClick={(row) => openDrawer("support", { MEMBER: row.a })}
-    />
+    <RequirementAuditBoundary
+      auditId="ADMIN-EXTRA-028"
+      status="extra"
+      label="NEW FEATURE - SUPPORT INBOX NOT IN REQUIREMENT"
+    >
+      <ClaudeAdminTable
+        pageKicker="SUPPORT OPERATIONS"
+        pageTitle="Help & support"
+        pageSub="Every message a member sends, with its triage state. The promise on the profile screen is a reply within a day."
+        pagePrimary="Reply to oldest"
+        pageSecondary="Canned replies"
+        onPrimary={() => openDrawer("support")}
+        onSecondary={() => openDrawer("support")}
+        pageStats={[
+          { k: "OPEN", v: "3", note: "Awaiting first reply" },
+          { k: "IN PROGRESS", v: "1", note: "Being worked on" },
+          { k: "RESOLVED, 7 DAYS", v: "14", note: "Median 4 hours" },
+          { k: "OLDEST OPEN", v: "31 hr", note: "Past the one-day promise" },
+        ]}
+        pageAdvice="One message has been open for 31 hours, past the one-day promise you make in the app. Answer it before anything else on this page."
+        pageAdviceDone="Open the oldest"
+        onAdvice={() => openDrawer("support", { MEMBER: "Kofi Mensah" })}
+        filters={["All", "Open", "In progress", "Resolved", "Payment", "Technical"]}
+        cols={["MEMBER", "SUBJECT", "TIER", "WAITING", "STATUS"]}
+        rows={rows}
+        isLoading={loading}
+        onEditRow={(row) => openDrawer("support", { MEMBER: row.a })}
+        onDeleteRow={(row) => showToast(`Ticket for ${row.a} marked resolved.`)}
+        onRowClick={(row) => openDrawer("support", { MEMBER: row.a })}
+      />
+    </RequirementAuditBoundary>
   );
 }

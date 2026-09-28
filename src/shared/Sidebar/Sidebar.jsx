@@ -53,7 +53,17 @@ const NAV_GROUPS = [
       { to: "/all-subscribers", label: "All Subscribers", icon: HiOutlineUserGroup },
       { to: "/community", label: "Community", icon: HiOutlineChatBubbleLeftRight, badge: "3" },
       { to: "/applications", label: "Applications", icon: HiOutlineDocumentText, badge: "2" },
-      { to: "/support-inbox", label: "Help & Support", icon: HiOutlineLifebuoy, badge: "3" },
+      {
+        to: "/support-inbox",
+        label: "Help & Support",
+        icon: HiOutlineLifebuoy,
+        badge: "3",
+        audit: {
+          auditId: "ADMIN-EXTRA-028",
+          status: "extra",
+          label: "NEW FEATURE - SUPPORT INBOX NOT IN REQUIREMENT",
+        },
+      },
       {
         to: "/quotes",
         label: "Quotes",

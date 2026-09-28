@@ -43,6 +43,11 @@ export default function Settings() {
       pageAdvice="Your privacy policy was last updated before Ghana and India went live, so it does not mention MoMo, UPI, or data leaving the EU."
       pageAdviceDone="Update the policy"
       onAdvice={() => openDrawer("settingDoc")}
+      adviceAudit={{
+        auditId: "ADMIN-EXTRA-024",
+        status: "extra",
+        label: "NEW FEATURE - LEGAL COMPLIANCE DIAGNOSTIC BANNER NOT IN REQUIREMENT",
+      }}
       filters={["All", "Legal", "Data", "Access"]}
       cols={["SETTING", "VALUE", "SCOPE", "UPDATED", "STATUS"]}
       rows={rows}
