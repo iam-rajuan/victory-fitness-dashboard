@@ -328,7 +328,17 @@ const DRAWER_CONFIGS = {
       { k: "ROLLOUT", type: "chips", initial: "25%", options: ["0%", "10%", "25%", "50%", "100%"] },
       { k: "MARKETS", type: "chips", initial: "Ghana", options: ["All", "Germany", "Ghana", "India", "UK", "US"] },
       { k: "WHAT IT CHANGES", type: "read", initial: "Replaces the MoMo checkout with a direct MTN API call instead of the hosted redirect. Meant to cut the drop-off between wallet prompt and confirmation." },
-      { k: "RESULT SO FAR", type: "text", initial: "18 attempts · 3 failures · 0 completions", hint: "the old flow has no completions either" },
+      {
+        k: "RESULT SO FAR",
+        type: "text",
+        initial: "18 attempts · 3 failures · 0 completions",
+        hint: "the old flow has no completions either",
+        audit: {
+          auditId: "ADMIN-EXTRA-038",
+          status: "extra",
+          label: "NOT IN REQUIREMENT - MANUAL EXPERIMENT TELEMETRY INPUT FIELD",
+        },
+      },
       { k: "OWNER", type: "text", initial: "Dev · reviewed by Victor Akko", hint: "changed today" },
       {
         k: "ON ROLLBACK",
@@ -362,8 +372,28 @@ const DRAWER_CONFIGS = {
     fields: [
       { k: "CHANNELS", type: "read", initial: "All three — push, WhatsApp and email. Member-facing reminders always offer every channel, because the member picks theirs once in Profile → Reminders and expects it to apply to everything. Restricting a channel here would silently strand whoever chose it." },
       { k: "MESSAGE", type: "input", initial: "{first_name}, you are {grams} g short with the evening to go. One Greek yoghurt closes it.", hint: "{first_name} and {grams} fill in per member" },
-      { k: "WHEN IT FIRES", type: "chips", initial: "16:00 local, if short", options: ["16:00 local, if short", "20:00 local, if short", "Never automatically"] },
-      { k: "FREQUENCY CAP", type: "chips", initial: "1 / day", options: ["1 / day", "1 / 2 days", "2 / week", "1 / week"] },
+      {
+        k: "WHEN IT FIRES",
+        type: "chips",
+        initial: "16:00 local, if short",
+        options: ["16:00 local, if short", "20:00 local, if short", "Never automatically"],
+        audit: {
+          auditId: "ADMIN-EXTRA-036",
+          status: "extra",
+          label: "NOT IN REQUIREMENT - FIXED CLOCK SEND TIMING SELECTOR",
+        },
+      },
+      {
+        k: "FREQUENCY CAP",
+        type: "chips",
+        initial: "1 / day",
+        options: ["1 / day", "1 / 2 days", "2 / week", "1 / week"],
+        audit: {
+          auditId: "ADMIN-EXTRA-037",
+          status: "extra",
+          label: "NOT IN REQUIREMENT - VARIABLE FREQUENCY CAP OVERRIDE SELECTOR",
+        },
+      },
       {
         k: "WHO GETS IT",
         type: "chips",
@@ -531,6 +561,11 @@ const DRAWER_CONFIGS = {
     cta: "Start the offer",
     alt: "Preview",
     note: "A referred friend converts at roughly three times the rate of a cold signup, so the referrer's free month usually costs less than the ad spend it replaces.",
+    noteAudit: {
+      auditId: "ADMIN-EXTRA-040",
+      status: "extra",
+      label: "NOT IN REQUIREMENT - DUAL-SIDED REFERRAL INCENTIVE ENGINE",
+    },
     table: true,
     fields: [
       { k: "APPLIES TO", type: "chips", initial: "Gold", options: ["All paid tiers", "Silver", "Gold", "Platinum"] },
@@ -539,11 +574,61 @@ const DRAWER_CONFIGS = {
       { k: "RUNS FROM", type: "chips", initial: "Monday 15 Sep", options: ["Now", "Monday 15 Sep", "1 October"] },
       { k: "RUNS UNTIL", type: "chips", initial: "7 days", options: ["72 hours", "7 days", "14 days", "End of month"] },
       { k: "MARKETS", type: "chips", initial: "All markets", options: ["All markets", "Germany", "Ghana", "India", "UK", "US"] },
-      { k: "WHO CAN USE IT", type: "chips", initial: "Anyone with the link", options: ["Anyone with the link", "Existing members only", "Beta testers only", "New signups only"] },
-      { k: "REFERRAL REWARD", type: "chips", initial: "Both get the discount", options: ["Both get the discount", "Friend only", "Referrer gets a free month", "Both get the discount and referrer gets a month"] },
-      { k: "THE LINK MEMBERS SHARE", type: "text", initial: "victoryfitness.app/invite/VF-GOLD20", hint: "auto-generated, one per member so you can see who referred whom" },
-      { k: "WHAT THE FRIEND READS", type: "text", initial: "Michael thinks you would get on with this. 20% off Victory Gold until Sunday — same discount for both of you.", hint: "shown on the invite landing page" },
-      { k: "SEND IT OUT AS", type: "chips", initial: "In-app card and WhatsApp", options: ["In-app card and WhatsApp", "Broadcast to feeds", "Email only", "Do not announce"] },
+      {
+        k: "WHO CAN USE IT",
+        type: "chips",
+        initial: "Anyone with the link",
+        options: ["Anyone with the link", "Existing members only", "Beta testers only", "New signups only"],
+        audit: {
+          auditId: "ADMIN-EXTRA-039",
+          status: "extra",
+          label: "NOT IN REQUIREMENT - PROMO LINK ACCESS RESTRICTION & BETA TARGETING",
+        },
+      },
+      {
+        k: "REFERRAL REWARD",
+        type: "chips",
+        initial: "Both get the discount",
+        options: ["Both get the discount", "Friend only", "Referrer gets a free month", "Both get the discount and referrer gets a month"],
+        audit: {
+          auditId: "ADMIN-EXTRA-040",
+          status: "extra",
+          label: "NOT IN REQUIREMENT - DUAL-SIDED REFERRAL DISCOUNT INCENTIVE ENGINE",
+        },
+      },
+      {
+        k: "THE LINK MEMBERS SHARE",
+        type: "text",
+        initial: "victoryfitness.app/invite/VF-GOLD20",
+        hint: "auto-generated, one per member so you can see who referred whom",
+        audit: {
+          auditId: "ADMIN-EXTRA-041",
+          status: "extra",
+          label: "NOT IN REQUIREMENT - PROMOTIONAL VANITY INVITE URL GENERATOR",
+        },
+      },
+      {
+        k: "WHAT THE FRIEND READS",
+        type: "text",
+        initial: "Michael thinks you would get on with this. 20% off Victory Gold until Sunday — same discount for both of you.",
+        hint: "shown on the invite landing page",
+        audit: {
+          auditId: "ADMIN-EXTRA-042",
+          status: "extra",
+          label: "NOT IN REQUIREMENT - DYNAMIC PROMOTIONAL LANDING COPY PREVIEW",
+        },
+      },
+      {
+        k: "SEND IT OUT AS",
+        type: "chips",
+        initial: "In-app card and WhatsApp",
+        options: ["In-app card and WhatsApp", "Broadcast to feeds", "Email only", "Do not announce"],
+        audit: {
+          auditId: "ADMIN-EXTRA-043",
+          status: "extra",
+          label: "NOT IN REQUIREMENT - MULTI-CHANNEL DISCOUNT CAMPAIGN BROADCAST DISPATCHER",
+        },
+      },
     ],
   },
   broadcast: {
@@ -2211,12 +2296,28 @@ export default function ClaudeDrawer() {
 
           {/* Drawer note */}
           {drawerNote && (
-            <div
-              style={{ borderLeftWidth: 3, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
-              className="mt-5 p-3.5 rounded-xl border border-[#B5651D]/30 text-xs font-inter leading-relaxed bg-[#B5651D]/15 text-[#F7F3EE]/85"
-            >
-              {drawerNote}
-            </div>
+            config?.noteAudit ? (
+              <RequirementAuditBoundary
+                auditId={config.noteAudit.auditId}
+                status={config.noteAudit.status || "extra"}
+                label={config.noteAudit.label}
+                className="mt-5"
+              >
+                <div
+                  style={{ borderLeftWidth: 3, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
+                  className="p-3.5 rounded-xl border border-[#B5651D]/30 text-xs font-inter leading-relaxed bg-[#B5651D]/15 text-[#F7F3EE]/85"
+                >
+                  {drawerNote}
+                </div>
+              </RequirementAuditBoundary>
+            ) : (
+              <div
+                style={{ borderLeftWidth: 3, borderLeftColor: "#B5651D", borderLeftStyle: "solid" }}
+                className="mt-5 p-3.5 rounded-xl border border-[#B5651D]/30 text-xs font-inter leading-relaxed bg-[#B5651D]/15 text-[#F7F3EE]/85"
+              >
+                {drawerNote}
+              </div>
+            )
           )}
         </div>
 

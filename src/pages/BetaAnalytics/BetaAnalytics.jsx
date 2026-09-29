@@ -140,26 +140,26 @@ export default function BetaAnalytics() {
   const fbCount = `${FEEDBACK.reduce((a, x) => a + x.c, 0)} responses · 5 themes`;
 
   return (
-    <RequirementAuditBoundary
-      auditId="ADMIN-MISMATCH-005"
-      status="mismatch"
-      label="MISMATCH - DOCUMENT REQUIRES 5-DAY GOLD TRIAL"
-    >
-      <div className={`animate-in fade-in duration-200 font-dmsans ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
+    <div className={`animate-in fade-in duration-200 font-dmsans ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
       {/* Hero Banner: Exact Claude Reference (lines 258-278) */}
-      <div
-        style={{
-          background: t.cardBg,
-          borderRadius: "22px",
-          padding: "26px 28px",
-          marginBottom: "20px",
-          boxShadow: t.cardShadow,
-          border: isDark ? "none" : `1px solid ${t.cardBorder}`,
-          position: "relative",
-          overflow: "hidden",
-        }}
+      <RequirementAuditBoundary
+        auditId="ADMIN-MISMATCH-005"
+        status="mismatch"
+        label="MISMATCH - DOCUMENT REQUIRES 5-DAY GOLD TRIAL (21-DAY BETA HERO BANNER)"
+        className="mb-5"
       >
-        <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: "4px", background: "#B5651D" }} />
+        <div
+          style={{
+            background: t.cardBg,
+            borderRadius: "22px",
+            padding: "26px 28px",
+            boxShadow: t.cardShadow,
+            border: isDark ? "none" : `1px solid ${t.cardBorder}`,
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: "4px", background: "#B5651D" }} />
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "26px", flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: "320px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
@@ -201,6 +201,7 @@ export default function BetaAnalytics() {
           </div>
         </div>
       </div>
+      </RequirementAuditBoundary>
 
       {/* 4 Beta Stages: Exact Claude Reference (lines 280-291) */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
@@ -244,18 +245,23 @@ export default function BetaAnalytics() {
         <div style={{ flex: "1 1 600px", minWidth: 0 }}>
           
           {/* THE POINT OF THE PROGRAMME / Feedback inbox: Exact 1:1 Claude Reference */}
-          <div
-            style={{
-              background: t.cardBg,
-              borderRadius: "20px",
-              boxShadow: t.cardShadow,
-              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
-              borderLeft: "4px solid #B5651D",
-              padding: "22px",
-              marginBottom: "16px",
-              boxSizing: "border-box",
-            }}
+          <RequirementAuditBoundary
+            auditId="ADMIN-EXTRA-044"
+            status="extra"
+            label="NOT IN REQUIREMENT - THE POINT OF THE PROGRAMME (FEEDBACK INBOX)"
+            className="mb-4"
           >
+            <div
+              style={{
+                background: t.cardBg,
+                borderRadius: "20px",
+                boxShadow: t.cardShadow,
+                border: isDark ? "none" : `1px solid ${t.cardBorder}`,
+                borderLeft: "4px solid #B5651D",
+                padding: "22px",
+                boxSizing: "border-box",
+              }}
+            >
             <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "12px", marginBottom: "6px" }}>
               <div>
                 <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "5px" }}>
@@ -341,19 +347,25 @@ export default function BetaAnalytics() {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          </RequirementAuditBoundary>
 
           {/* CHECKPOINT ANALYTICS / Where testers fall away: Exact Claude Reference (lines 321-335) */}
-          <div
-            style={{
-              background: t.cardBg,
-              borderRadius: "20px",
-              boxShadow: t.cardShadow,
-              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
-              padding: "22px",
-              boxSizing: "border-box",
-            }}
+          <RequirementAuditBoundary
+            auditId="ADMIN-EXTRA-045"
+            status="extra"
+            label="NOT IN REQUIREMENT - CHECKPOINT ANALYTICS (WHERE TESTERS FALL AWAY)"
           >
+            <div
+              style={{
+                background: t.cardBg,
+                borderRadius: "20px",
+                boxShadow: t.cardShadow,
+                border: isDark ? "none" : `1px solid ${t.cardBorder}`,
+                padding: "22px",
+                boxSizing: "border-box",
+              }}
+            >
             <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "5px" }}>
               CHECKPOINT ANALYTICS
             </div>
@@ -404,24 +416,30 @@ export default function BetaAnalytics() {
             >
               The cliff is between day 5 and day 10 — four of fifteen stop there, and it matches the buffering complaint from Ghana and India. Fix video on mobile data before you run this programme again.
             </div>
-          </div>
+            </div>
+          </RequirementAuditBoundary>
         </div>
 
         {/* Right Column (flex: 1 1 330px; min-width: 300px; display: flex; flex-direction: column; gap: 16px) */}
         <div style={{ flex: "1 1 330px", minWidth: "300px", display: "flex", flexDirection: "column", gap: "16px" }}>
           
           {/* DO THIS TODAY: Exact Claude Reference (lines 340-352) */}
-          <div
-            style={{
-              background: t.cardBg,
-              borderRadius: "20px",
-              boxShadow: t.cardShadow,
-              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
-              borderLeft: "4px solid #B5651D",
-              padding: "20px",
-              boxSizing: "border-box",
-            }}
+          <RequirementAuditBoundary
+            auditId="ADMIN-EXTRA-046"
+            status="extra"
+            label="NOT IN REQUIREMENT - DO THIS TODAY (BETA ACTIONS CHECKLIST)"
           >
+            <div
+              style={{
+                background: t.cardBg,
+                borderRadius: "20px",
+                boxShadow: t.cardShadow,
+                border: isDark ? "none" : `1px solid ${t.cardBorder}`,
+                borderLeft: "4px solid #B5651D",
+                padding: "20px",
+                boxSizing: "border-box",
+              }}
+            >
             <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "14px" }}>
               DO THIS TODAY
             </div>
@@ -497,19 +515,25 @@ export default function BetaAnalytics() {
                 </div>
               );
             })}
-          </div>
+            </div>
+          </RequirementAuditBoundary>
 
           {/* AFTER DAY 21: Exact Claude Reference (lines 354-370) */}
-          <div
-            style={{
-              background: t.cardBg,
-              borderRadius: "20px",
-              boxShadow: t.cardShadow,
-              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
-              padding: "20px",
-              boxSizing: "border-box",
-            }}
+          <RequirementAuditBoundary
+            auditId="ADMIN-EXTRA-047"
+            status="extra"
+            label="NOT IN REQUIREMENT - AFTER DAY 21 (RE-MARKETING SEQUENCE)"
           >
+            <div
+              style={{
+                background: t.cardBg,
+                borderRadius: "20px",
+                boxShadow: t.cardShadow,
+                border: isDark ? "none" : `1px solid ${t.cardBorder}`,
+                padding: "20px",
+                boxSizing: "border-box",
+              }}
+            >
             <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "5px" }}>
               AFTER DAY 21
             </div>
@@ -564,7 +588,8 @@ export default function BetaAnalytics() {
             >
               Open the sequence editor
             </div>
-          </div>
+            </div>
+          </RequirementAuditBoundary>
 
           {/* TESTERS: Exact Claude Reference (lines 371-388) */}
           <div
@@ -656,7 +681,6 @@ export default function BetaAnalytics() {
           </div>
         </div>
       </div>
-      </div>
-    </RequirementAuditBoundary>
+    </div>
   );
 }
