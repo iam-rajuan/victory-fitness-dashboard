@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { useTheme } from "../../context/ThemeContext";
 import RequirementAuditBoundary from "../../components/audit/RequirementAuditBoundary";
+import { adminApiRequest } from "../../../services/auth.service";
 
 const BETA_HERO = [
   { k: "CAPACITY", v: "300", tone: "default" },
@@ -15,59 +16,6 @@ const BETA_STAGES = [
   { k: "ACTIVATED", v: "6", pct: "40%", note: "Opened at least one Gold feature. This is the real number.", c: "#5FC48E", border: "#1A7A4A" },
   { k: "GAVE FEEDBACK", v: "12", pct: "80%", note: "Wrote something back. Higher than activation — people will talk even when they do not train.", c: "#5FC48E", border: "#1A7A4A" },
   { k: "WOULD PAY", v: "4", pct: "27%", note: "Said yes to “would you pay for this”. Ask again after the fixes ship.", c: "#D98A3E", border: "#B5651D" },
-];
-
-const FEEDBACK = [
-  {
-    c: 9,
-    t: "Nutrition logging is too slow",
-    status: "FIXED",
-    tone: "good",
-    quote: "I gave up logging dinner. Too many taps for something I eat every week.",
-    cta: "Tell the 9 it shipped",
-    who: "9 testers · Germany, Ghana, India",
-    drawer: "broadcast",
-  },
-  {
-    c: 7,
-    t: "Wanted the coach to know my injury",
-    status: "IN BUILD",
-    tone: "warn",
-    quote: "I told it about my knee on Monday and it suggested squats on Wednesday.",
-    cta: "See the build ticket",
-    who: "7 testers · all markets",
-    drawer: "flag",
-  },
-  {
-    c: 6,
-    t: "Videos buffer on mobile data",
-    status: "OPEN",
-    tone: "bad",
-    quote: "On 3G it stops every twenty seconds. I stopped training with the app outside.",
-    cta: "Assign to dev",
-    who: "6 testers · Ghana, India",
-    drawer: "support",
-  },
-  {
-    c: 5,
-    t: "Loved the identity statement",
-    status: "KEEP",
-    tone: "good",
-    quote: "Seeing my own sentence after a session hit harder than any streak counter.",
-    cta: "Use as marketing copy",
-    who: "5 testers · Germany, UK",
-    drawer: "quote",
-  },
-  {
-    c: 4,
-    t: "Did not understand what Gold included",
-    status: "OPEN",
-    tone: "bad",
-    quote: "I only realised on day 14 that the meal planner was part of it.",
-    cta: "Fix the day-0 screen",
-    who: "4 testers · Germany, Ghana",
-    drawer: "template",
-  },
 ];
 
 const BETA_DAYS = [
@@ -107,6 +55,7 @@ export default function BetaAnalytics() {
   const { openDrawer, showToast } = useAdminDrawer();
   const { isDark } = useTheme();
   const [bdone, setBdone] = useState([]);
+  const [betaSummary, setBetaSummary] = useState(null);
 
   const t = {
     text: isDark ? "#F7F3EE" : "#0D2B45",
@@ -137,7 +86,33 @@ export default function BetaAnalytics() {
     });
   };
 
-  const fbCount = `${FEEDBACK.reduce((a, x) => a + x.c, 0)} responses · 5 themes`;
+  useEffect(() => {
+    const ac = new AbortController();
+    adminApiRequest("/admin/trials/phase-one-beta?limit=300", { signal: ac.signal })
+      .then((data) => setBetaSummary(data))
+      .catch(() => {});
+    return () => ac.abort();
+  }, []);
+
+  const feedbackData = betaSummary?.feedback || null;
+  const feedbackItems = feedbackData?.themes || [];
+  const feedbackTotal = Number(feedbackData?.totalResponses || 0);
+  const feedbackThemeCount = Number(feedbackData?.themeCount || feedbackItems.length || 0);
+  const betaStages = useMemo(() => {
+    const totalUsers = Number(betaSummary?.totalBetaUsers || 0);
+    return BETA_STAGES.map((stage) => {
+      if (stage.k === "GAVE FEEDBACK") {
+        const pct = totalUsers > 0 ? `${Math.round((feedbackTotal / totalUsers) * 100)}%` : stage.pct;
+        return { ...stage, v: String(feedbackTotal), pct };
+      }
+      if (stage.k === "WOULD PAY") {
+        const pctNumber = Number(feedbackData?.wouldPayPct || 0);
+        return { ...stage, v: String(feedbackData?.wouldPayCount || 0), pct: `${Math.round(pctNumber)}%` };
+      }
+      return stage;
+    });
+  }, [betaSummary, feedbackData, feedbackTotal]);
+  const fbCount = `${feedbackTotal} responses · ${feedbackThemeCount} themes`;
 
   return (
     <div className={`animate-in fade-in duration-200 font-dmsans ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
@@ -205,7 +180,7 @@ export default function BetaAnalytics() {
 
       {/* 4 Beta Stages: Exact Claude Reference (lines 280-291) */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
-        {BETA_STAGES.map((b) => (
+        {betaStages.map((b) => (
           <div
             key={b.k}
             style={{
@@ -245,12 +220,6 @@ export default function BetaAnalytics() {
         <div style={{ flex: "1 1 600px", minWidth: 0 }}>
           
           {/* THE POINT OF THE PROGRAMME / Feedback inbox: Exact 1:1 Claude Reference */}
-          <RequirementAuditBoundary
-            auditId="ADMIN-EXTRA-044"
-            status="extra"
-            label="NOT IN REQUIREMENT - THE POINT OF THE PROGRAMME (FEEDBACK INBOX)"
-            className="mb-4"
-          >
             <div
               style={{
                 background: t.cardBg,
@@ -259,6 +228,7 @@ export default function BetaAnalytics() {
                 border: isDark ? "none" : `1px solid ${t.cardBorder}`,
                 borderLeft: "4px solid #B5651D",
                 padding: "22px",
+                marginBottom: "16px",
                 boxSizing: "border-box",
               }}
             >
@@ -279,7 +249,23 @@ export default function BetaAnalytics() {
               Grouped by theme, not by tester. Size of the group is how many people said it.
             </p>
 
-            {FEEDBACK.map((fb, i) => (
+            {feedbackItems.length === 0 && (
+              <div
+                style={{
+                  background: t.subtleBg,
+                  borderRadius: "15px",
+                  border: isDark ? "none" : `1px solid ${t.cardBorder}`,
+                  padding: "16px 17px",
+                  boxSizing: "border-box",
+                  font: "400 13.5px/1.55 'Inter', sans-serif",
+                  color: t.subtext,
+                }}
+              >
+                No feedback has been sent from the app yet.
+              </div>
+            )}
+
+            {feedbackItems.map((fb, i) => (
               <div
                 key={fb.t}
                 style={{
@@ -287,7 +273,7 @@ export default function BetaAnalytics() {
                   borderRadius: "15px",
                   border: isDark ? "none" : `1px solid ${t.cardBorder}`,
                   padding: "16px 17px",
-                  marginBottom: i < FEEDBACK.length - 1 ? "9px" : 0,
+                  marginBottom: i < feedbackItems.length - 1 ? "9px" : 0,
                   boxSizing: "border-box",
                 }}
               >
@@ -348,7 +334,6 @@ export default function BetaAnalytics() {
               </div>
             ))}
             </div>
-          </RequirementAuditBoundary>
 
           {/* CHECKPOINT ANALYTICS / Where testers fall away: Exact Claude Reference (lines 321-335) */}
           <RequirementAuditBoundary
