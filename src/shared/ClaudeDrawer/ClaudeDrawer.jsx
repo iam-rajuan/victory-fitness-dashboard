@@ -958,7 +958,11 @@ export default function ClaudeDrawer() {
       durationMinutes,
       durationSeconds,
       visibility,
-      thumbnail: String(formValues.thumbnail || payload?.thumbnail || "").trim(),
+      thumbnail: String(formValues.defaultThumbnail || payload?.defaultThumbnail || (!payload?.customThumbnail ? payload?.thumbnail : "") || "").trim(),
+      image_base64: formValues.thumbnail_image_base64 || undefined,
+      mime_type: formValues.thumbnail_mime_type || undefined,
+      file_name: formValues.thumbnail_file_name || undefined,
+      removeThumbnail: Boolean(formValues.thumbnailRemoved),
       movements,
     };
   };
@@ -1938,6 +1942,115 @@ export default function ClaudeDrawer() {
                     </span>
                   </div>
                 )
+              )}
+
+              {isVideoEditor && (
+                <div className="mt-4 rounded-xl border border-[#F7F3EE]/15 bg-[#07131E]/70 p-3.5">
+                  {(() => {
+                    const defaultThumbnail = String(formValues.defaultThumbnail || payload?.defaultThumbnail || (!payload?.customThumbnail ? payload?.thumbnail : "") || "").trim();
+                    const customThumbnail = String(formValues.customThumbnail || payload?.customThumbnail || "").trim();
+                    const stagedPreview = String(formValues.thumbnailPreview || "").trim();
+                    const hasCustomThumbnail = Boolean(stagedPreview || (!formValues.thumbnailRemoved && customThumbnail));
+                    const previewUrl = stagedPreview || (!formValues.thumbnailRemoved && customThumbnail) || defaultThumbnail;
+                    const handleThumbnailFile = async (file) => {
+                      if (!file) return;
+                      showToast(`Attaching ${file.name}...`);
+                      try {
+                        const imagePayload = await toBase64Payload(file, "workout-thumbnail.jpg");
+                        setFormValues((prev) => ({
+                          ...prev,
+                          thumbnail_image_base64: imagePayload.image_base64,
+                          thumbnail_mime_type: imagePayload.mime_type,
+                          thumbnail_file_name: imagePayload.file_name,
+                          thumbnailPreview: imagePayload.preview,
+                          thumbnailRemoved: false,
+                        }));
+                        showToast(`Attached ${file.name}`);
+                      } catch (err) {
+                        showToast(`Failed: ${err?.message || "Thumbnail upload failed"}`);
+                      }
+                    };
+
+                    return (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-[10px] font-medium tracking-[0.14em] text-[#C9943A] uppercase">
+                              Custom thumbnail
+                            </div>
+                            <div className="text-[11px] font-mono text-[#F7F3EE]/45 mt-0.5">
+                              {hasCustomThumbnail ? "Members see this image first" : "Using video thumbnail fallback"}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#F7F3EE]/10 text-[#F7F3EE]/80 hover:text-[#F7F3EE] hover:bg-[#F7F3EE]/15 transition-colors cursor-pointer border border-[#F7F3EE]/10">
+                              <HiOutlineArrowPath className="w-3.5 h-3.5 text-[#C9943A]" />
+                              <span>{hasCustomThumbnail ? "Change" : "Upload"}</span>
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
+                                className="hidden"
+                                onChange={(e) => handleThumbnailFile(e.target.files?.[0])}
+                              />
+                            </label>
+                            {hasCustomThumbnail && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFormValues((prev) => ({
+                                    ...prev,
+                                    customThumbnail: "",
+                                    thumbnail_image_base64: "",
+                                    thumbnail_mime_type: "",
+                                    thumbnail_file_name: "",
+                                    thumbnailPreview: "",
+                                    thumbnailRemoved: true,
+                                  }));
+                                  showToast("Custom thumbnail removed.");
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500/15 text-red-400 hover:bg-red-500/25 transition-colors cursor-pointer border border-red-500/20"
+                              >
+                                <HiOutlineTrash className="w-3.5 h-3.5" />
+                                <span>Remove</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {previewUrl ? (
+                          <div className="relative w-full aspect-video rounded-xl overflow-hidden border border-[#F7F3EE]/10 bg-[#050D14]">
+                            <img
+                              src={previewUrl}
+                              alt="Workout thumbnail preview"
+                              className="w-full h-full object-cover"
+                            />
+                            <span className="absolute left-2 top-2 rounded-full bg-[#0D0D0D]/75 px-2 py-1 text-[9.5px] font-mono font-semibold uppercase tracking-wider text-[#F7F3EE]/80">
+                              {hasCustomThumbnail ? "Custom" : "Fallback"}
+                            </span>
+                          </div>
+                        ) : (
+                          <label className="group relative flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed border-[#C9943A]/40 bg-[#07131E]/60 hover:bg-[#07131E] hover:border-[#C9943A] transition-all cursor-pointer text-center">
+                            <div className="w-11 h-11 rounded-full bg-[#C9943A]/15 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                              <HiOutlinePhoto className="w-5 h-5 text-[#C9943A]" />
+                            </div>
+                            <div className="text-xs font-semibold text-[#F7F3EE] mb-1">
+                              Upload custom thumbnail
+                            </div>
+                            <div className="text-[11px] text-[#F7F3EE]/50 font-mono">
+                              JPG, PNG, WEBP, GIF, HEIC
+                            </div>
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif"
+                              className="hidden"
+                              onChange={(e) => handleThumbnailFile(e.target.files?.[0])}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
               )}
             </div>
           )}
