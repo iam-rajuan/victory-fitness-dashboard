@@ -189,7 +189,7 @@ const DRAWER_CONFIGS = {
     fields: [
       { k: "NAME", type: "text", initial: "", placeholder: "Challenge name", hint: "shown on the card" },
       { k: "LENGTH", type: "chips", initial: "3", options: ["3", "5", "7", "14", "21"] },
-      { k: "TYPE", type: "chips", initial: "Physical", options: ["Physical", "Mental", "Relational"] },
+      { k: "TYPE", type: "chips", initial: "Physical", options: ["Physical", "Mental", "Relational", "Nutrition"] },
       { k: "STATUS", type: "chips", initial: "DRAFT", options: ["DRAFT", "UPCOMING", "ACTIVE", "ARCHIVED"] },
       { k: "FEATURED CARD", type: "chips", initial: "No", options: ["No", "Yes"] },
       { k: "DIFFICULTY", type: "chips", initial: "BEGINNER", options: ["BEGINNER", "INTERMEDIATE", "ADVANCED"] },
@@ -2201,7 +2201,9 @@ export default function ClaudeDrawer() {
                           ? formValues[field.k]
                           : String(formValues[field.k] || "").split(",").map((item) => item.trim()).filter(Boolean)
                         : [];
-                      const isSelected = field.multi ? selectedValues.includes(opt) : formValues[field.k] === opt;
+                      const isSelected = field.multi
+                        ? selectedValues.includes(opt)
+                        : String(formValues[field.k] || "").toLowerCase() === String(opt || "").toLowerCase();
                       return (
                         <button
                           key={opt}
