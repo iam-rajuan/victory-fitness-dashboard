@@ -14,7 +14,7 @@ const buildWorkoutPayload = (workout, onSaved) => {
     LENGTH: duration > 0 ? `${duration} min` : "Not set",
     durationSeconds: Number(workout.durationSeconds || 0),
     EQUIPMENT: workout.equipment || "Bodyweight",
-    LEVEL: workout.level || "Intermediate",
+    LEVEL: Array.isArray(workout.levels) && workout.levels.length ? workout.levels : (workout.level ? [workout.level] : ["Intermediate"]),
     VISIBILITY: workout.visibility || "Draft",
     videoSource: workout.videoSource || "VIMEO",
     videoUrl: workout.videoUrl || "",
@@ -73,7 +73,7 @@ export default function Workouts() {
 
       const publishedCount = list.filter((w) => w.visibility === "Published" || w.isPublished).length;
       const draftCount = list.length - publishedCount;
-      const untaggedCount = list.filter((w) => !w.tag || !w.equipment || !w.level).length;
+      const untaggedCount = list.filter((w) => !w.tag || !w.equipment || !(Array.isArray(w.levels) ? w.levels.length : w.level)).length;
       const under20Count = list.filter((w) => Number(w.durationMinutes || 0) > 0 && Number(w.durationMinutes || 0) < 20).length;
 
       setRows(mapped);

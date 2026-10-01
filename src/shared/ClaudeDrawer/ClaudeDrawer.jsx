@@ -133,10 +133,10 @@ const DRAWER_CONFIGS = {
     note: "Members filter by purpose, then by time. If you leave either blank this workout never appears in a filtered list — only in search.",
     fields: [
       { k: "TITLE", type: "text", initial: "New workout", hint: "shown on the card" },
-      { k: "PURPOSE", type: "chips", initial: "Mobility", options: ["Strength", "Mobility", "Core", "Conditioning", "Recovery", "Lower body", "Upper body"] },
+      { k: "PURPOSE", type: "chips", initial: "Mobility", options: ["Strength", "Full Body Workout", "Mobility", "Core", "Conditioning", "Recovery", "Lower body", "Upper body"] },
       { k: "LENGTH", type: "chips", initial: "15 min", options: ["10 min", "15 min", "25 min", "38 min", "45 min", "60 min"] },
       { k: "EQUIPMENT", type: "chips", initial: "Bodyweight", options: ["Bodyweight", "Dumbbells", "Barbell", "Kettlebell", "Pull-up bar", "Bands", "Full gym"] },
-      { k: "LEVEL", type: "chips", initial: "Intermediate", options: ["Beginner", "Intermediate", "Advanced"] },
+      { k: "LEVEL", type: "chips", multi: true, initial: ["Intermediate"], options: ["Beginner", "Intermediate", "Advanced"] },
       { k: "TIER ACCESS", type: "chips", initial: "All tiers", options: ["All tiers", "Gold and up", "Platinum and up", "Inner Circle"] },
       { k: "MOVEMENTS", type: "movements", initial: [], hint: "drives the in-session set list" },
       { k: "COACH NOTE", type: "input", initial: "Keep the shoulders down on the press. Stop two reps short of failure.", hint: "shown before the first set" },
@@ -154,7 +154,7 @@ const DRAWER_CONFIGS = {
     note: "Members filter by purpose, then by time. If you leave either blank this workout never appears in a filtered list — only in search.",
     fields: [
       { k: "TITLE", type: "text", initial: "New workout", hint: "shown on the card" },
-      { k: "PURPOSE", type: "chips", initial: "Mobility", options: ["Strength", "Mobility", "Core", "Conditioning", "Recovery", "Lower body", "Upper body"] },
+      { k: "PURPOSE", type: "chips", initial: "Mobility", options: ["Strength", "Full Body Workout", "Mobility", "Core", "Conditioning", "Recovery", "Lower body", "Upper body"] },
       { k: "LENGTH", type: "chips", initial: "15 min", options: ["10 min", "15 min", "25 min", "38 min", "45 min", "60 min"] },
       { k: "EQUIPMENT", type: "chips", initial: "Bodyweight", options: ["Bodyweight", "Dumbbells", "Barbell", "Kettlebell", "Pull-up bar", "Bands", "Full gym"] },
       { k: "LEVEL", type: "chips", initial: "Intermediate", options: ["Beginner", "Intermediate", "Advanced"] },
@@ -172,7 +172,7 @@ const DRAWER_CONFIGS = {
     note: "Checking imported workout filters...",
     fields: [
       { k: "VIMEO FOLDER", type: "text", initial: "Victory Fitness / Workouts 2026", hint: "Checking Vimeo..." },
-      { k: "APPLY TO ALL", type: "chips", initial: "Strength", options: ["Strength", "Mobility", "Core", "Conditioning", "Recovery"] },
+      { k: "APPLY TO ALL", type: "chips", initial: "Strength", options: ["Strength", "Full Body Workout", "Mobility", "Core", "Conditioning", "Recovery"] },
       { k: "DEFAULT EQUIPMENT", type: "chips", initial: "Dumbbells", options: ["Bodyweight", "Dumbbells", "Barbell", "Kettlebell", "Full gym"] },
       { k: "DEFAULT LEVEL", type: "chips", initial: "Intermediate", options: ["Beginner", "Intermediate", "Advanced"] },
       { k: "LENGTH FROM", type: "chips", initial: "Vimeo duration", options: ["Vimeo duration", "Set manually"] },
@@ -864,6 +864,21 @@ export default function ClaudeDrawer() {
     setFormValues((prev) => ({ ...prev, [fieldKey]: value }));
   };
 
+  const handleMultiChipSelect = (fieldKey, value) => {
+    setFormValues((prev) => {
+      const current = Array.isArray(prev[fieldKey])
+        ? prev[fieldKey]
+        : String(prev[fieldKey] || "")
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean);
+      const next = current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value];
+      return { ...prev, [fieldKey]: next.length ? next : [value] };
+    });
+  };
+
   const handleTextChange = (fieldKey, value) => {
     setFormValues((prev) => ({ ...prev, [fieldKey]: value }));
   };
@@ -936,7 +951,10 @@ export default function ClaudeDrawer() {
       videoSource,
       tag: String(formValues.PURPOSE || "Strength").trim(),
       equipment: String(formValues.EQUIPMENT || "").trim(),
-      level: String(formValues.LEVEL || "").trim(),
+      level: String(Array.isArray(formValues.LEVEL) ? (formValues.LEVEL[0] || "") : (formValues.LEVEL || "")).trim(),
+      levels: Array.isArray(formValues.LEVEL)
+        ? formValues.LEVEL.map((item) => String(item).trim()).filter(Boolean)
+        : String(formValues.LEVEL || "").split(",").map((item) => item.trim()).filter(Boolean),
       durationMinutes,
       durationSeconds,
       visibility,
@@ -2065,12 +2083,17 @@ export default function ClaudeDrawer() {
                     }}
                   >
                     {(field.options || []).map((opt) => {
-                      const isSelected = formValues[field.k] === opt;
+                      const selectedValues = field.multi
+                        ? Array.isArray(formValues[field.k])
+                          ? formValues[field.k]
+                          : String(formValues[field.k] || "").split(",").map((item) => item.trim()).filter(Boolean)
+                        : [];
+                      const isSelected = field.multi ? selectedValues.includes(opt) : formValues[field.k] === opt;
                       return (
                         <button
                           key={opt}
                           type="button"
-                          onClick={() => handleChipSelect(field.k, opt)}
+                          onClick={() => field.multi ? handleMultiChipSelect(field.k, opt) : handleChipSelect(field.k, opt)}
                           style={{
                             padding: "9px 14px",
                             borderRadius: "10px",
