@@ -1,25 +1,86 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { adminApiRequest } from "../../../services/auth.service";
 
-function isAuditModeEnabled() {
-  if (import.meta.env.VITE_REQUIREMENT_AUDIT === "true") {
-    return true;
+const ADMIN_AUDIT_FLAG_KEY = "requirement_audit_admin_marks";
+const ADMIN_AUDIT_STORAGE_KEY = "victoryRequirementAuditAdminMarks";
+let cachedAuditMode = null;
+let auditModePromise = null;
+
+function parseStoredAuditMode(value) {
+  if (value === "1" || value === "true") return true;
+  if (value === "0" || value === "false") return false;
+  return null;
+}
+
+function readStoredAuditMode() {
+  if (typeof window === "undefined") return null;
+  try {
+    return parseStoredAuditMode(window.localStorage?.getItem(ADMIN_AUDIT_STORAGE_KEY));
+  } catch {
+    return null;
   }
+}
 
-  if (typeof window !== "undefined") {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("requirementAudit") === "1") {
-      return true;
+function writeStoredAuditMode(enabled) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage?.setItem(ADMIN_AUDIT_STORAGE_KEY, enabled ? "1" : "0");
+  } catch {
+    // Storage is only a cache; backend remains the source of truth.
+  }
+}
+
+async function loadAuditMode() {
+  if (cachedAuditMode !== null) return cachedAuditMode;
+
+  const stored = readStoredAuditMode();
+  if (stored !== null) cachedAuditMode = stored;
+
+  try {
+    const response = await adminApiRequest("/admin/feature-flags");
+    const flag = (response.items || []).find((item) => item.key === ADMIN_AUDIT_FLAG_KEY);
+    const enabled = Boolean(flag?.enabled);
+    cachedAuditMode = enabled;
+    writeStoredAuditMode(enabled);
+    return enabled;
+  } catch {
+    cachedAuditMode = stored ?? false;
+    return cachedAuditMode;
+  }
+}
+
+function useAuditModeEnabled() {
+  const [enabled, setEnabled] = useState(() => cachedAuditMode ?? false);
+
+  useEffect(() => {
+    let mounted = true;
+    const handleLocalAuditModeChange = (event) => {
+      const nextEnabled = Boolean(event?.detail?.adminMarksEnabled);
+      cachedAuditMode = nextEnabled;
+      setEnabled(nextEnabled);
+    };
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("victory-requirement-audit-change", handleLocalAuditModeChange);
     }
-    try {
-      if (window.localStorage && window.localStorage.getItem("requirementAudit") === "1") {
-        return true;
+
+    if (!auditModePromise) {
+      auditModePromise = loadAuditMode().finally(() => {
+        auditModePromise = null;
+      });
+    }
+    auditModePromise.then((nextEnabled) => {
+      if (mounted) setEnabled(nextEnabled);
+    });
+    return () => {
+      mounted = false;
+      if (typeof window !== "undefined") {
+        window.removeEventListener("victory-requirement-audit-change", handleLocalAuditModeChange);
       }
-    } catch {
-      // Ignore localStorage errors
-    }
-  }
+    };
+  }, []);
 
-  return false;
+  return enabled;
 }
 
 function getLabel(status, label) {
@@ -37,7 +98,9 @@ export default function RequirementAuditBoundary({
   style = {},
   children,
 }) {
-  if (!isAuditModeEnabled()) {
+  const auditModeEnabled = useAuditModeEnabled();
+
+  if (!auditModeEnabled) {
     return children;
   }
 
@@ -77,4 +140,3 @@ export default function RequirementAuditBoundary({
     </div>
   );
 }
-
