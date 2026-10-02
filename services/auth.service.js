@@ -134,6 +134,21 @@ const storeAuthSession = (data) => {
   serverSessionVerified = true;
 };
 
+const clearServerAuthCookies = async () => {
+  try {
+    await fetch(`${API_URL}/auth/logout`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+  } catch {
+    // A stale browser cookie should never block a fresh login attempt.
+  }
+};
+
 const syncStoredApiUrl = () => {
   if (typeof window === "undefined") {
     return;
@@ -225,21 +240,12 @@ export const ensureAdminSession = async () => {
 export const adminApiRequest = async (path, options = {}) => {
   let currentToken = getUserToken();
   if (!currentToken) {
-    try {
-      const loginRes = await fetch(`${API_URL}/auth/login`, {
-        method: "POST",
-        headers: { Accept: "application/json", "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email: "office@victoryfitness.de", password: "admin@123" }),
-      });
-      const authData = await loginRes.json().catch(() => ({}));
-      if (loginRes.ok && authData?.user?.is_admin) {
-        storeAuthSession(authData);
-        currentToken = authData.access_token || authData.accessToken;
-      }
-    } catch {
-      /* ignore */
+    const refreshed = await ensureAdminSession();
+    if (!refreshed) {
+      clearUserInfo();
+      throw new Error("Admin session required");
     }
+    currentToken = getUserToken();
   }
   const tokenPayload = currentToken ? decodeAuthToken(currentToken) : null;
   const tokenExpiresAt = Number(tokenPayload?.exp || 0) * 1000;
@@ -255,6 +261,7 @@ export const adminApiRequest = async (path, options = {}) => {
     const token = getUserToken();
     return fetch(`${API_URL}${path}`, {
       method: options.method || "GET",
+      cache: "no-store",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
@@ -282,6 +289,10 @@ export const adminApiRequest = async (path, options = {}) => {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 403 && data?.detail === "Admin access required") {
+      clearUserInfo();
+      await clearServerAuthCookies();
+    }
     const error = new Error(data?.detail || "Request failed");
     error.status = response.status;
     error.path = path;
@@ -292,6 +303,9 @@ export const adminApiRequest = async (path, options = {}) => {
 };
 
 export const loginAdmin = async ({ email, password }) => {
+  clearUserInfo();
+  await clearServerAuthCookies();
+
   const response = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     headers: {
@@ -304,10 +318,13 @@ export const loginAdmin = async ({ email, password }) => {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
+    clearUserInfo();
     throw new Error(data?.detail || "Login failed");
   }
 
   if (!data?.user?.is_admin) {
+    clearUserInfo();
+    await clearServerAuthCookies();
     throw new Error("This account does not have admin dashboard access");
   }
 
