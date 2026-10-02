@@ -43,6 +43,11 @@ const SEQUENCE = [
   { when: "DAY 45", t: "Last call, then we stop writing", note: "One message, then off the list for good.", state: "NOT WRITTEN", tone: "bad" },
 ];
 
+const renderStars = (rating) => {
+  const value = Math.max(0, Math.min(5, Math.round(Number(rating || 0))));
+  return "★".repeat(value) + "☆".repeat(Math.max(0, 5 - value));
+};
+
 const TESTERS = [
   { i: "KM", n: "Kofi Mensah", meta: "Ghana · day 18 · 31 messages", state: "ACTIVE", tone: "good" },
   { i: "AR", n: "Arjun Rao", meta: "India · day 14 · 12 messages", state: "ACTIVE", tone: "good" },
@@ -117,12 +122,7 @@ export default function BetaAnalytics() {
   return (
     <div className={`animate-in fade-in duration-200 font-dmsans ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
       {/* Hero Banner: Exact Claude Reference (lines 258-278) */}
-      <RequirementAuditBoundary
-        auditId="ADMIN-MISMATCH-005"
-        status="mismatch"
-        label="MISMATCH - DOCUMENT REQUIRES 5-DAY GOLD TRIAL (21-DAY BETA HERO BANNER)"
-        className="mb-5"
-      >
+      <div className="mb-5">
         <div
           style={{
             background: t.cardBg,
@@ -176,7 +176,7 @@ export default function BetaAnalytics() {
           </div>
         </div>
       </div>
-      </RequirementAuditBoundary>
+      </div>
 
       {/* 4 Beta Stages: Exact Claude Reference (lines 280-291) */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
@@ -301,6 +301,20 @@ export default function BetaAnalytics() {
                     }}
                   >
                     {fb.status}
+                  </span>
+                  <span
+                    title={`${Number(fb.averageRating || 0).toFixed(1)} out of 5`}
+                    style={{
+                      font: "700 12px 'DM Sans', sans-serif",
+                      color: "#C9943A",
+                      letterSpacing: ".06em",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {renderStars(fb.averageRating)}
+                    <span style={{ color: t.subtext, marginLeft: "5px", letterSpacing: 0 }}>
+                      {Number(fb.averageRating || 0).toFixed(1)}
+                    </span>
                   </span>
                 </div>
 

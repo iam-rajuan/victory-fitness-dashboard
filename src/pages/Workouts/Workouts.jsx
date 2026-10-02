@@ -5,12 +5,15 @@ import { deleteAdminWorkout, listAdminWorkouts } from "../../../services/admin-w
 
 const buildWorkoutPayload = (workout, onSaved) => {
   const duration = Number(workout.durationMinutes || 0);
+  const purposes = Array.isArray(workout.purposes) && workout.purposes.length
+    ? workout.purposes
+    : (workout.tag ? [workout.tag] : ["Strength"]);
   return {
     mode: "edit",
     workoutId: workout.id,
     title: "Edit workout",
     TITLE: workout.title || "Untitled Workout",
-    PURPOSE: workout.tag || "Strength",
+    PURPOSE: purposes,
     LENGTH: duration > 0 ? `${duration} min` : "Not set",
     durationSeconds: Number(workout.durationSeconds || 0),
     EQUIPMENT: workout.equipment || "Bodyweight",
@@ -64,7 +67,7 @@ export default function Workouts() {
         return {
           id: w._id || w.id,
           a: w.title || "Untitled Workout",
-          b: `${w.tag || "Untagged"} · ${source}`,
+          b: `${(Array.isArray(w.purposes) && w.purposes.length ? w.purposes.join(", ") : w.tag) || "Untagged"} · ${source}`,
           c: formatWorkoutLength(duration, durationSeconds),
           d: String(w.viewsCount || w.starts || "0"),
           e: isPublished ? "Published" : "Draft",
@@ -75,7 +78,10 @@ export default function Workouts() {
 
       const publishedCount = list.filter((w) => w.visibility === "Published" || w.isPublished).length;
       const draftCount = list.length - publishedCount;
-      const untaggedCount = list.filter((w) => !w.tag || !w.equipment || !(Array.isArray(w.levels) ? w.levels.length : w.level)).length;
+      const untaggedCount = list.filter((w) => {
+        const hasPurpose = Array.isArray(w.purposes) ? w.purposes.length > 0 : Boolean(w.tag);
+        return !hasPurpose || !w.equipment || !(Array.isArray(w.levels) ? w.levels.length : w.level);
+      }).length;
       const under20Count = list.filter((w) => Number(w.durationMinutes || 0) > 0 && Number(w.durationMinutes || 0) < 20).length;
 
       setRows(mapped);

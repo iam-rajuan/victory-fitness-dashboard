@@ -133,7 +133,7 @@ const DRAWER_CONFIGS = {
     note: "Members filter by purpose, then by time. If you leave either blank this workout never appears in a filtered list — only in search.",
     fields: [
       { k: "TITLE", type: "text", initial: "New workout", hint: "shown on the card" },
-      { k: "PURPOSE", type: "chips", initial: "Mobility", options: ["Strength", "Full Body Workout", "Mobility", "Core", "Conditioning", "Recovery", "Lower body", "Upper body"] },
+      { k: "PURPOSE", type: "chips", multi: true, initial: ["Mobility"], options: ["Strength", "Full Body Workout", "Mobility", "Core", "Conditioning", "Recovery", "Lower body", "Upper body"] },
       { k: "LENGTH", type: "chips", initial: "15 min", options: ["10 min", "15 min", "25 min", "38 min", "45 min", "60 min"] },
       { k: "EQUIPMENT", type: "chips", initial: "Bodyweight", options: ["Bodyweight", "Dumbbells", "Barbell", "Kettlebell", "Pull-up bar", "Bands", "Full gym"] },
       { k: "LEVEL", type: "chips", multi: true, initial: ["Intermediate"], options: ["Beginner", "Intermediate", "Advanced"] },
@@ -154,7 +154,7 @@ const DRAWER_CONFIGS = {
     note: "Members filter by purpose, then by time. If you leave either blank this workout never appears in a filtered list — only in search.",
     fields: [
       { k: "TITLE", type: "text", initial: "New workout", hint: "shown on the card" },
-      { k: "PURPOSE", type: "chips", initial: "Mobility", options: ["Strength", "Full Body Workout", "Mobility", "Core", "Conditioning", "Recovery", "Lower body", "Upper body"] },
+      { k: "PURPOSE", type: "chips", multi: true, initial: ["Mobility"], options: ["Strength", "Full Body Workout", "Mobility", "Core", "Conditioning", "Recovery", "Lower body", "Upper body"] },
       { k: "LENGTH", type: "chips", initial: "15 min", options: ["10 min", "15 min", "25 min", "38 min", "45 min", "60 min"] },
       { k: "EQUIPMENT", type: "chips", initial: "Bodyweight", options: ["Bodyweight", "Dumbbells", "Barbell", "Kettlebell", "Pull-up bar", "Bands", "Full gym"] },
       { k: "LEVEL", type: "chips", initial: "Intermediate", options: ["Beginner", "Intermediate", "Advanced"] },
@@ -192,7 +192,7 @@ const DRAWER_CONFIGS = {
       { k: "TYPE", type: "chips", initial: "Physical", options: ["Physical", "Mental", "Relational", "Nutrition"] },
       { k: "STATUS", type: "chips", initial: "DRAFT", options: ["DRAFT", "UPCOMING", "ACTIVE", "ARCHIVED"] },
       { k: "FEATURED CARD", type: "chips", initial: "No", options: ["No", "Yes"] },
-      { k: "DIFFICULTY", type: "chips", initial: "BEGINNER", options: ["BEGINNER", "INTERMEDIATE", "ADVANCED"] },
+      { k: "DIFFICULTY", type: "chips", multi: true, initial: ["BEGINNER"], options: ["BEGINNER", "INTERMEDIATE", "ADVANCED"] },
       { k: "POINTS ON COMPLETION", type: "text", initial: "", placeholder: "e.g. 75", hint: "shown as the win" },
       { k: "WHAT TO DO", type: "input", initial: "", placeholder: "The instruction, verbatim...", hint: "the instruction, verbatim" },
       { k: "WHY IT MATTERS", type: "input", initial: "", placeholder: "Why this challenge matters...", hint: "largest text on the detail screen" },
@@ -889,6 +889,16 @@ export default function ClaudeDrawer() {
     return String(Math.max(1, Number(digits)));
   };
 
+  const normalizeSelectedList = (value) => {
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item).trim()).filter(Boolean);
+    }
+    return String(value || "")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  };
+
   const handleMovementChange = (index, key, value) => {
     setFormValues((prev) => {
       const movements = Array.isArray(prev.MOVEMENTS) ? [...prev.MOVEMENTS] : [];
@@ -942,6 +952,9 @@ export default function ClaudeDrawer() {
         order: index,
       }))
       .filter((movement) => movement.name);
+    const purposes = normalizeSelectedList(formValues.PURPOSE);
+    const levels = normalizeSelectedList(formValues.LEVEL);
+
     return {
       title: String(formValues.TITLE || payload?.TITLE || "Untitled Workout").trim(),
       vimeoId: isUpload ? "" : String(formValues.vimeoId || payload?.vimeoId || "").trim(),
@@ -949,12 +962,11 @@ export default function ClaudeDrawer() {
         ? String(formValues.videoUrl || payload?.videoUrl || "").trim()
         : String(formValues.videoUrl || payload?.videoUrl || "").trim(),
       videoSource,
-      tag: String(formValues.PURPOSE || "Strength").trim(),
+      tag: String(purposes[0] || "Strength").trim(),
+      purposes: purposes.length ? purposes : ["Strength"],
       equipment: String(formValues.EQUIPMENT || "").trim(),
-      level: String(Array.isArray(formValues.LEVEL) ? (formValues.LEVEL[0] || "") : (formValues.LEVEL || "")).trim(),
-      levels: Array.isArray(formValues.LEVEL)
-        ? formValues.LEVEL.map((item) => String(item).trim()).filter(Boolean)
-        : String(formValues.LEVEL || "").split(",").map((item) => item.trim()).filter(Boolean),
+      level: String(levels[0] || "").trim(),
+      levels,
       durationMinutes,
       durationSeconds,
       visibility,
@@ -1005,7 +1017,10 @@ export default function ClaudeDrawer() {
     const durationDays = Math.max(1, Number(String(formValues.LENGTH || payload?.LENGTH || "7").match(/\d+/)?.[0] || 7));
     const points = Math.max(0, Number(String(formValues["POINTS ON COMPLETION"] || "0").match(/\d+/)?.[0] || 0));
     const status = String(statusOverride || formValues.STATUS || payload?.STATUS || "DRAFT").trim().toUpperCase();
-    const difficulty = String(formValues.DIFFICULTY || payload?.DIFFICULTY || "BEGINNER").trim().toUpperCase();
+    const difficulties = normalizeSelectedList(formValues.DIFFICULTY)
+      .map((item) => item.toUpperCase())
+      .filter((item) => ["BEGINNER", "INTERMEDIATE", "ADVANCED"].includes(item));
+    const difficulty = difficulties[0] || "BEGINNER";
     const title = String(formValues.NAME || "Untitled challenge").trim();
     const description = String(formValues["WHAT TO DO"] || title).trim();
     const category = String(formValues.TYPE || "Physical").trim();
@@ -1024,7 +1039,8 @@ export default function ClaudeDrawer() {
       category,
       durationDays,
       points,
-      difficulty: ["BEGINNER", "INTERMEDIATE", "ADVANCED"].includes(difficulty) ? difficulty : "BEGINNER",
+      difficulty,
+      difficulties: difficulties.length ? difficulties : ["BEGINNER"],
       status: ["ACTIVE", "UPCOMING", "DRAFT", "ARCHIVED"].includes(status) ? status : "DRAFT",
       thumbnail: String(payload?.THUMBNAIL || "").trim(),
       featured: String(formValues["FEATURED CARD"] || payload?.["FEATURED CARD"] || "").trim().toLowerCase() === "yes",

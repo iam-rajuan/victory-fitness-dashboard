@@ -21,7 +21,7 @@ const statusLabel = (status) => {
 const mapChallengeRow = (challenge) => ({
   id: challenge.id,
   a: `${challenge.featured ? "★ " : ""}${challenge.title || "Untitled challenge"}`,
-  b: challenge.category || "Physical",
+  b: `${challenge.category || "Physical"} · ${(Array.isArray(challenge.difficulties) && challenge.difficulties.length ? challenge.difficulties : [challenge.difficulty || "BEGINNER"]).join(", ")}`,
   c: String(challenge.durationDays || 0),
   d: String(challenge.participantCount || 0),
   e: statusLabel(challenge.status),
@@ -40,7 +40,9 @@ const drawerPayloadFromChallenge = (challenge = {}) => ({
   "WHY IT MATTERS": challenge.whyItMatters || challenge.why_it_matters || "",
   STATUS: challenge.status || "DRAFT",
   "FEATURED CARD": challenge.featured ? "Yes" : "No",
-  DIFFICULTY: challenge.difficulty || "BEGINNER",
+  DIFFICULTY: Array.isArray(challenge.difficulties) && challenge.difficulties.length
+    ? challenge.difficulties
+    : [challenge.difficulty || "BEGINNER"],
   THUMBNAIL: challenge.thumbnail || "",
   PLAN_TEXT: challenge.planText || challenge.plan_text || "",
   PLAN_DAYS: challenge.planDays || challenge.plan_days || [],
