@@ -1099,6 +1099,46 @@ export default function ClaudeDrawer() {
     return "";
   };
 
+  const normalizeExternalVideoUrl = (value) => {
+    const videoUrl = String(value || "").trim();
+    if (!videoUrl) return "";
+    try {
+      const url = new URL(videoUrl);
+      const host = url.hostname.replace(/^www\./, "").toLowerCase();
+      if (host === "youtu.be") {
+        const id = url.pathname.replace(/^\/+/, "").split("/")[0];
+        return id ? `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1&playsinline=1` : videoUrl;
+      }
+      if (["youtube.com", "m.youtube.com", "youtube-nocookie.com"].includes(host)) {
+        const id = url.pathname.startsWith("/watch")
+          ? url.searchParams.get("v")
+          : url.pathname.startsWith("/embed/") || url.pathname.startsWith("/shorts/")
+            ? url.pathname.split("/").filter(Boolean)[1]
+            : "";
+        return id ? `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1&playsinline=1` : videoUrl;
+      }
+      if ((host === "vimeo.com" || host === "player.vimeo.com") && !url.pathname.includes("/video/")) {
+        const id = url.pathname.replace(/^\/+/, "").split("/")[0];
+        return id ? `https://player.vimeo.com/video/${id}?title=0&byline=0&portrait=0&playsinline=1&dnt=1&color=c9943a&transparent=0` : videoUrl;
+      }
+      if (host === "player.vimeo.com" && url.pathname.includes("/video/") && !videoUrl.includes("transparent=0")) {
+        return `${videoUrl}${videoUrl.includes("?") ? "&" : "?"}color=c9943a&transparent=0`;
+      }
+    } catch {
+      const youtubeMatch = videoUrl.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([a-zA-Z0-9_-]{6,})/);
+      if (youtubeMatch?.[1]) {
+        return `https://www.youtube.com/embed/${youtubeMatch[1]}?rel=0&modestbranding=1&playsinline=1`;
+      }
+      const vimeoMatch = videoUrl.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+      if (vimeoMatch?.[1]) {
+        return `https://player.vimeo.com/video/${vimeoMatch[1]}?title=0&byline=0&portrait=0&playsinline=1&dnt=1&color=c9943a&transparent=0`;
+      }
+    }
+    return videoUrl;
+  };
+
+  const isEmbeddableVideoUrl = (value) => /player\.vimeo\.com\/video\/|youtube\.com\/embed\//i.test(String(value || ""));
+
   const saveWorkout = async (visibility) => {
     const requestPayload = buildWorkoutRequestPayload(visibility);
     if (requestPayload.videoSource === "UPLOAD" && String(requestPayload.videoUrl || "").startsWith("blob:")) {
@@ -1222,7 +1262,9 @@ export default function ClaudeDrawer() {
       market: String(formValues.MARKET || payload?.MARKET || "All markets").trim(),
       purpose: String(formValues.PURPOSE || payload?.PURPOSE || "Announcement").trim(),
       publish_option: String(formValues.PUBLISH || payload?.PUBLISH || "Now").trim(),
-      external_video_url: formValues.videoRemoved ? undefined : (String(formValues.videoUrl || payload?.videoUrl || "").trim() || undefined),
+      external_video_url: formValues.videoRemoved
+        ? undefined
+        : (normalizeExternalVideoUrl(formValues.videoUrl || payload?.videoUrl) || undefined),
       image_base64: formValues.imageRemoved ? undefined : (formValues.image_base64 || undefined),
       image_url: formValues.imageRemoved ? null : undefined,
       video_base64: formValues.videoRemoved ? undefined : (formValues.video_base64 || undefined),
@@ -1731,23 +1773,29 @@ export default function ClaudeDrawer() {
                               <span>Remove</span>
                             </button>
                           </div>
-                          <div className="w-full aspect-video rounded-xl overflow-hidden border border-[#F7F3EE]/10 bg-black flex items-center justify-center">
-                            {/player\.vimeo\.com|youtube\.com\/embed/.test(formValues.videoUrl || payload?.videoUrl) ? (
-                              <iframe
-                                src={formValues.videoUrl || payload?.videoUrl}
-                                title="Broadcast video preview"
-                                className="w-full h-full border-0"
-                                allowFullScreen
-                              />
-                            ) : (
-                              <video
-                                src={formValues.videoUrl || payload?.videoUrl}
-                                controls
-                                playsInline
-                                className="w-full h-full object-contain"
-                              />
-                            )}
-                          </div>
+                          {(() => {
+                            const previewVideoUrl = normalizeExternalVideoUrl(formValues.videoUrl || payload?.videoUrl);
+                            return (
+                              <div className="w-full aspect-video rounded-xl overflow-hidden border border-[#F7F3EE]/10 bg-black flex items-center justify-center">
+                                {isEmbeddableVideoUrl(previewVideoUrl) ? (
+                                  <iframe
+                                    src={previewVideoUrl}
+                                    title="Broadcast video preview"
+                                    className="w-full h-full border-0"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowFullScreen
+                                  />
+                                ) : (
+                                  <video
+                                    src={previewVideoUrl}
+                                    controls
+                                    playsInline
+                                    className="w-full h-full object-contain"
+                                  />
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       ) : (
                         <div className="space-y-3">
@@ -1805,10 +1853,11 @@ export default function ClaudeDrawer() {
                             placeholder="Or paste Vimeo, YouTube, or direct video URL"
                             value={formValues.videoUrl || ""}
                             onChange={(e) => {
+                              const normalizedVideoUrl = normalizeExternalVideoUrl(e.target.value);
                               setFormValues((prev) => ({
                                 ...prev,
                                 FORMAT: "Video",
-                                videoUrl: e.target.value.trim(),
+                                videoUrl: normalizedVideoUrl,
                                 videoRemoved: false,
                                 image_base64: "",
                                 audio_base64: "",
