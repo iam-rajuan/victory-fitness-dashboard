@@ -5,6 +5,7 @@ import "react-quill/dist/quill.snow.css";
 import { IoChevronBack } from "react-icons/io5";
 import { Spin, message } from "antd";
 import { adminApiRequest } from "../../../services/auth.service";
+import { LEGAL_DOCUMENT_ACCEPT, readLegalDocumentFile } from "../../utils/legalDocumentImport";
 
 
 function TermsCondition() {
@@ -63,6 +64,20 @@ function TermsCondition() {
     }
   };
 
+  const handleDocumentUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const imported = await readLegalDocumentFile(file);
+      setTitle(imported.title || "Terms & Conditions");
+      setContent(imported.html);
+      message.success("Terms & Conditions uploaded into editor. Save changes to publish.");
+    } catch (err) {
+      message.error(err.message || "Failed to upload document");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -85,6 +100,16 @@ function TermsCondition() {
       </div>
 
       <div className=" bg-white rounded shadow p-5 h-full">
+        <div className="mb-4 flex flex-col gap-2 rounded border border-dashed border-slate-300 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-sm font-semibold text-slate-900">Upload Terms & Conditions</div>
+            <div className="text-xs text-slate-500">Import HTML, text, or Markdown into the editor before publishing.</div>
+          </div>
+          <label className="cursor-pointer rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">
+            Choose file
+            <input type="file" accept={LEGAL_DOCUMENT_ACCEPT} onChange={handleDocumentUpload} className="hidden" />
+          </label>
+        </div>
         <input
           type="text"
           value={title}

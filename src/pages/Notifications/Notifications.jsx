@@ -9,11 +9,20 @@ const EMPTY_TEMPLATE = {
   title: "",
   channels: ["push"],
   audience: "member",
+  memberSegments: ["all"],
   frequencyCapHours: 24,
   requiresContentReview: false,
   reviewStatus: "draft",
   variants: [{ key: "a", title: "", message: "" }],
 };
+
+const MEMBER_SEGMENTS = [
+  { key: "all", label: "All members" },
+  { key: "silver", label: "Silver" },
+  { key: "gold", label: "Gold" },
+  { key: "platinum", label: "Platinum" },
+  { key: "twenty_one_day_tester", label: "21 day Tester" },
+];
 
 function capLabel(hours) {
   const value = Math.max(Number(hours || 0), 1);
@@ -28,6 +37,22 @@ function channelLabel(channels = []) {
   return channels.map((item) => labels[item] || item).join(" · ") || "No channel";
 }
 
+function segmentLabel(segments = []) {
+  const normalized = Array.isArray(segments) && segments.length ? segments : ["all"];
+  if (normalized.includes("all")) return "All members";
+  const labels = Object.fromEntries(MEMBER_SEGMENTS.map((item) => [item.key, item.label]));
+  return normalized.map((item) => labels[item] || item).join(" · ");
+}
+
+function normalizeSegments(segments) {
+  const allowed = new Set(MEMBER_SEGMENTS.map((item) => item.key));
+  const normalized = Array.isArray(segments)
+    ? segments.map((item) => String(item || "").trim()).filter((item) => allowed.has(item))
+    : [];
+  if (!normalized.length || normalized.includes("all")) return ["all"];
+  return Array.from(new Set(normalized));
+}
+
 function normalizeTemplate(item) {
   return {
     id: String(item.id || item.type || "").trim(),
@@ -35,6 +60,7 @@ function normalizeTemplate(item) {
     title: String(item.title || "").trim(),
     channels: Array.isArray(item.channels) && item.channels.length ? item.channels : ["push"],
     audience: item.audience === "system" ? "system" : "member",
+    memberSegments: normalizeSegments(item.memberSegments),
     frequencyCapHours: Math.max(Number(item.frequencyCapHours || 24), 1),
     requiresContentReview: Boolean(item.requiresContentReview),
     reviewStatus: ["draft", "pending_review", "approved"].includes(item.reviewStatus) ? item.reviewStatus : "approved",
@@ -58,6 +84,7 @@ function toApiPayload(item) {
     title: item.title,
     channels: item.channels,
     audience: item.audience,
+    memberSegments: item.audience === "member" ? normalizeSegments(item.memberSegments) : ["all"],
     frequencyCapHours: Number(item.frequencyCapHours || 24),
     requiresContentReview: Boolean(item.requiresContentReview),
     reviewStatus: item.reviewStatus,
@@ -79,6 +106,16 @@ function TemplateEditor({ value, onClose, onSave }) {
       if (set.has(channel)) set.delete(channel);
       else set.add(channel);
       return { ...prev, channels: Array.from(set) };
+    });
+  };
+
+  const toggleSegment = (segment) => {
+    setDraft((prev) => {
+      if (segment === "all") return { ...prev, memberSegments: ["all"] };
+      const current = new Set(normalizeSegments(prev.memberSegments).filter((item) => item !== "all"));
+      if (current.has(segment)) current.delete(segment);
+      else current.add(segment);
+      return { ...prev, memberSegments: current.size ? Array.from(current) : ["all"] };
     });
   };
 
@@ -137,6 +174,23 @@ function TemplateEditor({ value, onClose, onSave }) {
               </select>
             </label>
           </div>
+
+          {draft.audience === "member" ? (
+            <div>
+              <div className="text-[10px] tracking-[.14em] text-white/45 mb-2">MEMBER GROUPS</div>
+              <div className="flex flex-wrap gap-2">
+                {MEMBER_SEGMENTS.map((segment) => (
+                  <button
+                    key={segment.key}
+                    onClick={() => toggleSegment(segment.key)}
+                    className={`rounded-xl px-4 py-2 text-sm font-semibold ${normalizeSegments(draft.memberSegments).includes(segment.key) ? "bg-[#C9943A] text-black" : "border border-white/15 text-white/70"}`}
+                  >
+                    {segment.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div>
             <div className="text-[10px] tracking-[.14em] text-white/45 mb-2">CHANNELS</div>
@@ -206,7 +260,8 @@ export default function Notifications() {
     a: item.title,
     b: channelLabel(item.channels),
     c: capLabel(item.frequencyCapHours),
-    d: item.audience === "member" ? `${item.enabledMembers} on · ${item.disabledMembers} off · ${item.sentCount} sent` : `${item.sentCount} sent`,
+    d: item.audience === "member" ? segmentLabel(item.memberSegments) : "System",
+    f: item.audience === "member" ? `${item.enabledMembers} on · ${item.disabledMembers} off · ${item.sentCount} sent` : `${item.sentCount} sent`,
     e: item.reviewStatus === "approved" ? "Approved" : item.reviewStatus === "draft" ? "Draft" : "Unapproved",
     tone: item.reviewStatus === "approved" ? "good" : "bad",
     rawData: item,
@@ -253,8 +308,8 @@ export default function Notifications() {
           if (!unapprovedEnabled) return load();
           await persist(templates.map((item) => item.id === unapprovedEnabled.id ? { ...item, reviewStatus: "approved" } : item), "Pending member-facing template approved");
         }}
-        filters={["All", "Member-facing", "Approved", "Unapproved", "Push", "WhatsApp", "Email"]}
-        cols={["TEMPLATE", "CHANNELS OFFERED", "CAP CEILING", "MEMBER SWITCHES", "STATE"]}
+        filters={["All", "Member-facing", "Silver", "Gold", "Platinum", "21 day Tester", "Approved", "Unapproved", "Push", "WhatsApp", "Email"]}
+        cols={["TEMPLATE", "CHANNELS OFFERED", "CAP CEILING", "TARGET MEMBERS", "STATE"]}
         rows={rows}
         isLoading={loading}
         onEditRow={(row) => setEditor(row.raw?.rawData || row.rawData || row)}

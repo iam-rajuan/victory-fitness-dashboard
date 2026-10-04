@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { adminApiRequest } from "../../../services/auth.service";
@@ -9,8 +10,8 @@ const APP_AUDIT_STORAGE_KEY = "victoryRequirementAuditAppMarks";
 const ADMIN_AUDIT_STORAGE_KEY = "victoryRequirementAuditAdminMarks";
 
 const BASE_ROWS = [
-  { a: "Privacy policy", b: "Published", c: "All markets", d: "4 months ago", e: "Out of date", tone: "bad", drawer: "settingDoc", id: "st1" },
-  { a: "Terms & conditions", b: "Published", c: "All markets", d: "4 months ago", e: "Out of date", tone: "warn", drawer: "settingDoc", id: "st2" },
+  { a: "Privacy policy", b: "Published", c: "All markets", d: "4 months ago", e: "Upload available", tone: "warn", route: "/privacy-policy", id: "st1" },
+  { a: "Terms & conditions", b: "Published", c: "All markets", d: "4 months ago", e: "Upload available", tone: "warn", route: "/terms-and-condition", id: "st2" },
   {
     a: "About us",
     b: "Published",
@@ -29,6 +30,7 @@ const BASE_ROWS = [
 
 export default function Settings() {
   const { openDrawer, showToast } = useAdminDrawer();
+  const navigate = useNavigate();
   const [rows] = useState(BASE_ROWS);
   const [auditFlags, setAuditFlags] = useState({
     app: false,
@@ -128,11 +130,11 @@ export default function Settings() {
       pageKicker="ADMINISTRATION"
       pageTitle="Settings"
       pageSub="Legal pages, company details and the switches that apply to the whole platform rather than to any one member."
-      pagePrimary="Save changes"
-      pageSecondary="View as member"
+      pagePrimary="Update privacy policy"
+      pageSecondary="Update terms"
       extraHeaderActions={auditControls}
-      onPrimary={() => openDrawer("settingDoc")}
-      onSecondary={() => openDrawer("settingText")}
+      onPrimary={() => navigate("/privacy-policy")}
+      onSecondary={() => navigate("/terms-and-condition")}
       pageStats={[
         { k: "LEGAL PAGES", v: "3", note: "Privacy, terms, about" },
         { k: "LAST UPDATED", v: "4 mo", note: "Before two markets launched" },
@@ -141,7 +143,7 @@ export default function Settings() {
       ]}
       pageAdvice="Your privacy policy was last updated before Ghana and India went live, so it does not mention MoMo, UPI, or data leaving the EU."
       pageAdviceDone="Update the policy"
-      onAdvice={() => openDrawer("settingDoc")}
+      onAdvice={() => navigate("/privacy-policy")}
       adviceAudit={{
         auditId: "ADMIN-EXTRA-024",
         status: "extra",
@@ -150,9 +152,9 @@ export default function Settings() {
       filters={["All", "Legal", "Data", "Access"]}
       cols={["SETTING", "VALUE", "SCOPE", "UPDATED", "STATUS"]}
       rows={rows}
-      onEditRow={(row) => openDrawer(row.drawer || "settingDoc")}
+      onEditRow={(row) => (row.route ? navigate(row.route) : openDrawer(row.drawer || "settingDoc"))}
       onDeleteRow={(row) => showToast(`Cannot delete critical platform setting: ${row.a}`)}
-      onRowClick={(row) => openDrawer(row.drawer || "settingDoc")}
+      onRowClick={(row) => (row.route ? navigate(row.route) : openDrawer(row.drawer || "settingDoc"))}
     />
   );
 }
