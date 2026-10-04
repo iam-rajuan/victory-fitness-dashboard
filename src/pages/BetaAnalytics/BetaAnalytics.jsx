@@ -612,6 +612,151 @@ export default function BetaAnalytics() {
         {/* Right Column (flex: 1 1 330px; min-width: 300px; display: flex; flex-direction: column; gap: 16px) */}
         <div style={{ flex: "1 1 330px", minWidth: "300px", display: "flex", flexDirection: "column", gap: "16px" }}>
           
+          {/* TESTERS: real beta users from the backend */}
+          <div
+            style={{
+              background: t.cardBg,
+              borderRadius: "20px",
+              boxShadow: t.cardShadow,
+              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
+              padding: "20px",
+              boxSizing: "border-box",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", marginBottom: "14px" }}>
+              <span style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A" }}>
+                TESTERS
+              </span>
+              <span style={{ font: "700 11px 'JetBrains Mono', monospace", color: t.muted }}>
+                {testers.length} ENROLLED · {testerCountryCount} COUNTRIES
+              </span>
+            </div>
+
+            {visibleTesters.length === 0 ? (
+              <div
+                style={{
+                  border: `1px solid ${t.rowBorder}`,
+                  borderRadius: "14px",
+                  padding: "18px",
+                  font: "600 13px 'DM Sans', sans-serif",
+                  color: t.muted,
+                }}
+              >
+                No beta testers found yet.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {visibleTesters.map((tItem, idx) => (
+                  <div
+                    key={tItem.id || `${tItem.email}-${idx}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "11px",
+                      padding: "11px 10px",
+                      borderBottom: idx < visibleTesters.length - 1 ? `1px solid ${t.rowBorder}` : "none",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "99px",
+                        background: isDark ? "rgba(247,243,238,.12)" : "rgba(13,43,69,.08)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flex: "none",
+                      }}
+                    >
+                      <span style={{ font: "700 11.5px 'DM Sans', sans-serif", color: "#C9943A" }}>
+                        {tItem.initials}
+                      </span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          font: "600 13.5px 'DM Sans', sans-serif",
+                          color: t.text,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {tItem.name}
+                      </div>
+                      <div
+                        style={{
+                          font: "400 11px 'JetBrains Mono', monospace",
+                          color: t.muted,
+                          marginTop: "2px",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {tItem.meta}
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        font: "700 9.5px 'DM Sans', sans-serif",
+                        letterSpacing: ".11em",
+                        flex: "none",
+                        color:
+                          tItem.tone === "good"
+                            ? isDark
+                              ? "#5FC48E"
+                              : "#1A7A4A"
+                            : tItem.tone === "warn"
+                            ? "#C9943A"
+                            : isDark
+                            ? "#D98A3E"
+                            : "#B5651D",
+                      }}
+                    >
+                      {tItem.state}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsTestersModalOpen(true)}
+              style={{
+                width: "100%",
+                height: "42px",
+                borderRadius: "12px",
+                boxSizing: "border-box",
+                border: "1.5px solid rgba(201,148,58,.6)",
+                background: isDark ? "rgba(201,148,58,0.06)" : "rgba(201,148,58,0.04)",
+                color: "#C9943A",
+                font: "700 13px 'DM Sans', sans-serif",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                cursor: "pointer",
+                marginTop: "14px",
+                userSelect: "none",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = isDark ? "rgba(201,148,58,0.14)" : "rgba(201,148,58,0.12)";
+                e.currentTarget.style.borderColor = "#C9943A";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = isDark ? "rgba(201,148,58,0.06)" : "rgba(201,148,58,0.04)";
+                e.currentTarget.style.borderColor = "rgba(201,148,58,.6)";
+              }}
+            >
+              <span>{`See all ${testers.length || 0}`}</span>
+              <span style={{ fontSize: "14px", lineHeight: 1 }}>↗</span>
+            </button>
+          </div>
+
           {/* DO THIS TODAY: Exact Claude Reference (lines 340-352) */}
           <RequirementAuditBoundary
             auditId="ADMIN-EXTRA-046"
@@ -780,150 +925,6 @@ export default function BetaAnalytics() {
             </div>
           </RequirementAuditBoundary>
 
-          {/* TESTERS: real beta users from the backend */}
-          <div
-            style={{
-              background: t.cardBg,
-              borderRadius: "20px",
-              boxShadow: t.cardShadow,
-              border: isDark ? "none" : `1px solid ${t.cardBorder}`,
-              padding: "20px",
-              boxSizing: "border-box",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", marginBottom: "14px" }}>
-              <span style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A" }}>
-                TESTERS
-              </span>
-              <span style={{ font: "700 11px 'JetBrains Mono', monospace", color: t.muted }}>
-                {testers.length} ENROLLED · {testerCountryCount} COUNTRIES
-              </span>
-            </div>
-
-            {visibleTesters.length === 0 ? (
-              <div
-                style={{
-                  border: `1px solid ${t.rowBorder}`,
-                  borderRadius: "14px",
-                  padding: "18px",
-                  font: "600 13px 'DM Sans', sans-serif",
-                  color: t.muted,
-                }}
-              >
-                No beta testers found yet.
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                {visibleTesters.map((tItem, idx) => (
-                  <div
-                    key={tItem.id || `${tItem.email}-${idx}`}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "11px",
-                      padding: "11px 10px",
-                      borderBottom: idx < visibleTesters.length - 1 ? `1px solid ${t.rowBorder}` : "none",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "32px",
-                        height: "32px",
-                        borderRadius: "99px",
-                        background: isDark ? "rgba(247,243,238,.12)" : "rgba(13,43,69,.08)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flex: "none",
-                      }}
-                    >
-                      <span style={{ font: "700 11.5px 'DM Sans', sans-serif", color: "#C9943A" }}>
-                        {tItem.initials}
-                      </span>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          font: "600 13.5px 'DM Sans', sans-serif",
-                          color: t.text,
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {tItem.name}
-                      </div>
-                      <div
-                        style={{
-                          font: "400 11px 'JetBrains Mono', monospace",
-                          color: t.muted,
-                          marginTop: "2px",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {tItem.meta}
-                      </div>
-                    </div>
-                    <span
-                      style={{
-                        font: "700 9.5px 'DM Sans', sans-serif",
-                        letterSpacing: ".11em",
-                        flex: "none",
-                        color:
-                          tItem.tone === "good"
-                            ? isDark
-                              ? "#5FC48E"
-                              : "#1A7A4A"
-                            : tItem.tone === "warn"
-                            ? "#C9943A"
-                            : isDark
-                            ? "#D98A3E"
-                            : "#B5651D",
-                      }}
-                    >
-                      {tItem.state}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setIsTestersModalOpen(true)}
-              style={{
-                width: "100%",
-                height: "42px",
-                borderRadius: "12px",
-                boxSizing: "border-box",
-                border: "1.5px solid rgba(201,148,58,.6)",
-                background: isDark ? "rgba(201,148,58,0.06)" : "rgba(201,148,58,0.04)",
-                color: "#C9943A",
-                font: "700 13px 'DM Sans', sans-serif",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                cursor: "pointer",
-                marginTop: "14px",
-                userSelect: "none",
-                transition: "all 0.15s ease",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = isDark ? "rgba(201,148,58,0.14)" : "rgba(201,148,58,0.12)";
-                e.currentTarget.style.borderColor = "#C9943A";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = isDark ? "rgba(201,148,58,0.06)" : "rgba(201,148,58,0.04)";
-                e.currentTarget.style.borderColor = "rgba(201,148,58,.6)";
-              }}
-            >
-              <span>{`See all ${testers.length || 0}`}</span>
-              <span style={{ fontSize: "14px", lineHeight: 1 }}>↗</span>
-            </button>
-          </div>
         </div>
       </div>
 
