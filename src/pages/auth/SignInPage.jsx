@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { IoEyeOffOutline, IoEyeOutline } from "react-icons/io5";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { clearUserInfo, ensureAdminSession, loginAdmin } from "../../../services/auth.service";
 
 function SignInPage() {
@@ -14,6 +14,17 @@ function SignInPage() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const isReauth = searchParams.get("reauth") === "1";
+  const queryFrom = searchParams.get("from");
+  const stateFrom = location.state?.from;
+  const redirectPath =
+    typeof queryFrom === "string" && queryFrom.startsWith("/") && !queryFrom.startsWith("//")
+      ? queryFrom
+      : typeof stateFrom === "string" && stateFrom.startsWith("/") && !stateFrom.startsWith("//")
+        ? stateFrom
+        : "/";
 
   useEffect(() => {
     let isMounted = true;
@@ -21,7 +32,7 @@ function SignInPage() {
       .then((allowed) => {
         if (!isMounted) return;
         if (allowed) {
-          navigate("/", { replace: true });
+          navigate(redirectPath, { replace: true });
           return;
         }
         setIsCheckingSession(false);
@@ -38,7 +49,7 @@ function SignInPage() {
     return () => {
       isMounted = false;
     };
-  }, [navigate]);
+  }, [navigate, redirectPath]);
 
   const handleCheckboxChange = (event) => {
     setIsChecked(event.target.checked);
@@ -59,7 +70,7 @@ function SignInPage() {
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
       });
-      navigate("/", { replace: true });
+      navigate(redirectPath, { replace: true });
     } catch (err) {
       console.error("Login failed:", err);
       setError(err instanceof Error ? err.message : "Invalid credentials or unauthorized admin role.");
@@ -107,6 +118,11 @@ function SignInPage() {
               {error && (
                 <div className="p-3.5 rounded-xl bg-[#B5651D]/20 border border-[#B5651D]/40 text-xs font-inter text-[#F7F3EE] leading-relaxed">
                   {error}
+                </div>
+              )}
+              {isReauth && !error && (
+                <div className="p-3.5 rounded-xl bg-[#C9943A]/15 border border-[#C9943A]/35 text-xs font-inter text-[#F7F3EE] leading-relaxed">
+                  Your admin session expired. Please sign in again to continue.
                 </div>
               )}
 

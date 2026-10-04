@@ -6,6 +6,37 @@ const API_URL_STORAGE_KEY = "victoryAdminApiUrl";
 let sessionBootstrapPromise = null;
 let serverSessionVerified = false;
 
+const buildSignInUrl = () => {
+  if (typeof window === "undefined") {
+    return "/sign-in";
+  }
+
+  const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  const signInUrl = new URL("/sign-in", window.location.origin);
+  signInUrl.searchParams.set("reauth", "1");
+  if (currentPath && !currentPath.startsWith("/sign-in")) {
+    signInUrl.searchParams.set("from", currentPath);
+  }
+  return `${signInUrl.pathname}${signInUrl.search}`;
+};
+
+export const redirectToAdminSignIn = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (window.location.pathname === "/sign-in") {
+    return;
+  }
+
+  window.location.replace(buildSignInUrl());
+};
+
+const expireAdminSession = () => {
+  clearUserInfo();
+  redirectToAdminSignIn();
+};
+
 const hasStoredAdminSession = () => {
   if (typeof window === "undefined") {
     return false;
@@ -242,17 +273,23 @@ export const adminApiRequest = async (path, options = {}) => {
   if (!currentToken) {
     const refreshed = await ensureAdminSession();
     if (!refreshed) {
-      clearUserInfo();
+      expireAdminSession();
       throw new Error("Admin session required");
     }
     currentToken = getUserToken();
   }
-  const tokenPayload = currentToken ? decodeAuthToken(currentToken) : null;
+  let tokenPayload = null;
+  try {
+    tokenPayload = currentToken ? decodeAuthToken(currentToken) : null;
+  } catch {
+    expireAdminSession();
+    throw new Error("Session expired");
+  }
   const tokenExpiresAt = Number(tokenPayload?.exp || 0) * 1000;
   if (currentToken && (!tokenExpiresAt || tokenExpiresAt - Date.now() < 60_000)) {
     const refreshed = await refreshAdminSession();
     if (!refreshed) {
-      clearUserInfo();
+      expireAdminSession();
       throw new Error("Session expired");
     }
   }
@@ -281,7 +318,7 @@ export const adminApiRequest = async (path, options = {}) => {
     // server refresh instead of trusting the local token check.
     const refreshed = await refreshAdminSession();
     if (!refreshed) {
-      clearUserInfo();
+      expireAdminSession();
       throw new Error("Session expired");
     }
     response = await makeRequest();
@@ -290,8 +327,10 @@ export const adminApiRequest = async (path, options = {}) => {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (response.status === 403 && data?.detail === "Admin access required") {
-      clearUserInfo();
+      expireAdminSession();
       await clearServerAuthCookies();
+    } else if (response.status === 401) {
+      expireAdminSession();
     }
     const error = new Error(data?.detail || "Request failed");
     error.status = response.status;
