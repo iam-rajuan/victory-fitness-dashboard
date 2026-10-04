@@ -4,8 +4,13 @@ import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { deleteAdminWorkout, listAdminWorkouts } from "../../../services/admin-workouts.service";
 import { DEFAULT_WORKOUT_CATEGORY, WORKOUT_CATEGORY_OPTIONS } from "../../constants/workoutCategories";
 
+const normalizeWorkoutDurationMinutes = (value) => {
+  const minutes = Number(value || 0);
+  return minutes === 38 ? 35 : minutes;
+};
+
 const buildWorkoutPayload = (workout, onSaved) => {
-  const duration = Number(workout.durationMinutes || 0);
+  const duration = normalizeWorkoutDurationMinutes(workout.durationMinutes);
   const purposes = Array.isArray(workout.purposes) && workout.purposes.length
     ? workout.purposes
     : (workout.tag ? [workout.tag] : [DEFAULT_WORKOUT_CATEGORY]);
@@ -62,7 +67,7 @@ export default function Workouts() {
       const data = await listAdminWorkouts();
       const list = Array.isArray(data) ? data : data?.workouts || data?.items || [];
       const mapped = list.map((w) => {
-        const duration = Number(w.durationMinutes || w.duration || w.lengthMinutes || 0);
+        const duration = normalizeWorkoutDurationMinutes(w.durationMinutes || w.duration || w.lengthMinutes);
         const durationSeconds = Number(w.durationSeconds || 0);
         const isPublished = w.visibility === "Published" || w.isPublished;
         const source = w.videoSource ? String(w.videoSource).toLowerCase().replace(/^\w/, (c) => c.toUpperCase()) : "Vimeo";

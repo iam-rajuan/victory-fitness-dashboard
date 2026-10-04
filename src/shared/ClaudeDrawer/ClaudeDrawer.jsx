@@ -121,6 +121,8 @@ const STARTERS = [
   ],
 ];
 
+const WORKOUT_LENGTH_OPTIONS = ["10 min", "15 min", "25 min", "35 min", "45 min", "60 min"];
+
 const DRAWER_CONFIGS = {
   workout: {
     kicker: "WORKOUT EDITOR",
@@ -135,7 +137,7 @@ const DRAWER_CONFIGS = {
     fields: [
       { k: "TITLE", type: "text", initial: "New workout", hint: "shown on the card" },
       { k: "PURPOSE", type: "chips", multi: true, initial: [DEFAULT_WORKOUT_CATEGORY], options: WORKOUT_CATEGORY_OPTIONS },
-      { k: "LENGTH", type: "chips", initial: "15 min", options: ["10 min", "15 min", "25 min", "38 min", "45 min", "60 min"] },
+      { k: "LENGTH", type: "chips", initial: "15 min", options: WORKOUT_LENGTH_OPTIONS },
       { k: "EQUIPMENT", type: "chips", initial: "Bodyweight", options: ["Bodyweight", "Dumbbells", "Barbell", "Kettlebell", "Pull-up bar", "Bands", "Full gym"] },
       { k: "LEVEL", type: "chips", multi: true, initial: ["Intermediate"], options: ["Beginner", "Intermediate", "Advanced"] },
       { k: "TIER ACCESS", type: "chips", initial: "All tiers", options: ["All tiers", "Gold and up", "Platinum and up", "Inner Circle"] },
@@ -156,7 +158,7 @@ const DRAWER_CONFIGS = {
     fields: [
       { k: "TITLE", type: "text", initial: "New workout", hint: "shown on the card" },
       { k: "PURPOSE", type: "chips", multi: true, initial: [DEFAULT_WORKOUT_CATEGORY], options: WORKOUT_CATEGORY_OPTIONS },
-      { k: "LENGTH", type: "chips", initial: "15 min", options: ["10 min", "15 min", "25 min", "38 min", "45 min", "60 min"] },
+      { k: "LENGTH", type: "chips", initial: "15 min", options: WORKOUT_LENGTH_OPTIONS },
       { k: "EQUIPMENT", type: "chips", initial: "Bodyweight", options: ["Bodyweight", "Dumbbells", "Barbell", "Kettlebell", "Pull-up bar", "Bands", "Full gym"] },
       { k: "LEVEL", type: "chips", initial: "Intermediate", options: ["Beginner", "Intermediate", "Advanced"] },
       { k: "TIER ACCESS", type: "chips", initial: "All tiers", options: ["All tiers", "Gold and up", "Platinum and up", "Inner Circle"] },

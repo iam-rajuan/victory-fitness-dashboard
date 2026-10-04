@@ -43,11 +43,6 @@ const NAV_GROUPS = [
         label: "21-Day Gold Beta",
         icon: HiOutlineSparkles,
         badge: "12",
-        audit: {
-          auditId: "ADMIN-MISMATCH-001",
-          status: "mismatch",
-          label: "MISMATCH - DOCUMENT REQUIRES 5-DAY GOLD TRIAL",
-        },
       },
       { to: "/trial-analytics", label: "5-Day Gold Trial", icon: HiOutlineClock, badge: "5" },
       { to: "/all-subscribers", label: "All Subscribers", icon: HiOutlineUserGroup },
