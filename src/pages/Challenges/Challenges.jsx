@@ -29,6 +29,16 @@ const mapChallengeRow = (challenge) => ({
   rawData: challenge,
 });
 
+const toRailChallenge = (row, { openDrawer, loadChallenges, handleDelete } = {}) => ({
+  d: `${row.c}d`,
+  type: row.b,
+  n: row.a,
+  joined: `${row.d} joined`,
+  featured: Boolean(row.rawData?.featured),
+  onEdit: () => openDrawer("challenge", { ...drawerPayloadFromChallenge(row.rawData), onSaved: loadChallenges }),
+  onRemove: () => handleDelete(row),
+});
+
 const drawerPayloadFromChallenge = (challenge = {}) => ({
   id: challenge.id || challenge._id,
   title: "Edit challenge",
@@ -115,14 +125,23 @@ export default function Challenges() {
   };
 
   const rail = useMemo(() => {
-    return rows.slice(0, 4).map((row) => ({
-      d: `${row.c}d`,
-      type: row.b,
-      n: row.a,
-      joined: `${row.d} joined`,
-      onEdit: () => openDrawer("challenge", { ...drawerPayloadFromChallenge(row.rawData), onSaved: loadChallenges }),
-      onRemove: () => handleDelete(row),
-    }));
+    return rows
+      .filter((row) => String(row.rawData?.status || "").toUpperCase() !== "DRAFT")
+      .slice()
+      .sort((a, b) => {
+        const joinedDelta = Number(b.rawData?.participantCount || 0) - Number(a.rawData?.participantCount || 0);
+        if (joinedDelta !== 0) return joinedDelta;
+        const timeA = new Date(a.rawData?.updatedAt || a.rawData?.createdAt || a.rawData?.updated_at || a.rawData?.created_at || 0).getTime();
+        const timeB = new Date(b.rawData?.updatedAt || b.rawData?.createdAt || b.rawData?.updated_at || b.rawData?.created_at || 0).getTime();
+        return timeB - timeA;
+      })
+      .slice(0, 5)
+      .map((row) => toRailChallenge(row, { openDrawer, loadChallenges, handleDelete }));
+  }, [rows]);
+
+  const featuredRailCard = useMemo(() => {
+    const featuredRow = rows.find((row) => row.rawData?.featured);
+    return featuredRow ? toRailChallenge(featuredRow, { openDrawer, loadChallenges, handleDelete }) : null;
   }, [rows]);
 
   const getChallengeFromRow = (row) => row?.rawData || row?.raw?.rawData || row;
@@ -159,6 +178,7 @@ export default function Challenges() {
         pageAdviceDone="Create challenge"
         onAdvice={() => openDrawer("challenge", { LENGTH: "3", TYPE: "Physical", STATUS: "DRAFT", onSaved: loadChallenges })}
         rail={rail}
+        railFeatured={featuredRailCard}
         filters={["All", "3 day", "5 day", "7 day", "14 day", "21 day", "Draft"]}
         cols={["CHALLENGE", "TYPE", "DAYS", "JOINED", "STATUS"]}
         rows={rows}
@@ -180,7 +200,7 @@ export default function Challenges() {
             </div>
             <h2 className="text-2xl font-semibold font-clash leading-tight mb-2">Delete challenge?</h2>
             <p className="text-sm font-inter leading-relaxed text-[#F7F3EE]/65 mb-5">
-              This removes "{deleteTarget.a}" from the dashboard and the member app. This action cannot be undone.
+              This removes &quot;{deleteTarget.a}&quot; from the dashboard and the member app. This action cannot be undone.
             </p>
             <div className="flex gap-3">
               <button

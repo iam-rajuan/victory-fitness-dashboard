@@ -110,6 +110,7 @@ export default function ClaudeAdminTable({
   onAdvice,
   adviceAudit,
   rail,
+  railFeatured,
   filters = ["All"],
   cols = ["NAME", "TIER", "MARKET", "LAST ACTIVE", "STATUS"],
   rows = [],
@@ -551,18 +552,65 @@ export default function ClaudeAdminTable({
       })()}
 
       {/* Mobile Mirror Rail (e.g. for Challenges, lines 425-448) */}
-      {rail && rail.length > 0 && (
+      {(railFeatured || (rail && rail.length > 0)) && (
         <div style={{ marginBottom: "18px" }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "12px", marginBottom: "11px" }}>
             <span style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".15em", color: "#C9943A" }}>
-              MOST JOINED THIS WEEK · WHAT MEMBERS SEE ON THE CHALLENGE SCREEN
+              FEATURED CARD · TOP 5 MOST JOINED
             </span>
             <span style={{ font: "500 11.5px 'JetBrains Mono', monospace", color: t.muted }}>
-              mirrors the mobile rail
+              mirrors the challenge screen
             </span>
           </div>
+          {railFeatured && (
+            <div
+              style={{
+                marginBottom: "11px",
+                width: "min(100%, 520px)",
+                background: t.cardBg,
+                borderRadius: "16px",
+                border: `1px solid ${t.cardBorder}`,
+                borderLeft: "4px solid #C9943A",
+                boxShadow: t.cardShadow,
+                padding: "16px 18px",
+                boxSizing: "border-box",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "12px", marginBottom: "7px" }}>
+                <span style={{ font: "700 11px 'DM Sans', sans-serif", letterSpacing: ".14em", color: "#C9943A" }}>FEATURED CARD</span>
+                <span style={{ font: "700 12px 'JetBrains Mono', monospace", color: "#C9943A" }}>{railFeatured.joined}</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "14px" }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ font: "700 18px/1.25 'DM Sans', sans-serif", color: t.text }}>{railFeatured.n}</div>
+                  <div style={{ font: "500 10px 'DM Sans', sans-serif", letterSpacing: ".1em", color: t.muted, marginTop: "5px", textTransform: "uppercase" }}>
+                    {railFeatured.d} · {railFeatured.type}
+                  </div>
+                </div>
+                <div
+                  onClick={() => (railFeatured.onEdit ? railFeatured.onEdit() : openDrawer("challenge"))}
+                  style={{
+                    height: "36px",
+                    minWidth: "96px",
+                    borderRadius: "10px",
+                    boxSizing: "border-box",
+                    border: "1.5px solid rgba(201,148,58,.7)",
+                    color: "#C9943A",
+                    font: "700 12px 'DM Sans', sans-serif",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  Edit
+                </div>
+              </div>
+            </div>
+          )}
           <div style={{ display: "flex", gap: "11px", overflowX: "auto", paddingBottom: "4px" }}>
-            {rail.map((c, i) => (
+            {(rail || []).map((c, i) => (
               <div
                 key={c.n || i}
                 style={{
