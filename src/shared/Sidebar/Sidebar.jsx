@@ -83,6 +83,9 @@ const NAV_GROUPS = [
   {
     label: "ADMINISTRATION",
     items: [
+      { to: "/privacy-policy", label: "Privacy Policy", icon: HiOutlineShieldCheck },
+      { to: "/terms-and-condition", label: "Terms & Conditions", icon: HiOutlineDocumentText },
+      { to: "/about-us", label: "About Us", icon: HiOutlineQuestionMarkCircle },
       {
         to: "/faq",
         label: "FAQ",
