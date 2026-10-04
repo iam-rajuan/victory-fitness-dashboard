@@ -4,157 +4,88 @@ import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { adminApiRequest } from "../../../services/auth.service";
 
-const APP_AUDIT_FLAG_KEY = "requirement_audit_app_marks";
-const ADMIN_AUDIT_FLAG_KEY = "requirement_audit_admin_marks";
-const APP_AUDIT_STORAGE_KEY = "victoryRequirementAuditAppMarks";
-const ADMIN_AUDIT_STORAGE_KEY = "victoryRequirementAuditAdminMarks";
-
-const BASE_ROWS = [
-  { a: "Privacy policy", b: "Published", c: "All markets", d: "4 months ago", e: "Upload available", tone: "warn", route: "/privacy-policy", id: "st1" },
-  { a: "Terms & conditions", b: "Published", c: "All markets", d: "4 months ago", e: "Upload available", tone: "warn", route: "/terms-and-condition", id: "st2" },
-  {
-    a: "About us",
-    b: "Published",
-    c: "All markets",
-    d: "2 months ago",
-    e: "Current",
-    tone: "good",
-    drawer: "settingText",
-    id: "st3",
-    audit: { auditId: "ADMIN-EXTRA-005", status: "extra", label: "NEW FEATURE - ABOUT US MANAGEMENT NOT IN REQUIREMENT" },
-  },
-  { a: "Data region", b: "EU · Frankfurt", c: "All markets", d: "At launch", e: "Current", tone: "good", drawer: "settingData", id: "st4" },
-  { a: "Right to export and delete", b: "Self-serve in app", c: "All markets", d: "1 month ago", e: "Current", tone: "good", drawer: "settingData", id: "st5" },
-  { a: "Admin accounts", b: "1 account", c: "Platform", d: "At launch", e: "Add per person", tone: "warn", drawer: "settingAccess", id: "st6" },
+const LEGAL_DOCS = [
+  { id: "privacy", label: "Privacy policy", endpoint: "/admin/content/privacy-policy", route: "/privacy-policy" },
+  { id: "terms", label: "Terms & conditions", endpoint: "/admin/content/terms-condition", route: "/terms-and-condition" },
+  { id: "about", label: "About us", endpoint: "/admin/content/about-us", route: "/about-us" },
 ];
 
+function formatDate(value) {
+  if (!value) return "Not published";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not published";
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function legalRoute(row) {
+  return row?.route || row?.raw?.route || row?.rawData?.route || "/settings";
+}
+
 export default function Settings() {
-  const { openDrawer, showToast } = useAdminDrawer();
+  const { showToast } = useAdminDrawer();
   const navigate = useNavigate();
-  const [rows] = useState(BASE_ROWS);
-  const [auditFlags, setAuditFlags] = useState({
-    app: false,
-    admin: false,
-  });
-  const [savingAuditKey, setSavingAuditKey] = useState("");
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
-    adminApiRequest("/admin/feature-flags")
-      .then((response) => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const responses = await Promise.all(
+          LEGAL_DOCS.map(async (item) => ({ ...item, data: await adminApiRequest(item.endpoint) }))
+        );
         if (!mounted) return;
-        const items = response.items || [];
-        const appFlag = items.find((item) => item.key === APP_AUDIT_FLAG_KEY);
-        const adminFlag = items.find((item) => item.key === ADMIN_AUDIT_FLAG_KEY);
-        const nextFlags = {
-          app: Boolean(appFlag?.enabled),
-          admin: Boolean(adminFlag?.enabled),
-        };
-        setAuditFlags(nextFlags);
-        window.localStorage?.setItem(APP_AUDIT_STORAGE_KEY, nextFlags.app ? "1" : "0");
-        window.localStorage?.setItem(ADMIN_AUDIT_STORAGE_KEY, nextFlags.admin ? "1" : "0");
-      })
-      .catch(() => {
-        showToast("Could not load audit marker settings.");
-      });
+        setRows(responses.map((item) => ({
+          id: item.id,
+          a: item.label,
+          b: item.data.status || (item.id === "about" ? "Current" : "Published"),
+          c: (item.data.applies_to || ["ALL"]).join(", "),
+          d: formatDate(item.data.published_at || item.data.updated_at),
+          e: item.data.version || "v1",
+          tone: item.data.status === "Draft" || item.data.status === "Unpublished" ? "warn" : "good",
+          route: item.route,
+          rawData: item.data,
+        })));
+      } catch (error) {
+        showToast(error?.message || "Could not load legal document settings.");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    load();
     return () => {
       mounted = false;
     };
   }, [showToast]);
 
-  const updateAuditFlag = async (target, enabled) => {
-    const key = target === "app" ? APP_AUDIT_FLAG_KEY : ADMIN_AUDIT_FLAG_KEY;
-    const description = target === "app"
-      ? "Show red requirement-audit labels and borders inside the member app."
-      : "Show red requirement-audit labels and borders inside the admin dashboard.";
-
-    setSavingAuditKey(target);
-    try {
-      await adminApiRequest("/admin/feature-flags", {
-        method: "POST",
-        body: {
-          key,
-          description,
-          enabled,
-          rolloutPct: 100,
-          allowedCountries: [],
-        },
-      });
-
-      setAuditFlags((current) => ({ ...current, [target]: enabled }));
-      window.localStorage?.setItem(target === "app" ? APP_AUDIT_STORAGE_KEY : ADMIN_AUDIT_STORAGE_KEY, enabled ? "1" : "0");
-      if (target === "admin") {
-        window.dispatchEvent(new CustomEvent("victory-requirement-audit-change", {
-          detail: { adminMarksEnabled: enabled },
-        }));
-      }
-      showToast(`${target === "app" ? "App" : "Admin"} red marks ${enabled ? "turned on" : "turned off"}.`);
-    } catch (error) {
-      showToast(error?.message || "Could not update audit marker setting.");
-    } finally {
-      setSavingAuditKey("");
-    }
-  };
-
-  const auditControls = useMemo(() => {
-    const renderToggle = (target, label, enabled) => {
-      const isSaving = savingAuditKey === target;
-      return (
-        <button
-          type="button"
-          onClick={() => updateAuditFlag(target, !enabled)}
-          disabled={isSaving}
-          className={[
-            "rounded-full border px-4 py-2 text-xs font-black uppercase tracking-[0.08em] transition",
-            enabled
-              ? "border-red-500/70 bg-red-500 text-white shadow-[0_0_18px_rgba(239,68,68,0.22)]"
-              : "border-white/15 bg-[#0D2B45] text-[#F7F3EE] hover:border-[#C9943A]/70",
-            isSaving ? "cursor-wait opacity-70" : "",
-          ].join(" ")}
-        >
-          {label}: {isSaving ? "Saving" : enabled ? "On" : "Off"}
-        </button>
-      );
-    };
-
-    return (
-      <div className="flex flex-wrap items-center gap-2">
-        {renderToggle("app", "App red marks", auditFlags.app)}
-        {renderToggle("admin", "Admin red marks", auditFlags.admin)}
-      </div>
-    );
-  }, [auditFlags.admin, auditFlags.app, savingAuditKey]);
+  const stats = useMemo(() => {
+    const published = rows.filter((row) => /published|current/i.test(row.b)).length;
+    return [
+      { k: "LEGAL PAGES", v: String(rows.length || 3), note: "Privacy, terms, about" },
+      { k: "PUBLISHED", v: String(published), note: "Current member-facing versions" },
+      { k: "MARKETS", v: "5", note: "All, EU, Germany, Ghana, India" },
+      { k: "VERSIONING", v: "On", note: "Previous versions retained" },
+    ];
+  }, [rows]);
 
   return (
     <ClaudeAdminTable
       pageKicker="ADMINISTRATION"
       pageTitle="Settings"
-      pageSub="Legal pages, company details and the switches that apply to the whole platform rather than to any one member."
+      pageSub="Legal documents and company content that apply across the platform."
       pagePrimary="Update privacy policy"
       pageSecondary="Update terms"
-      extraHeaderActions={auditControls}
       onPrimary={() => navigate("/privacy-policy")}
       onSecondary={() => navigate("/terms-and-condition")}
-      pageStats={[
-        { k: "LEGAL PAGES", v: "3", note: "Privacy, terms, about" },
-        { k: "LAST UPDATED", v: "4 mo", note: "Before two markets launched" },
-        { k: "DATA REGION", v: "EU", note: "Frankfurt" },
-        { k: "ADMIN ACCOUNTS", v: "1", note: "Add one per person" },
-      ]}
-      pageAdvice="Your privacy policy was last updated before Ghana and India went live, so it does not mention MoMo, UPI, or data leaving the EU."
-      pageAdviceDone="Update the policy"
-      onAdvice={() => navigate("/privacy-policy")}
-      adviceAudit={{
-        auditId: "ADMIN-EXTRA-024",
-        status: "extra",
-        label: "NEW FEATURE - LEGAL COMPLIANCE DIAGNOSTIC BANNER NOT IN REQUIREMENT",
-      }}
-      filters={["All", "Legal", "Data", "Access"]}
-      cols={["SETTING", "VALUE", "SCOPE", "UPDATED", "STATUS"]}
+      pageStats={stats}
+      filters={["All", "Legal"]}
+      cols={["DOCUMENT", "STATUS", "SCOPE", "PUBLISHED", "VERSION"]}
       rows={rows}
-      onEditRow={(row) => (row.route ? navigate(row.route) : openDrawer(row.drawer || "settingDoc"))}
-      onDeleteRow={(row) => showToast(`Cannot delete critical platform setting: ${row.a}`)}
-      onRowClick={(row) => (row.route ? navigate(row.route) : openDrawer(row.drawer || "settingDoc"))}
+      isLoading={loading}
+      hideDeleteActions
+      onEditRow={(row) => navigate(legalRoute(row))}
+      onRowClick={(row) => navigate(legalRoute(row))}
     />
   );
 }

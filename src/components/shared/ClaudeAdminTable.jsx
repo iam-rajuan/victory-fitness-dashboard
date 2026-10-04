@@ -116,6 +116,7 @@ export default function ClaudeAdminTable({
   rows = [],
   onEditRow,
   onDeleteRow,
+  hideDeleteActions = false,
   onRowClick,
   isLoading = false,
 }) {
@@ -876,27 +877,29 @@ export default function ClaudeAdminTable({
                     >
                       Edit
                     </div>
-                    <div
-                      onClick={(e) => handleDeleteClick(r, e)}
-                      style={{
-                        width: "30px",
-                        height: "30px",
-                        borderRadius: "8px",
-                        boxSizing: "border-box",
-                        border: "1.5px solid rgba(217,138,62,.5)",
-                        color: "#D98A3E",
-                        font: "700 13px 'DM Sans', sans-serif",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        cursor: "pointer",
-                        flex: "none",
-                        userSelect: "none",
-                        background: isDark ? "transparent" : "#FAF7F2",
-                      }}
-                    >
-                      ×
-                    </div>
+                    {!hideDeleteActions ? (
+                      <div
+                        onClick={(e) => handleDeleteClick(r, e)}
+                        style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "8px",
+                          boxSizing: "border-box",
+                          border: "1.5px solid rgba(217,138,62,.5)",
+                          color: "#D98A3E",
+                          font: "700 13px 'DM Sans', sans-serif",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          flex: "none",
+                          userSelect: "none",
+                          background: isDark ? "transparent" : "#FAF7F2",
+                        }}
+                      >
+                        ×
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               );
