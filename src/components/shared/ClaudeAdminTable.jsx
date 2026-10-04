@@ -116,6 +116,7 @@ export default function ClaudeAdminTable({
   rows = [],
   onEditRow,
   onDeleteRow,
+  renderRowActions,
   hideDeleteActions = false,
   onRowClick,
   isLoading = false,
@@ -857,49 +858,55 @@ export default function ClaudeAdminTable({
                     onClick={(e) => e.stopPropagation()}
                     style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}
                   >
-                    <div
-                      onClick={() => resolveRowDrawer(r)}
-                      style={{
-                        height: "30px",
-                        padding: "0 10px",
-                        borderRadius: "8px",
-                        boxSizing: "border-box",
-                        border: "1.5px solid rgba(201,148,58,.55)",
-                        color: "#C9943A",
-                        font: "700 11.5px 'DM Sans', sans-serif",
-                        display: "flex",
-                        alignItems: "center",
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                        userSelect: "none",
-                        background: isDark ? "transparent" : "#FAF7F2",
-                      }}
-                    >
-                      Edit
-                    </div>
-                    {!hideDeleteActions ? (
-                      <div
-                        onClick={(e) => handleDeleteClick(r, e)}
-                        style={{
-                          width: "30px",
-                          height: "30px",
-                          borderRadius: "8px",
-                          boxSizing: "border-box",
-                          border: "1.5px solid rgba(217,138,62,.5)",
-                          color: "#D98A3E",
-                          font: "700 13px 'DM Sans', sans-serif",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          cursor: "pointer",
-                          flex: "none",
-                          userSelect: "none",
-                          background: isDark ? "transparent" : "#FAF7F2",
-                        }}
-                      >
-                        ×
-                      </div>
-                    ) : null}
+                    {renderRowActions ? (
+                      renderRowActions(r.raw || r, { isDark, resolveRowDrawer: () => resolveRowDrawer(r), handleDelete: (e) => handleDeleteClick(r, e) })
+                    ) : (
+                      <>
+                        <div
+                          onClick={() => resolveRowDrawer(r)}
+                          style={{
+                            height: "30px",
+                            padding: "0 10px",
+                            borderRadius: "8px",
+                            boxSizing: "border-box",
+                            border: "1.5px solid rgba(201,148,58,.55)",
+                            color: "#C9943A",
+                            font: "700 11.5px 'DM Sans', sans-serif",
+                            display: "flex",
+                            alignItems: "center",
+                            cursor: "pointer",
+                            whiteSpace: "nowrap",
+                            userSelect: "none",
+                            background: isDark ? "transparent" : "#FAF7F2",
+                          }}
+                        >
+                          Edit
+                        </div>
+                        {!hideDeleteActions ? (
+                          <div
+                            onClick={(e) => handleDeleteClick(r, e)}
+                            style={{
+                              width: "30px",
+                              height: "30px",
+                              borderRadius: "8px",
+                              boxSizing: "border-box",
+                              border: "1.5px solid rgba(217,138,62,.5)",
+                              color: "#D98A3E",
+                              font: "700 13px 'DM Sans', sans-serif",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: "pointer",
+                              flex: "none",
+                              userSelect: "none",
+                              background: isDark ? "transparent" : "#FAF7F2",
+                            }}
+                          >
+                            ×
+                          </div>
+                        ) : null}
+                      </>
+                    )}
                   </div>
                 </div>
               );

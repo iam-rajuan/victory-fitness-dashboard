@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { useTheme } from "../../context/ThemeContext";
@@ -121,6 +121,8 @@ const testerStateFor = (tester) => {
   const lastActive = parseDate(activity.lastActiveAt);
   const inactiveDays = lastActive ? Math.floor((Date.now() - lastActive.getTime()) / 86_400_000) : 999;
   const status = String(tester.status || "").toUpperCase();
+  if (tester.isDeleted) return { label: "DELETED", tone: "bad" };
+  if (tester.isBlocked || status === "BLOCKED") return { label: "BLOCKED", tone: "bad" };
   if (!activity.usedAnyTrackedFeature) return { label: "SILENT", tone: "bad" };
   if (status !== "ACTIVE") return { label: status || "EXPIRED", tone: "bad" };
   if (inactiveDays >= 3 || Number(tester.daysRemaining || 0) <= 2) return { label: "AT RISK", tone: "warn" };
@@ -158,6 +160,10 @@ const normalizeTester = (tester) => {
     meta: `${country} · ${currentDay ? `day ${currentDay}` : "day n/a"} · ${totalActions > 0 ? `${totalActions} actions` : "never opened"}`,
     activity,
     totalActions,
+    isBlocked: Boolean(tester.isBlocked),
+    isDeleted: Boolean(tester.isDeleted),
+    blockedAt: tester.blockedAt || null,
+    deletedAt: tester.deletedAt || null,
   };
 };
 
@@ -167,6 +173,12 @@ export default function BetaAnalytics() {
   const [bdone, setBdone] = useState([]);
   const [betaSummary, setBetaSummary] = useState(null);
   const [isTestersModalOpen, setIsTestersModalOpen] = useState(false);
+
+  const loadBetaSummary = useCallback(async ({ signal } = {}) => {
+    const data = await adminApiRequest("/admin/trials/phase-one-beta?limit=300", { signal });
+    setBetaSummary(data);
+    return data;
+  }, []);
 
   const t = {
     text: isDark ? "#F7F3EE" : "#0D2B45",
@@ -199,11 +211,9 @@ export default function BetaAnalytics() {
 
   useEffect(() => {
     const ac = new AbortController();
-    adminApiRequest("/admin/trials/phase-one-beta?limit=300", { signal: ac.signal })
-      .then((data) => setBetaSummary(data))
-      .catch(() => {});
+    loadBetaSummary({ signal: ac.signal }).catch(() => {});
     return () => ac.abort();
-  }, []);
+  }, [loadBetaSummary]);
 
   const feedbackData = betaSummary?.feedback || null;
   const feedbackItems = feedbackData?.themes || [];
@@ -923,8 +933,8 @@ export default function BetaAnalytics() {
         onClose={() => setIsTestersModalOpen(false)}
         testers={testers}
         countryCount={testerCountryCount}
+        onRefresh={loadBetaSummary}
       />
     </div>
   );
 }
-

@@ -39,11 +39,12 @@ export const getUserManagementOverview = async ({
   limit = 10,
   query = "",
   year,
+  statusScope,
   signal,
 } = {}) => {
   try {
     return await adminApiRequest(
-      `/admin/user-management${buildQueryString({ page, limit, query, year })}`,
+      `/admin/user-management${buildQueryString({ page, limit, query, year, statusScope })}`,
       { signal },
     );
   } catch (error) {
@@ -123,5 +124,25 @@ export const deleteAdminUser = async (userId) => {
     });
   } catch (error) {
     throw new Error(createFriendlyUserManagementError(error, "Failed to delete user"));
+  }
+};
+
+export const blockAdminUser = async (userId) => {
+  try {
+    return await adminApiRequest(`/admin/users/${userId}/block`, {
+      method: "PATCH",
+    });
+  } catch (error) {
+    throw new Error(createFriendlyUserManagementError(error, "Failed to block user"));
+  }
+};
+
+export const restoreAdminUser = async (userId) => {
+  try {
+    return await adminApiRequest(`/admin/users/${userId}/restore`, {
+      method: "PATCH",
+    });
+  } catch (error) {
+    throw new Error(createFriendlyUserManagementError(error, "Failed to restore user"));
   }
 };

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
-import { deleteAdminUser, getUserManagementOverview } from "../../../services/admin-users.service";
+import { blockAdminUser, deleteAdminUser, getUserManagementOverview, restoreAdminUser } from "../../../services/admin-users.service";
 
 const USER_FILTERS = ["All", "Paying", "On trial", "Beta testers", "At risk", "Never active"];
 
@@ -27,26 +27,52 @@ const mapUserRow = (user) => ({
   b: normalizeTierLabel(user),
   c: user.country || user.country_code || "Not set",
   d: user.lastActiveLabel || "Never",
-  e: user.statusLabel || (user.status === "ACTIVE" ? "Healthy" : user.status || "Pending"),
-  tone: user.tone || (user.neverActive ? "bad" : user.isAtRisk ? "warn" : "good"),
+  e: user.isDeleted ? "Deleted" : user.isBlocked ? "Blocked" : user.statusLabel || (user.status === "ACTIVE" ? "Healthy" : user.status || "Pending"),
+  tone: user.isDeleted || user.isBlocked ? "bad" : user.tone || (user.neverActive ? "bad" : user.isAtRisk ? "warn" : "good"),
   rawData: user,
   isPaying: Boolean(user.isPaying),
   isTrial: Boolean(user.isTrial || user.trial_type),
   isBetaTester: Boolean(user.isBetaTester || user.is_beta_tester),
   isAtRisk: Boolean(user.isAtRisk),
   neverActive: Boolean(user.neverActive),
+  isBlocked: Boolean(user.isBlocked),
+  isDeleted: Boolean(user.isDeleted),
 });
+
+const actionButtonStyle = (variant = "neutral", isDark = true) => {
+  const colors = {
+    neutral: { border: "rgba(201,148,58,.55)", text: "#C9943A" },
+    warn: { border: "rgba(217,138,62,.55)", text: "#D98A3E" },
+    good: { border: "rgba(95,196,142,.55)", text: "#5FC48E" },
+  }[variant] || { border: "rgba(201,148,58,.55)", text: "#C9943A" };
+  return {
+    height: "30px",
+    padding: "0 10px",
+    borderRadius: "8px",
+    boxSizing: "border-box",
+    border: `1.5px solid ${colors.border}`,
+    color: colors.text,
+    font: "700 11.5px 'DM Sans', sans-serif",
+    display: "flex",
+    alignItems: "center",
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+    userSelect: "none",
+    background: isDark ? "transparent" : "#FAF7F2",
+  };
+};
 
 export default function UserDetails() {
   const { openDrawer, showToast } = useAdminDrawer();
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [showBlockedUsers, setShowBlockedUsers] = useState(false);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getUserManagementOverview({ limit: 500 });
+      const data = await getUserManagementOverview({ limit: 500, statusScope: showBlockedUsers ? "blocked" : "active" });
       const nextSummary = data?.summary || {};
       const users = Array.isArray(data?.table?.users) ? data.table.users : [];
       setSummary(nextSummary);
@@ -57,7 +83,7 @@ export default function UserDetails() {
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [showBlockedUsers, showToast]);
 
   useEffect(() => {
     void loadUsers();
@@ -97,28 +123,55 @@ export default function UserDetails() {
   }, [loadUsers, openDrawer]);
 
   const handleDelete = async (row) => {
-    if (!window.confirm(`Delete "${row.a}"? This removes the account from the backend.`)) {
+    if (!window.confirm(`Delete "${row.a}"? The account will be hidden, recoverable, and the user will be logged out immediately.`)) {
       return;
     }
     try {
       await deleteAdminUser(row.id);
-      showToast(`User ${row.a} deleted.`);
+      showToast(`User ${row.a} deleted and session expired.`);
       await loadUsers();
     } catch (err) {
       showToast(`Failed: ${err?.message || "Unable to delete user."}`);
     }
   };
 
+  const handleBlock = async (row) => {
+    if (!window.confirm(`Block "${row.a}"? Their current app session will expire immediately.`)) {
+      return;
+    }
+    try {
+      await blockAdminUser(row.id);
+      showToast(`User ${row.a} blocked and logged out.`);
+      await loadUsers();
+    } catch (err) {
+      showToast(`Failed: ${err?.message || "Unable to block user."}`);
+    }
+  };
+
+  const handleRestore = async (row) => {
+    if (!window.confirm(`Restore "${row.a}"? They will be able to sign in again.`)) {
+      return;
+    }
+    try {
+      await restoreAdminUser(row.id);
+      showToast(`User ${row.a} restored.`);
+      await loadUsers();
+    } catch (err) {
+      showToast(`Failed: ${err?.message || "Unable to restore user."}`);
+    }
+  };
+
   return (
     <ClaudeAdminTable
       pageKicker={pageKicker}
-      pageTitle="All users"
-      pageSub="Everyone who has an account, paid or not. Sorted by what they are worth to you, not by when they joined."
+      pageTitle={showBlockedUsers ? "Blocked users" : "All users"}
+      pageSub={showBlockedUsers ? "Blocked and deleted member accounts. Restore only when access should be allowed again." : "Everyone who has an account, paid or not. Sorted by what they are worth to you, not by when they joined."}
       pagePrimary="+ Invite user"
-      pageSecondary="Export CSV"
+      pageSecondary={showBlockedUsers ? "Show active users" : "Blocked users"}
       onPrimary={() => openUserEditor({ rawData: {} })}
+      onSecondary={() => setShowBlockedUsers((value) => !value)}
       pageStats={stats}
-      pageAdvice="9 users have never opened a feature since registering. They are the cheapest churn you will ever prevent — one message each."
+      pageAdvice={showBlockedUsers ? "Restore only accounts that should regain access. Blocked and deleted users cannot continue with old sessions." : "9 users have never opened a feature since registering. They are the cheapest churn you will ever prevent — one message each."}
       pageAdviceDone="Message the 9"
       onAdvice={() => openDrawer("message")}
       adviceAudit={{
@@ -126,13 +179,36 @@ export default function UserDetails() {
         status: "extra",
         label: "NEW FEATURE - INACTIVE USER CHURN NUDGE ADVICE NOT IN REQUIREMENT",
       }}
-      filters={USER_FILTERS}
+      filters={showBlockedUsers ? ["All"] : USER_FILTERS}
       cols={["NAME", "TIER", "MARKET", "LAST ACTIVE", "STATUS"]}
       rows={rows}
       isLoading={loading}
       onEditRow={(row) => openDrawer("message", { WHO: row.a })}
       onDeleteRow={handleDelete}
       onRowClick={(row) => openDrawer("message", { WHO: row.a })}
+      renderRowActions={(row, { isDark }) => {
+        const isBlocked = Boolean(row.isBlocked || row.rawData?.isBlocked || row.isDeleted || row.rawData?.isDeleted);
+        if (isBlocked) {
+          return (
+            <div onClick={() => handleRestore(row)} style={actionButtonStyle("good", isDark)}>
+              Restore
+            </div>
+          );
+        }
+        return (
+          <>
+            <div onClick={() => openDrawer("message", { WHO: row.a })} style={actionButtonStyle("neutral", isDark)}>
+              Message
+            </div>
+            <div onClick={() => handleBlock(row)} style={actionButtonStyle("warn", isDark)}>
+              Block
+            </div>
+            <div onClick={() => handleDelete(row)} style={actionButtonStyle("warn", isDark)}>
+              Delete
+            </div>
+          </>
+        );
+      }}
     />
   );
 }
