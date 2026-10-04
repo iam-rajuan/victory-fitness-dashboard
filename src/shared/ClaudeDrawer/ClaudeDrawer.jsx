@@ -4,6 +4,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { adminApiRequest } from "../../../services/auth.service";
 import { previewAdminWorkoutSync, syncAdminWorkouts, uploadAdminCommunityVideo, uploadAdminWorkoutVideo } from "../../../services/admin-workouts.service";
 import { toBase64Payload } from "../../utils/imageUpload";
+import { DEFAULT_WORKOUT_CATEGORY, WORKOUT_CATEGORY_OPTIONS } from "../../constants/workoutCategories";
 import ClaudeApplicationDrawer from "./ClaudeApplicationDrawer";
 import RequirementAuditBoundary from "../../components/audit/RequirementAuditBoundary";
 import {
@@ -133,7 +134,7 @@ const DRAWER_CONFIGS = {
     note: "Members filter by purpose, then by time. If you leave either blank this workout never appears in a filtered list — only in search.",
     fields: [
       { k: "TITLE", type: "text", initial: "New workout", hint: "shown on the card" },
-      { k: "PURPOSE", type: "chips", multi: true, initial: ["Mobility"], options: ["Strength", "Full Body Workout", "Mobility", "Core", "Conditioning", "Recovery", "Lower body", "Upper body"] },
+      { k: "PURPOSE", type: "chips", multi: true, initial: [DEFAULT_WORKOUT_CATEGORY], options: WORKOUT_CATEGORY_OPTIONS },
       { k: "LENGTH", type: "chips", initial: "15 min", options: ["10 min", "15 min", "25 min", "38 min", "45 min", "60 min"] },
       { k: "EQUIPMENT", type: "chips", initial: "Bodyweight", options: ["Bodyweight", "Dumbbells", "Barbell", "Kettlebell", "Pull-up bar", "Bands", "Full gym"] },
       { k: "LEVEL", type: "chips", multi: true, initial: ["Intermediate"], options: ["Beginner", "Intermediate", "Advanced"] },
@@ -154,7 +155,7 @@ const DRAWER_CONFIGS = {
     note: "Members filter by purpose, then by time. If you leave either blank this workout never appears in a filtered list — only in search.",
     fields: [
       { k: "TITLE", type: "text", initial: "New workout", hint: "shown on the card" },
-      { k: "PURPOSE", type: "chips", multi: true, initial: ["Mobility"], options: ["Strength", "Full Body Workout", "Mobility", "Core", "Conditioning", "Recovery", "Lower body", "Upper body"] },
+      { k: "PURPOSE", type: "chips", multi: true, initial: [DEFAULT_WORKOUT_CATEGORY], options: WORKOUT_CATEGORY_OPTIONS },
       { k: "LENGTH", type: "chips", initial: "15 min", options: ["10 min", "15 min", "25 min", "38 min", "45 min", "60 min"] },
       { k: "EQUIPMENT", type: "chips", initial: "Bodyweight", options: ["Bodyweight", "Dumbbells", "Barbell", "Kettlebell", "Pull-up bar", "Bands", "Full gym"] },
       { k: "LEVEL", type: "chips", initial: "Intermediate", options: ["Beginner", "Intermediate", "Advanced"] },
@@ -172,7 +173,7 @@ const DRAWER_CONFIGS = {
     note: "Checking imported workout filters...",
     fields: [
       { k: "VIMEO FOLDER", type: "text", initial: "Victory Fitness / Workouts 2026", hint: "Checking Vimeo..." },
-      { k: "APPLY TO ALL", type: "chips", initial: "Strength", options: ["Strength", "Full Body Workout", "Mobility", "Core", "Conditioning", "Recovery"] },
+      { k: "APPLY TO ALL", type: "chips", initial: DEFAULT_WORKOUT_CATEGORY, options: WORKOUT_CATEGORY_OPTIONS },
       { k: "DEFAULT EQUIPMENT", type: "chips", initial: "Dumbbells", options: ["Bodyweight", "Dumbbells", "Barbell", "Kettlebell", "Full gym"] },
       { k: "DEFAULT LEVEL", type: "chips", initial: "Intermediate", options: ["Beginner", "Intermediate", "Advanced"] },
       { k: "LENGTH FROM", type: "chips", initial: "Vimeo duration", options: ["Vimeo duration", "Set manually"] },
@@ -750,7 +751,7 @@ export default function ClaudeDrawer() {
 
   const buildVimeoImportPayload = () => ({
     folderName: formValues["VIMEO FOLDER"] || "",
-    tag: formValues["APPLY TO ALL"] || "Strength",
+    tag: formValues["APPLY TO ALL"] || DEFAULT_WORKOUT_CATEGORY,
     equipment: formValues["DEFAULT EQUIPMENT"] || "Dumbbells",
     level: formValues["DEFAULT LEVEL"] || "Intermediate",
     useVimeoDuration: formValues["LENGTH FROM"] !== "Set manually",
@@ -962,8 +963,8 @@ export default function ClaudeDrawer() {
         ? String(formValues.videoUrl || payload?.videoUrl || "").trim()
         : String(formValues.videoUrl || payload?.videoUrl || "").trim(),
       videoSource,
-      tag: String(purposes[0] || "Strength").trim(),
-      purposes: purposes.length ? purposes : ["Strength"],
+      tag: String(purposes[0] || DEFAULT_WORKOUT_CATEGORY).trim(),
+      purposes: purposes.length ? purposes : [DEFAULT_WORKOUT_CATEGORY],
       equipment: String(formValues.EQUIPMENT || "").trim(),
       level: String(levels[0] || "").trim(),
       levels,

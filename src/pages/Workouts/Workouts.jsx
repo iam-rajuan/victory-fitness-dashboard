@@ -2,18 +2,20 @@ import { useCallback, useEffect, useState } from "react";
 import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { deleteAdminWorkout, listAdminWorkouts } from "../../../services/admin-workouts.service";
+import { DEFAULT_WORKOUT_CATEGORY, WORKOUT_CATEGORY_OPTIONS } from "../../constants/workoutCategories";
 
 const buildWorkoutPayload = (workout, onSaved) => {
   const duration = Number(workout.durationMinutes || 0);
   const purposes = Array.isArray(workout.purposes) && workout.purposes.length
     ? workout.purposes
-    : (workout.tag ? [workout.tag] : ["Strength"]);
+    : (workout.tag ? [workout.tag] : [DEFAULT_WORKOUT_CATEGORY]);
+  const orderedPurposes = WORKOUT_CATEGORY_OPTIONS.filter((category) => purposes.includes(category));
   return {
     mode: "edit",
     workoutId: workout.id,
     title: "Edit workout",
     TITLE: workout.title || "Untitled Workout",
-    PURPOSE: purposes,
+    PURPOSE: orderedPurposes.length ? orderedPurposes : [DEFAULT_WORKOUT_CATEGORY],
     LENGTH: duration > 0 ? `${duration} min` : "Not set",
     durationSeconds: Number(workout.durationSeconds || 0),
     EQUIPMENT: workout.equipment || "Bodyweight",
@@ -67,7 +69,7 @@ export default function Workouts() {
         return {
           id: w._id || w.id,
           a: w.title || "Untitled Workout",
-          b: `${(Array.isArray(w.purposes) && w.purposes.length ? w.purposes.join(", ") : w.tag) || "Untagged"} · ${source}`,
+          b: `${(Array.isArray(w.purposes) && w.purposes.length ? WORKOUT_CATEGORY_OPTIONS.filter((category) => w.purposes.includes(category)).join(", ") : w.tag) || "Untagged"} · ${source}`,
           c: formatWorkoutLength(duration, durationSeconds),
           d: String(w.viewsCount || w.starts || "0"),
           e: isPublished ? "Published" : "Draft",
@@ -145,7 +147,7 @@ export default function Workouts() {
         pageAdvice={`${summary.draft} workouts are sitting in draft and invisible to members. ${summary.under20} of them are under 20 minutes - the filter people use most.`}
         pageAdviceDone="Review drafts"
         onAdvice={() => openDrawer("vimeo", { onImported: handleSaved })}
-        filters={["All", "Published", "Draft", "Untagged", "Under 20 min", "No equipment"]}
+        filters={["All", ...WORKOUT_CATEGORY_OPTIONS, "Published", "Draft", "Untagged", "Under 20 min", "No equipment"]}
         cols={["WORKOUT", "PURPOSE", "LENGTH", "STARTS", "STATUS"]}
         rows={rows}
         isLoading={loading}
