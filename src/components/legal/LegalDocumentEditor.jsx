@@ -7,7 +7,6 @@ import {
   IoClose,
   IoDownloadOutline,
   IoEyeOutline,
-  IoRefreshOutline,
   IoPhonePortraitOutline,
   IoDesktopOutline,
   IoOpenOutline,
@@ -310,6 +309,7 @@ export default function LegalDocumentEditor({
   const [isPublishing, setIsPublishing] = useState(false);
   const [documentState, setDocumentState] = useState(null);
   const [title, setTitle] = useState(defaultTitle);
+  const [versionName, setVersionName] = useState("");
   const [content, setContent] = useState("");
   const [filename, setFilename] = useState("");
   const [markets, setMarkets] = useState(["ALL"]);
@@ -343,6 +343,7 @@ export default function LegalDocumentEditor({
         if (cancelled) return;
         setDocumentState(response);
         setTitle(response.title || defaultTitle);
+        setVersionName(response.version || "v1");
         setContent(response.html_content || "");
         setFilename(response.filename || "");
         setMarkets(Array.isArray(response.applies_to) && response.applies_to.length ? response.applies_to : ["ALL"]);
@@ -434,6 +435,7 @@ export default function LegalDocumentEditor({
         method: "PUT",
         body: {
           title: title.trim(),
+          version: versionName.trim() || undefined,
           html_content: content,
           filename: filename || "Editor content",
           applies_to: markets,
@@ -442,6 +444,7 @@ export default function LegalDocumentEditor({
         },
       });
       setDocumentState(response);
+      setVersionName(response.version || "");
       message.success(`${pageTitle} (${response.version || "new version"}) successfully published!`);
     } catch (err) {
       console.error(`Failed to publish ${pageTitle}:`, err);
@@ -457,7 +460,7 @@ export default function LegalDocumentEditor({
       isOpen: true,
       title: title || documentState?.title || defaultTitle,
       html: content || documentState?.html_content || "",
-      version: documentState?.version || "v1",
+      version: versionName || documentState?.version || "v1",
       filename: filename || documentState?.filename || "Editor content",
       publishedAt: documentState?.published_at || documentState?.updated_at || new Date().toISOString(),
       effectiveAt: calculateEffectiveAt(),
@@ -481,31 +484,12 @@ export default function LegalDocumentEditor({
     });
   };
 
-  // Restore Historical Version into Editor
-  const handleRestoreVersion = (v) => {
-    setTitle(v.title || defaultTitle);
-    setContent(v.html_content || "");
-    setFilename(v.filename || "");
-    setMarkets(Array.isArray(v.applies_to) && v.applies_to.length ? v.applies_to : ["ALL"]);
-    if (v.notification_behavior) {
-      setNotificationBehavior(v.notification_behavior);
-    }
-    if (v.effective_at) {
-      setEffectiveMode("specific");
-      setSpecificDate(toDateInputValue(v.effective_at));
-    } else {
-      setEffectiveMode("now");
-    }
-    message.info(`Loaded ${v.version || "version"} into editor. You can edit and publish as a new version.`);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
   // Download Active Document
   const handleDownloadCurrent = () => {
     downloadDocumentFile({
       filename: documentState?.filename || filename,
       title: documentState?.title || title || defaultTitle,
-      version: documentState?.version || "v1",
+      version: versionName || documentState?.version || "v1",
       publishedAt: documentState?.published_at || documentState?.updated_at,
       effectiveAt: documentState?.effective_at || calculateEffectiveAt(),
       appliesTo: documentState?.applies_to || markets,
@@ -645,7 +629,7 @@ export default function LegalDocumentEditor({
               <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#C9943A]">Current Version</span>
               <span className="inline-flex items-center gap-1 rounded-full bg-[#C9943A]/15 px-2.5 py-0.5 text-xs font-black text-[#C9943A]">
                 <IoCheckmarkCircle className="h-3.5 w-3.5" />
-                {documentState?.version || "v1"}
+                {documentState?.version || versionName || "v1"}
               </span>
             </div>
             <h2 className="mt-3 text-lg font-bold text-[#F7F3EE]">{documentState?.title || defaultTitle}</h2>
@@ -656,7 +640,7 @@ export default function LegalDocumentEditor({
               </div>
               <div className="flex justify-between gap-3 py-2 text-[#F7F3EE]/72">
                 <span>Version</span>
-                <strong className="text-[#F7F3EE]">{documentState?.version || "v1"}</strong>
+                <strong className="text-[#F7F3EE]">{documentState?.version || versionName || "v1"}</strong>
               </div>
               <div className="flex justify-between gap-3 py-2 text-[#F7F3EE]/72">
                 <span>File</span>
@@ -847,18 +831,32 @@ export default function LegalDocumentEditor({
               </label>
             </div>
 
-            {/* Title Input */}
-            <div className="mb-4">
-              <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#F7F3EE]/60">
-                Document Title
-              </label>
-              <input
-                type="text"
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                className="w-full rounded-xl border border-[#F7F3EE]/15 bg-[#081C2E] px-4 py-3 text-base sm:text-lg font-bold text-[#F7F3EE] outline-none placeholder:text-[#F7F3EE]/35 focus:border-[#C9943A]"
-                placeholder={defaultTitle}
-              />
+            {/* Title and Editable Version Name Inputs */}
+            <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_180px]">
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#F7F3EE]/60">
+                  Document Title
+                </label>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  className="w-full rounded-xl border border-[#F7F3EE]/15 bg-[#081C2E] px-4 py-3 text-base sm:text-lg font-bold text-[#F7F3EE] outline-none placeholder:text-[#F7F3EE]/35 focus:border-[#C9943A]"
+                  placeholder={defaultTitle}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wider text-[#F7F3EE]/60">
+                  Version Name
+                </label>
+                <input
+                  type="text"
+                  value={versionName}
+                  onChange={(event) => setVersionName(event.target.value)}
+                  className="w-full rounded-xl border border-[#F7F3EE]/15 bg-[#081C2E] px-4 py-3 text-base sm:text-lg font-bold text-[#C9943A] outline-none placeholder:text-[#F7F3EE]/35 focus:border-[#C9943A]"
+                  placeholder="e.g. v1, v2.0"
+                />
+              </div>
             </div>
 
             {/* Rich Text Editor */}
@@ -939,7 +937,7 @@ export default function LegalDocumentEditor({
                         </div>
                       </div>
 
-                      {/* Action buttons */}
+                      {/* Action buttons - Preview & Download only (No Restore) */}
                       <div className="flex items-center gap-2 pt-2 sm:pt-0">
                         <button
                           type="button"
@@ -949,15 +947,6 @@ export default function LegalDocumentEditor({
                         >
                           <IoEyeOutline className="h-3.5 w-3.5" />
                           <span>Preview</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRestoreVersion(version)}
-                          className="flex items-center gap-1 rounded-lg border border-[#F7F3EE]/15 bg-[#F7F3EE]/5 px-2.5 py-1.5 text-xs font-semibold text-[#F7F3EE] hover:border-[#C9943A]/70 hover:text-[#C9943A]"
-                          title="Restore content into editor"
-                        >
-                          <IoRefreshOutline className="h-3.5 w-3.5" />
-                          <span>Restore</span>
                         </button>
                         <button
                           type="button"
