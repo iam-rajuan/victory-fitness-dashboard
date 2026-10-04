@@ -4,6 +4,7 @@ import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { useTheme } from "../../context/ThemeContext";
 import RequirementAuditBoundary from "../../components/audit/RequirementAuditBoundary";
 import { adminApiRequest } from "../../../services/auth.service";
+import BetaTestersModal from "./BetaTestersModal";
 
 const BETA_HERO = [
   { k: "CAPACITY", v: "300", tone: "default" },
@@ -153,6 +154,7 @@ const normalizeTester = (tester) => {
     state: state.label,
     tone: state.tone,
     lastActive: activity.lastActiveAt,
+    lastActiveFormatted: formatLastActive(activity.lastActiveAt),
     meta: `${country} · ${currentDay ? `day ${currentDay}` : "day n/a"} · ${totalActions > 0 ? `${totalActions} actions` : "never opened"}`,
     activity,
     totalActions,
@@ -164,7 +166,7 @@ export default function BetaAnalytics() {
   const { isDark } = useTheme();
   const [bdone, setBdone] = useState([]);
   const [betaSummary, setBetaSummary] = useState(null);
-  const [showAllTesters, setShowAllTesters] = useState(false);
+  const [isTestersModalOpen, setIsTestersModalOpen] = useState(false);
 
   const t = {
     text: isDark ? "#F7F3EE" : "#0D2B45",
@@ -232,7 +234,7 @@ export default function BetaAnalytics() {
     () => (Array.isArray(betaSummary?.users) ? betaSummary.users.map(normalizeTester) : []),
     [betaSummary]
   );
-  const visibleTesters = showAllTesters ? testers : testers.slice(0, 5);
+  const visibleTesters = useMemo(() => testers.slice(0, 5), [testers]);
   const testerCountryCount = Number(betaSummary?.countriesRepresented || new Set(testers.map((item) => item.country)).size || 0);
 
   return (
@@ -801,166 +803,128 @@ export default function BetaAnalytics() {
                 No beta testers found yet.
               </div>
             ) : (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: showAllTesters ? "minmax(220px, 1.4fr) minmax(110px, .75fr) minmax(95px, .55fr) minmax(120px, .75fr) minmax(120px, .65fr)" : "1fr",
-                  gap: showAllTesters ? "0" : "0",
-                  overflowX: "auto",
-                }}
-              >
-                {showAllTesters && (
-                  <>
-                    {["TESTER", "COUNTRY", "DAY", "LAST ACTIVE", "STATE"].map((heading) => (
-                      <div
-                        key={heading}
-                        style={{
-                          borderBottom: `1px solid ${t.rowBorder}`,
-                          color: t.muted,
-                          font: "700 9px 'JetBrains Mono', monospace",
-                          letterSpacing: ".12em",
-                          padding: "0 10px 9px",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {heading}
-                      </div>
-                    ))}
-                  </>
-                )}
-
+              <div style={{ display: "flex", flexDirection: "column" }}>
                 {visibleTesters.map((tItem, idx) => (
                   <div
                     key={tItem.id || `${tItem.email}-${idx}`}
                     style={{
-                      display: "contents",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "11px",
+                      padding: "11px 10px",
+                      borderBottom: idx < visibleTesters.length - 1 ? `1px solid ${t.rowBorder}` : "none",
                     }}
                   >
                     <div
                       style={{
+                        width: "32px",
+                        height: "32px",
+                        borderRadius: "99px",
+                        background: isDark ? "rgba(247,243,238,.12)" : "rgba(13,43,69,.08)",
                         display: "flex",
                         alignItems: "center",
-                        gap: "11px",
-                        padding: "11px 10px",
-                        borderBottom: idx < visibleTesters.length - 1 ? `1px solid ${t.rowBorder}` : "none",
-                        minWidth: showAllTesters ? "220px" : 0,
+                        justifyContent: "center",
+                        flex: "none",
                       }}
                     >
+                      <span style={{ font: "700 11.5px 'DM Sans', sans-serif", color: "#C9943A" }}>
+                        {tItem.initials}
+                      </span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <div
                         style={{
-                          width: "32px",
-                          height: "32px",
-                          borderRadius: "99px",
-                          background: isDark ? "rgba(247,243,238,.12)" : "rgba(13,43,69,.08)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flex: "none",
+                          font: "600 13.5px 'DM Sans', sans-serif",
+                          color: t.text,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
                         }}
                       >
-                        <span style={{ font: "700 11.5px 'DM Sans', sans-serif", color: "#C9943A" }}>
-                          {tItem.initials}
-                        </span>
+                        {tItem.name}
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ font: "600 13.5px 'DM Sans', sans-serif", color: t.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {tItem.name}
-                        </div>
-                        <div style={{ font: "400 11px 'JetBrains Mono', monospace", color: t.muted, marginTop: "2px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                          {showAllTesters ? tItem.email || tItem.meta : tItem.meta}
-                        </div>
+                      <div
+                        style={{
+                          font: "400 11px 'JetBrains Mono', monospace",
+                          color: t.muted,
+                          marginTop: "2px",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {tItem.meta}
                       </div>
-                      {!showAllTesters && (
-                        <span
-                          style={{
-                            font: "700 9.5px 'DM Sans', sans-serif",
-                            letterSpacing: ".11em",
-                            flex: "none",
-                            color: tItem.tone === "good" ? (isDark ? "#5FC48E" : "#1A7A4A") : tItem.tone === "warn" ? "#C9943A" : (isDark ? "#D98A3E" : "#B5651D"),
-                          }}
-                        >
-                          {tItem.state}
-                        </span>
-                      )}
                     </div>
-
-                    {showAllTesters && (
-                      <>
-                        <div
-                          style={{
-                            padding: "11px 10px",
-                            borderBottom: idx < visibleTesters.length - 1 ? `1px solid ${t.rowBorder}` : "none",
-                            color: t.subtext,
-                            font: "600 12px 'DM Sans', sans-serif",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {tItem.country}
-                        </div>
-                        <div
-                          style={{
-                            padding: "11px 10px",
-                            borderBottom: idx < visibleTesters.length - 1 ? `1px solid ${t.rowBorder}` : "none",
-                            color: t.subtext,
-                            font: "700 12px 'JetBrains Mono', monospace",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {tItem.currentDay ? `D${tItem.currentDay}` : "D-"}
-                        </div>
-                        <div
-                          style={{
-                            padding: "11px 10px",
-                            borderBottom: idx < visibleTesters.length - 1 ? `1px solid ${t.rowBorder}` : "none",
-                            color: t.subtext,
-                            font: "600 12px 'DM Sans', sans-serif",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {formatLastActive(tItem.lastActive)}
-                        </div>
-                        <div
-                          style={{
-                            padding: "11px 10px",
-                            borderBottom: idx < visibleTesters.length - 1 ? `1px solid ${t.rowBorder}` : "none",
-                            color: tItem.tone === "good" ? (isDark ? "#5FC48E" : "#1A7A4A") : tItem.tone === "warn" ? "#C9943A" : (isDark ? "#D98A3E" : "#B5651D"),
-                            font: "700 9.5px 'DM Sans', sans-serif",
-                            letterSpacing: ".11em",
-                            whiteSpace: "nowrap",
-                            textAlign: "right",
-                          }}
-                        >
-                          {tItem.state}
-                        </div>
-                      </>
-                    )}
+                    <span
+                      style={{
+                        font: "700 9.5px 'DM Sans', sans-serif",
+                        letterSpacing: ".11em",
+                        flex: "none",
+                        color:
+                          tItem.tone === "good"
+                            ? isDark
+                              ? "#5FC48E"
+                              : "#1A7A4A"
+                            : tItem.tone === "warn"
+                            ? "#C9943A"
+                            : isDark
+                            ? "#D98A3E"
+                            : "#B5651D",
+                      }}
+                    >
+                      {tItem.state}
+                    </span>
                   </div>
                 ))}
               </div>
             )}
 
-            <div
-              onClick={() => setShowAllTesters((value) => !value)}
+            <button
+              type="button"
+              onClick={() => setIsTestersModalOpen(true)}
               style={{
+                width: "100%",
                 height: "42px",
                 borderRadius: "12px",
                 boxSizing: "border-box",
                 border: "1.5px solid rgba(201,148,58,.6)",
+                background: isDark ? "rgba(201,148,58,0.06)" : "rgba(201,148,58,0.04)",
                 color: "#C9943A",
                 font: "700 13px 'DM Sans', sans-serif",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                gap: "8px",
                 cursor: "pointer",
                 marginTop: "14px",
                 userSelect: "none",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = isDark ? "rgba(201,148,58,0.14)" : "rgba(201,148,58,0.12)";
+                e.currentTarget.style.borderColor = "#C9943A";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = isDark ? "rgba(201,148,58,0.06)" : "rgba(201,148,58,0.04)";
+                e.currentTarget.style.borderColor = "rgba(201,148,58,.6)";
               }}
             >
-              {showAllTesters ? "Show top 5" : `See all ${testers.length || 0}`}
-            </div>
+              <span>{`See all ${testers.length || 0}`}</span>
+              <span style={{ fontSize: "14px", lineHeight: 1 }}>↗</span>
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Paginated Beta Testers Modal */}
+      <BetaTestersModal
+        isOpen={isTestersModalOpen}
+        onClose={() => setIsTestersModalOpen(false)}
+        testers={testers}
+        countryCount={testerCountryCount}
+      />
     </div>
   );
 }
+
