@@ -470,6 +470,7 @@ export default function BetaAnalytics() {
             auditId="ADMIN-EXTRA-045"
             status="extra"
             label="EXTRA - IMPLEMENTED - CHECKPOINT ANALYTICS (WHERE TESTERS FALL AWAY)"
+            markerColor="#1A7A4A"
           >
             <div
               style={{

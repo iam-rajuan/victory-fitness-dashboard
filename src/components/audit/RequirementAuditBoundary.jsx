@@ -94,6 +94,7 @@ export default function RequirementAuditBoundary({
   auditId,
   status = "extra",
   label,
+  markerColor,
   className = "",
   style = {},
   children,
@@ -107,8 +108,8 @@ export default function RequirementAuditBoundary({
   const isUncertain = status === "uncertain";
   const isMismatch = status === "mismatch";
   const borderStyle = isUncertain ? "dashed" : "solid";
-  const borderColor = isMismatch ? "#F59E0B" : "red";
-  const badgeBg = isMismatch ? "#F59E0B" : "red";
+  const borderColor = markerColor || (isMismatch ? "#F59E0B" : "red");
+  const badgeBg = markerColor || (isMismatch ? "#F59E0B" : "red");
 
   const resolvedLabel = label || getLabel(status);
   const displayText =
