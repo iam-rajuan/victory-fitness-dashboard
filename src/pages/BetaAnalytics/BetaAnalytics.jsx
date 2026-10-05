@@ -173,6 +173,10 @@ export default function BetaAnalytics() {
   const [bdone, setBdone] = useState([]);
   const [betaSummary, setBetaSummary] = useState(null);
   const [isTestersModalOpen, setIsTestersModalOpen] = useState(false);
+  const [feedbackModal, setFeedbackModal] = useState(null);
+  const [feedbackReply, setFeedbackReply] = useState("");
+  const [feedbackTicketNote, setFeedbackTicketNote] = useState("");
+  const [feedbackActionSaving, setFeedbackActionSaving] = useState(false);
 
   const loadBetaSummary = useCallback(async ({ signal } = {}) => {
     const data = await adminApiRequest("/admin/trials/phase-one-beta?limit=300", { signal });
@@ -246,6 +250,66 @@ export default function BetaAnalytics() {
   );
   const visibleTesters = useMemo(() => testers.slice(0, 5), [testers]);
   const testerCountryCount = Number(betaSummary?.countriesRepresented || new Set(testers.map((item) => item.country)).size || 0);
+  const openFeedbackAction = (fb) => {
+    const mode = String(fb?.cta || "").toLowerCase().includes("assign")
+      ? "ticket"
+      : String(fb?.cta || "").toLowerCase().includes("build")
+        ? "build"
+        : "reply";
+    setFeedbackModal({ ...fb, mode });
+    setFeedbackReply(
+      mode === "reply"
+        ? `Hi ${fb?.latestUserName || "there"},\n\nThanks for sending this feedback. We have read it and will use it in the beta fixes.\n\n- Victory Fitness`
+        : ""
+    );
+    setFeedbackTicketNote(fb?.quote ? `Member feedback: "${fb.quote}"` : "");
+  };
+  const closeFeedbackModal = () => {
+    if (feedbackActionSaving) return;
+    setFeedbackModal(null);
+    setFeedbackReply("");
+    setFeedbackTicketNote("");
+  };
+  const submitFeedbackReply = async (markResolved = false) => {
+    if (!feedbackModal || feedbackActionSaving) return;
+    const themeKey = feedbackModal.themeKey || feedbackModal.t;
+    setFeedbackActionSaving(true);
+    try {
+      const result = await adminApiRequest(`/admin/trials/phase-one-beta/feedback/${encodeURIComponent(themeKey)}/reply`, {
+        method: "POST",
+        body: { message: feedbackReply.trim(), mark_resolved: markResolved },
+      });
+      showToast(`Reply sent to ${result.notifiedCount || 0} member${Number(result.notifiedCount || 0) === 1 ? "" : "s"}`);
+      await loadBetaSummary();
+      setFeedbackModal(null);
+      setFeedbackReply("");
+      setFeedbackTicketNote("");
+    } catch (error) {
+      showToast(error?.message || "Unable to send feedback reply");
+    } finally {
+      setFeedbackActionSaving(false);
+    }
+  };
+  const submitFeedbackTicket = async (status = "ASSIGNED") => {
+    if (!feedbackModal || feedbackActionSaving) return;
+    const themeKey = feedbackModal.themeKey || feedbackModal.t;
+    setFeedbackActionSaving(true);
+    try {
+      const result = await adminApiRequest(`/admin/trials/phase-one-beta/feedback/${encodeURIComponent(themeKey)}/dev-ticket`, {
+        method: "POST",
+        body: { note: feedbackTicketNote.trim(), status },
+      });
+      showToast(`${result.ticketId || "Build ticket"} ${status === "IN_BUILD" ? "moved into build" : "assigned to dev"}`);
+      await loadBetaSummary();
+      setFeedbackModal(null);
+      setFeedbackReply("");
+      setFeedbackTicketNote("");
+    } catch (error) {
+      showToast(error?.message || "Unable to update build ticket");
+    } finally {
+      setFeedbackActionSaving(false);
+    }
+  };
 
   return (
     <div className={`animate-in fade-in duration-200 font-dmsans ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
@@ -452,7 +516,7 @@ export default function BetaAnalytics() {
 
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                   <div
-                    onClick={() => openDrawer(fb.drawer)}
+                    onClick={() => openFeedbackAction(fb)}
                     style={{
                       height: "36px",
                       padding: "0 14px",
@@ -927,6 +991,236 @@ export default function BetaAnalytics() {
 
         </div>
       </div>
+
+      {feedbackModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Feedback action"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeFeedbackModal();
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 80,
+            background: "rgba(13,13,13,.72)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "24px",
+          }}
+        >
+          <div
+            style={{
+              width: "min(720px, 100%)",
+              maxHeight: "calc(100vh - 48px)",
+              overflowY: "auto",
+              borderRadius: "18px",
+              background: isDark ? "#0D0D0D" : "#FFFFFF",
+              border: `1px solid ${isDark ? "rgba(247,243,238,.14)" : "rgba(13,43,69,.12)"}`,
+              boxShadow: isDark ? "0 24px 60px rgba(0,0,0,.45)" : "0 24px 70px rgba(13,43,69,.2)",
+            }}
+          >
+            <div style={{ padding: "22px 24px 18px", borderBottom: `1px solid ${t.rowBorder}` }}>
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "14px" }}>
+                <div>
+                  <div style={{ font: "700 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "7px" }}>
+                    FEEDBACK THREAD
+                  </div>
+                  <h3 style={{ margin: 0, font: "600 24px/1.1 'Clash Display', 'DM Sans', sans-serif", color: t.text }}>
+                    {feedbackModal.t}
+                  </h3>
+                  <p style={{ margin: "8px 0 0", font: "400 13px/1.55 'Inter', sans-serif", color: t.subtext }}>
+                    {feedbackModal.c} response{Number(feedbackModal.c || 0) === 1 ? "" : "s"} · {feedbackModal.who}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeFeedbackModal}
+                  disabled={feedbackActionSaving}
+                  style={{
+                    width: "34px",
+                    height: "34px",
+                    borderRadius: "99px",
+                    border: `1px solid ${t.rowBorder}`,
+                    background: isDark ? "rgba(247,243,238,.08)" : "rgba(13,43,69,.05)",
+                    color: t.subtext,
+                    cursor: feedbackActionSaving ? "not-allowed" : "pointer",
+                    font: "700 18px 'DM Sans', sans-serif",
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <div style={{ padding: "20px 24px 24px", display: "grid", gap: "14px" }}>
+              <div
+                style={{
+                  borderRadius: "14px",
+                  background: t.subtleBg,
+                  border: `1px solid ${t.rowBorder}`,
+                  padding: "14px 16px",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "8px" }}>
+                  <span style={{ font: "700 10px 'DM Sans', sans-serif", letterSpacing: ".14em", color: "#C9943A" }}>
+                    LATEST MEMBER FEEDBACK
+                  </span>
+                  <span style={{ font: "600 11px 'JetBrains Mono', monospace", color: t.muted }}>
+                    {feedbackModal.latestUserName || feedbackModal.latestUserEmail || "Member"}
+                  </span>
+                </div>
+                <p style={{ margin: 0, font: "400 13.5px/1.65 'Inter', sans-serif", color: t.subtext }}>
+                  “{feedbackModal.quote || "No message text available."}”
+                </p>
+              </div>
+
+              <div
+                style={{
+                  borderRadius: "14px",
+                  background: isDark ? "rgba(13,43,69,.75)" : "rgba(13,43,69,.04)",
+                  border: `1px solid ${t.rowBorder}`,
+                  padding: "14px 16px",
+                }}
+              >
+                <div style={{ font: "700 10px 'DM Sans', sans-serif", letterSpacing: ".14em", color: "#C9943A", marginBottom: "10px" }}>
+                  REPLY TO MEMBER
+                </div>
+                <textarea
+                  value={feedbackReply}
+                  onChange={(event) => setFeedbackReply(event.target.value)}
+                  placeholder="Write the reply the member should see in the app..."
+                  rows={6}
+                  style={{
+                    width: "100%",
+                    resize: "vertical",
+                    minHeight: "132px",
+                    boxSizing: "border-box",
+                    borderRadius: "12px",
+                    border: `1px solid ${isDark ? "rgba(247,243,238,.16)" : "rgba(13,43,69,.14)"}`,
+                    background: isDark ? "#082033" : "#FFFFFF",
+                    color: t.text,
+                    padding: "13px 14px",
+                    font: "500 13px/1.55 'Inter', sans-serif",
+                    outline: "none",
+                  }}
+                />
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "12px" }}>
+                  <button
+                    type="button"
+                    onClick={() => submitFeedbackReply(false)}
+                    disabled={feedbackActionSaving || feedbackReply.trim().length < 4}
+                    style={{
+                      height: "40px",
+                      padding: "0 16px",
+                      borderRadius: "11px",
+                      border: "none",
+                      background: "#C9943A",
+                      color: "#0D0D0D",
+                      font: "700 13px 'DM Sans', sans-serif",
+                      cursor: feedbackActionSaving || feedbackReply.trim().length < 4 ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {feedbackActionSaving ? "Sending..." : "Send reply"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => submitFeedbackReply(true)}
+                    disabled={feedbackActionSaving || feedbackReply.trim().length < 4}
+                    style={{
+                      height: "40px",
+                      padding: "0 16px",
+                      borderRadius: "11px",
+                      border: `1px solid ${t.rowBorder}`,
+                      background: "transparent",
+                      color: t.text,
+                      font: "700 13px 'DM Sans', sans-serif",
+                      cursor: feedbackActionSaving || feedbackReply.trim().length < 4 ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    Send and mark resolved
+                  </button>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  borderRadius: "14px",
+                  background: t.subtleBg,
+                  border: `1px solid ${t.rowBorder}`,
+                  padding: "14px 16px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", marginBottom: "10px" }}>
+                  <span style={{ font: "700 10px 'DM Sans', sans-serif", letterSpacing: ".14em", color: "#C9943A" }}>
+                    BUILD TICKET
+                  </span>
+                  <span style={{ font: "700 11px 'JetBrains Mono', monospace", color: t.muted }}>
+                    {feedbackModal.devTicketStatus || "NOT ASSIGNED"}
+                  </span>
+                </div>
+                <textarea
+                  value={feedbackTicketNote}
+                  onChange={(event) => setFeedbackTicketNote(event.target.value)}
+                  placeholder="Add implementation notes for the dev team..."
+                  rows={3}
+                  style={{
+                    width: "100%",
+                    resize: "vertical",
+                    minHeight: "82px",
+                    boxSizing: "border-box",
+                    borderRadius: "12px",
+                    border: `1px solid ${isDark ? "rgba(247,243,238,.16)" : "rgba(13,43,69,.14)"}`,
+                    background: isDark ? "#082033" : "#FFFFFF",
+                    color: t.text,
+                    padding: "12px 13px",
+                    font: "500 13px/1.55 'Inter', sans-serif",
+                    outline: "none",
+                  }}
+                />
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "12px" }}>
+                  <button
+                    type="button"
+                    onClick={() => submitFeedbackTicket("ASSIGNED")}
+                    disabled={feedbackActionSaving}
+                    style={{
+                      height: "38px",
+                      padding: "0 14px",
+                      borderRadius: "10px",
+                      border: `1.5px solid rgba(201,148,58,.65)`,
+                      background: "transparent",
+                      color: "#C9943A",
+                      font: "700 12.5px 'DM Sans', sans-serif",
+                      cursor: feedbackActionSaving ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    Assign to dev
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => submitFeedbackTicket("IN_BUILD")}
+                    disabled={feedbackActionSaving}
+                    style={{
+                      height: "38px",
+                      padding: "0 14px",
+                      borderRadius: "10px",
+                      border: "none",
+                      background: isDark ? "#1A7A4A" : "#1A7A4A",
+                      color: "#FFFFFF",
+                      font: "700 12.5px 'DM Sans', sans-serif",
+                      cursor: feedbackActionSaving ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    Mark in build
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Paginated Beta Testers Modal */}
       <BetaTestersModal
