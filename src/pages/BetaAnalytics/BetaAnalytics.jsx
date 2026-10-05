@@ -21,10 +21,11 @@ const BETA_STAGES = [
 ];
 
 const CHECKPOINT_DISPLAY_DAYS = [1, 3, 5, 7, 10, 14, 18, 21];
+const FEEDBACK_PAGE_SIZE = 25;
 
 const BETA_ACTIONS = [
   { id: "ba1", t: "Chase the 9 silent testers", note: "Enrolled, never opened a feature", n: "9", drawer: "message" },
-  { id: "ba2", t: "Reply to this week's feedback", note: "Every tester who writes gets an answer", n: "12", drawer: "support" },
+  { id: "ba2", t: "Reply to this week's feedback", note: "Every tester who writes gets an answer", n: "12", drawer: "feedback" },
   { id: "ba3", t: "Ship the logging fix note", note: "Nine people asked. Tell them it is done.", n: "1", drawer: "broadcast" },
   { id: "ba4", t: "Book three exit interviews", note: "Fifteen minutes each, the ones who quit", n: "3", drawer: "application" },
 ];
@@ -116,6 +117,12 @@ const formatLastActive = (value) => {
   return `${diffDays}d ago`;
 };
 
+const feedbackPayLabel = (value) => {
+  if (value === true) return "Would pay: yes";
+  if (value === false) return "Would pay: no";
+  return "Would pay: not sure";
+};
+
 const testerStateFor = (tester) => {
   const activity = tester.activity || {};
   const lastActive = parseDate(activity.lastActiveAt);
@@ -175,7 +182,10 @@ export default function BetaAnalytics() {
   const [isTestersModalOpen, setIsTestersModalOpen] = useState(false);
   const [feedbackModal, setFeedbackModal] = useState(null);
   const [feedbackReply, setFeedbackReply] = useState("");
-  const [feedbackTicketNote, setFeedbackTicketNote] = useState("");
+  const [selectedFeedbackItemId, setSelectedFeedbackItemId] = useState("");
+  const [feedbackSearch, setFeedbackSearch] = useState("");
+  const [feedbackFilter, setFeedbackFilter] = useState("all");
+  const [feedbackPage, setFeedbackPage] = useState(1);
   const [feedbackActionSaving, setFeedbackActionSaving] = useState(false);
 
   const loadBetaSummary = useCallback(async ({ signal } = {}) => {
@@ -251,65 +261,97 @@ export default function BetaAnalytics() {
   const visibleTesters = useMemo(() => testers.slice(0, 5), [testers]);
   const testerCountryCount = Number(betaSummary?.countriesRepresented || new Set(testers.map((item) => item.country)).size || 0);
   const openFeedbackAction = (fb) => {
-    const mode = String(fb?.cta || "").toLowerCase().includes("assign")
-      ? "ticket"
-      : String(fb?.cta || "").toLowerCase().includes("build")
-        ? "build"
-        : "reply";
-    setFeedbackModal({ ...fb, mode });
-    setFeedbackReply(
-      mode === "reply"
-        ? `Hi ${fb?.latestUserName || "there"},\n\nThanks for sending this feedback. We have read it and will use it in the beta fixes.\n\n- Victory Fitness`
-        : ""
-    );
-    setFeedbackTicketNote(fb?.quote ? `Member feedback: "${fb.quote}"` : "");
+    const firstFeedback = Array.isArray(fb?.feedbacks) ? fb.feedbacks[0] : null;
+    setFeedbackModal({ ...fb, mode: "reply" });
+    setSelectedFeedbackItemId(firstFeedback?.id || "");
+    setFeedbackSearch("");
+    setFeedbackFilter("all");
+    setFeedbackPage(1);
+    setFeedbackReply(`Thanks for your feedback about ${fb?.t || "this"}. We read your note and will use it to improve the beta experience.`);
   };
   const closeFeedbackModal = () => {
     if (feedbackActionSaving) return;
     setFeedbackModal(null);
     setFeedbackReply("");
-    setFeedbackTicketNote("");
+    setSelectedFeedbackItemId("");
+    setFeedbackSearch("");
+    setFeedbackFilter("all");
+    setFeedbackPage(1);
   };
-  const submitFeedbackReply = async (markResolved = false) => {
+  const submitFeedbackReply = async ({ markResolved = false, replyAll = false } = {}) => {
     if (!feedbackModal || feedbackActionSaving) return;
     const themeKey = feedbackModal.themeKey || feedbackModal.t;
+    const selectedId = selectedFeedbackItemId || feedbackModal.latestFeedbackId;
     setFeedbackActionSaving(true);
     try {
-      const result = await adminApiRequest(`/admin/trials/phase-one-beta/feedback/${encodeURIComponent(themeKey)}/reply`, {
+      const path = replyAll
+        ? `/admin/trials/phase-one-beta/feedback/${encodeURIComponent(themeKey)}/reply`
+        : `/admin/trials/phase-one-beta/feedback-items/${encodeURIComponent(selectedId)}/reply`;
+      const result = await adminApiRequest(path, {
         method: "POST",
         body: { message: feedbackReply.trim(), mark_resolved: markResolved },
       });
-      showToast(`Reply sent to ${result.notifiedCount || 0} member${Number(result.notifiedCount || 0) === 1 ? "" : "s"}`);
+      showToast(
+        replyAll
+          ? `Reply sent to ${result.notifiedCount || 0} member${Number(result.notifiedCount || 0) === 1 ? "" : "s"}`
+          : `Reply sent to ${result.email || "member"}`
+      );
       await loadBetaSummary();
       setFeedbackModal(null);
       setFeedbackReply("");
-      setFeedbackTicketNote("");
+      setSelectedFeedbackItemId("");
+      setFeedbackSearch("");
+      setFeedbackFilter("all");
+      setFeedbackPage(1);
     } catch (error) {
       showToast(error?.message || "Unable to send feedback reply");
     } finally {
       setFeedbackActionSaving(false);
     }
   };
-  const submitFeedbackTicket = async (status = "ASSIGNED") => {
-    if (!feedbackModal || feedbackActionSaving) return;
-    const themeKey = feedbackModal.themeKey || feedbackModal.t;
-    setFeedbackActionSaving(true);
-    try {
-      const result = await adminApiRequest(`/admin/trials/phase-one-beta/feedback/${encodeURIComponent(themeKey)}/dev-ticket`, {
-        method: "POST",
-        body: { note: feedbackTicketNote.trim(), status },
-      });
-      showToast(`${result.ticketId || "Build ticket"} ${status === "IN_BUILD" ? "moved into build" : "assigned to dev"}`);
-      await loadBetaSummary();
-      setFeedbackModal(null);
-      setFeedbackReply("");
-      setFeedbackTicketNote("");
-    } catch (error) {
-      showToast(error?.message || "Unable to update build ticket");
-    } finally {
-      setFeedbackActionSaving(false);
-    }
-  };
+  const feedbackRows = useMemo(
+    () => (Array.isArray(feedbackModal?.feedbacks) ? feedbackModal.feedbacks : []),
+    [feedbackModal]
+  );
+  const selectedFeedbackItem = useMemo(
+    () => feedbackRows.find((item) => item.id === selectedFeedbackItemId) || feedbackRows[0] || null,
+    [feedbackRows, selectedFeedbackItemId]
+  );
+  const feedbackRowStats = useMemo(() => {
+    const replied = feedbackRows.filter((item) => String(item.adminReply || "").trim()).length;
+    const open = Math.max(feedbackRows.length - replied, 0);
+    const uniqueUsers = new Set(feedbackRows.map((item) => item.userId || item.userEmail || item.userName).filter(Boolean)).size;
+    return { replied, open, uniqueUsers };
+  }, [feedbackRows]);
+  const filteredFeedbackRows = useMemo(() => {
+    const query = feedbackSearch.trim().toLowerCase();
+    return feedbackRows.filter((item) => {
+      const hasReply = Boolean(String(item.adminReply || "").trim());
+      if (feedbackFilter === "open" && hasReply) return false;
+      if (feedbackFilter === "replied" && !hasReply) return false;
+      if (!query) return true;
+      const haystack = [
+        item.userName,
+        item.userEmail,
+        item.country,
+        item.message,
+        item.adminReply,
+        feedbackPayLabel(item.wouldPay),
+      ].join(" ").toLowerCase();
+      return haystack.includes(query);
+    });
+  }, [feedbackRows, feedbackSearch, feedbackFilter]);
+  useEffect(() => {
+    setFeedbackPage(1);
+  }, [feedbackSearch, feedbackFilter, feedbackModal?.themeKey]);
+  const feedbackTotalPages = Math.max(1, Math.ceil(filteredFeedbackRows.length / FEEDBACK_PAGE_SIZE));
+  const safeFeedbackPage = Math.min(feedbackPage, feedbackTotalPages);
+  const pagedFeedbackRows = useMemo(() => {
+    const start = (safeFeedbackPage - 1) * FEEDBACK_PAGE_SIZE;
+    return filteredFeedbackRows.slice(start, start + FEEDBACK_PAGE_SIZE);
+  }, [filteredFeedbackRows, safeFeedbackPage]);
+  const feedbackListStart = filteredFeedbackRows.length ? (safeFeedbackPage - 1) * FEEDBACK_PAGE_SIZE + 1 : 0;
+  const feedbackListEnd = Math.min(safeFeedbackPage * FEEDBACK_PAGE_SIZE, filteredFeedbackRows.length);
 
   return (
     <div className={`animate-in fade-in duration-200 font-dmsans ${isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"}`}>
@@ -531,7 +573,7 @@ export default function BetaAnalytics() {
                       userSelect: "none",
                     }}
                   >
-                    {fb.cta}
+                    Reply to feedback
                   </div>
                   <span style={{ font: "400 11.5px 'JetBrains Mono', monospace", color: t.muted }}>
                     {fb.who}
@@ -994,6 +1036,7 @@ export default function BetaAnalytics() {
 
       {feedbackModal && (
         <div
+          className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex justify-end font-dmsans"
           role="dialog"
           aria-modal="true"
           aria-label="Feedback action"
@@ -1001,222 +1044,277 @@ export default function BetaAnalytics() {
             if (event.target === event.currentTarget) closeFeedbackModal();
           }}
           style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 80,
-            background: "rgba(13,13,13,.72)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "24px",
+            alignItems: "stretch",
           }}
         >
           <div
-            style={{
-              width: "min(720px, 100%)",
-              maxHeight: "calc(100vh - 48px)",
-              overflowY: "auto",
-              borderRadius: "18px",
-              background: isDark ? "#0D0D0D" : "#FFFFFF",
-              border: `1px solid ${isDark ? "rgba(247,243,238,.14)" : "rgba(13,43,69,.12)"}`,
-              boxShadow: isDark ? "0 24px 60px rgba(0,0,0,.45)" : "0 24px 70px rgba(13,43,69,.2)",
-            }}
+            className="w-[1040px] max-w-[96vw] h-screen max-h-screen overflow-hidden flex flex-col shadow-2xl animate-in slide-in-from-right duration-200 bg-[#0D0D0D] border-l border-[#F7F3EE]/15 text-[#F7F3EE]"
+            onMouseDown={(event) => event.stopPropagation()}
+            role="document"
           >
-            <div style={{ padding: "22px 24px 18px", borderBottom: `1px solid ${t.rowBorder}` }}>
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "14px" }}>
-                <div>
-                  <div style={{ font: "700 10px 'DM Sans', sans-serif", letterSpacing: ".16em", color: "#C9943A", marginBottom: "7px" }}>
-                    FEEDBACK THREAD
+            <div className="px-6 sm:px-8 pt-6 pb-5 border-b border-[#F7F3EE]/10">
+              <div className="flex items-start justify-between gap-5">
+                <div className="min-w-0">
+                  <div className="text-[10px] font-bold tracking-[0.18em] text-[#C9943A] uppercase mb-1 font-dmsans">
+                    Feedback Category
                   </div>
-                  <h3 style={{ margin: 0, font: "600 24px/1.1 'Clash Display', 'DM Sans', sans-serif", color: t.text }}>
+                  <h2 className="text-2xl sm:text-3xl font-semibold font-clash leading-tight text-[#F7F3EE] truncate">
                     {feedbackModal.t}
-                  </h3>
-                  <p style={{ margin: "8px 0 0", font: "400 13px/1.55 'Inter', sans-serif", color: t.subtext }}>
-                    {feedbackModal.c} response{Number(feedbackModal.c || 0) === 1 ? "" : "s"} · {feedbackModal.who}
+                  </h2>
+                  <p className="mt-1.5 text-xs sm:text-sm font-inter leading-relaxed max-w-2xl text-[#F7F3EE]/62">
+                    Review every member submission in this category, identify repeated issues, and send a targeted app notification to one member or the whole category.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={closeFeedbackModal}
                   disabled={feedbackActionSaving}
-                  style={{
-                    width: "34px",
-                    height: "34px",
-                    borderRadius: "99px",
-                    border: `1px solid ${t.rowBorder}`,
-                    background: isDark ? "rgba(247,243,238,.08)" : "rgba(13,43,69,.05)",
-                    color: t.subtext,
-                    cursor: feedbackActionSaving ? "not-allowed" : "pointer",
-                    font: "700 18px 'DM Sans', sans-serif",
-                  }}
+                  className="w-10 h-10 rounded-full bg-[#F7F3EE]/8 border border-[#F7F3EE]/10 text-xl transition-colors cursor-pointer text-[#F7F3EE]/55 hover:text-[#F7F3EE] hover:bg-[#F7F3EE]/12 disabled:cursor-not-allowed flex items-center justify-center"
+                  aria-label="Close drawer"
                 >
                   ×
                 </button>
               </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-5">
+                {[
+                  ["Responses", feedbackRows.length],
+                  ["Members", feedbackRowStats.uniqueUsers],
+                  ["Avg rating", Number(feedbackModal.averageRating || 0).toFixed(1)],
+                  ["Replied", feedbackRowStats.replied],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-xl bg-[#0D2B45] border border-[#F7F3EE]/10 px-3.5 py-3">
+                    <div className="text-[9px] font-bold tracking-[0.14em] uppercase text-[#F7F3EE]/38">{label}</div>
+                    <div className="mt-1 text-xl font-bold font-mono text-[#F7F3EE]">{value}</div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div style={{ padding: "20px 24px 24px", display: "grid", gap: "14px" }}>
-              <div
-                style={{
-                  borderRadius: "14px",
-                  background: t.subtleBg,
-                  border: `1px solid ${t.rowBorder}`,
-                  padding: "14px 16px",
-                }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", gap: "12px", marginBottom: "8px" }}>
-                  <span style={{ font: "700 10px 'DM Sans', sans-serif", letterSpacing: ".14em", color: "#C9943A" }}>
-                    LATEST MEMBER FEEDBACK
-                  </span>
-                  <span style={{ font: "600 11px 'JetBrains Mono', monospace", color: t.muted }}>
-                    {feedbackModal.latestUserName || feedbackModal.latestUserEmail || "Member"}
-                  </span>
+            <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[430px_minmax(0,1fr)] overflow-hidden">
+              <aside className="min-h-0 border-r border-[#F7F3EE]/10 bg-[#07131E] flex flex-col">
+                <div className="p-5 border-b border-[#F7F3EE]/10">
+                  <label className="block text-[10px] font-bold tracking-[0.14em] uppercase text-[#F7F3EE]/42 mb-2">
+                    Search submissions
+                  </label>
+                  <input
+                    value={feedbackSearch}
+                    onChange={(event) => {
+                      setFeedbackSearch(event.target.value);
+                      setFeedbackPage(1);
+                    }}
+                    placeholder="Name, email, country, message..."
+                    className="w-full h-11 rounded-xl border border-[#F7F3EE]/12 bg-[#0D2B45] px-3.5 text-sm text-[#F7F3EE] placeholder:text-[#F7F3EE]/35 outline-none focus:border-[#C9943A]/70"
+                  />
+                  <div className="flex gap-2 mt-3">
+                    {[
+                      ["all", `All ${feedbackRows.length}`],
+                      ["open", `Open ${feedbackRowStats.open}`],
+                      ["replied", `Replied ${feedbackRowStats.replied}`],
+                    ].map(([key, label]) => {
+                      const active = feedbackFilter === key;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => {
+                            setFeedbackFilter(key);
+                            setFeedbackPage(1);
+                          }}
+                          className={`h-9 px-3 rounded-lg border text-xs font-bold transition-colors ${
+                            active
+                              ? "bg-[#C9943A] border-[#C9943A] text-[#0D0D0D]"
+                              : "bg-transparent border-[#F7F3EE]/14 text-[#F7F3EE]/70 hover:border-[#C9943A]/60"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <p style={{ margin: 0, font: "400 13.5px/1.65 'Inter', sans-serif", color: t.subtext }}>
-                  “{feedbackModal.quote || "No message text available."}”
-                </p>
-              </div>
 
-              <div
-                style={{
-                  borderRadius: "14px",
-                  background: isDark ? "rgba(13,43,69,.75)" : "rgba(13,43,69,.04)",
-                  border: `1px solid ${t.rowBorder}`,
-                  padding: "14px 16px",
-                }}
-              >
-                <div style={{ font: "700 10px 'DM Sans', sans-serif", letterSpacing: ".14em", color: "#C9943A", marginBottom: "10px" }}>
-                  REPLY TO MEMBER
+                <div className="flex-1 min-h-0 overflow-y-auto p-3">
+                  {pagedFeedbackRows.map((item) => {
+                    const selected = selectedFeedbackItem?.id === item.id;
+                    const hasReply = Boolean(String(item.adminReply || "").trim());
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedFeedbackItemId(item.id);
+                          setFeedbackReply(`Thanks for your feedback about ${feedbackModal.t}. We read your note and will use it to improve the beta experience.`);
+                        }}
+                        className={`w-full min-h-[118px] text-left rounded-xl border p-3.5 mb-2.5 transition-colors overflow-hidden ${
+                          selected
+                            ? "border-[#C9943A] bg-[#C9943A]/12"
+                            : "border-[#F7F3EE]/10 bg-[#0D2B45]/72 hover:border-[#F7F3EE]/24"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-bold text-[#F7F3EE] truncate">
+                              {item.userName || item.userEmail || "Member"}
+                            </div>
+                            <div className="mt-0.5 text-[10px] font-mono text-[#F7F3EE]/42 truncate">
+                              {[item.userEmail, item.country].filter(Boolean).join(" · ")}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="text-[11px] font-bold font-mono text-[#C9943A]">★ {item.rating || 0}</span>
+                            <span className={`h-5 max-w-[74px] px-2 rounded-full text-[9px] font-bold tracking-[0.08em] uppercase flex items-center truncate ${
+                              hasReply ? "bg-[#1A7A4A]/22 text-[#5FC48E]" : "bg-[#C9943A]/14 text-[#C9943A]"
+                            }`}>
+                              {hasReply ? "replied" : "open"}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="mt-2 text-xs leading-relaxed text-[#F7F3EE]/68 line-clamp-2">
+                          {item.message || "No message text available."}
+                        </p>
+                        <div className="mt-2 text-[10px] font-mono text-[#F7F3EE]/38 truncate">
+                          {feedbackPayLabel(item.wouldPay)}
+                        </div>
+                      </button>
+                    );
+                  })}
+                  {filteredFeedbackRows.length === 0 && (
+                    <div className="rounded-xl border border-[#F7F3EE]/10 bg-[#0D2B45]/70 p-5 text-sm leading-relaxed text-[#F7F3EE]/58">
+                      No feedback matches this search or filter.
+                    </div>
+                  )}
                 </div>
-                <textarea
-                  value={feedbackReply}
-                  onChange={(event) => setFeedbackReply(event.target.value)}
-                  placeholder="Write the reply the member should see in the app..."
-                  rows={6}
-                  style={{
-                    width: "100%",
-                    resize: "vertical",
-                    minHeight: "132px",
-                    boxSizing: "border-box",
-                    borderRadius: "12px",
-                    border: `1px solid ${isDark ? "rgba(247,243,238,.16)" : "rgba(13,43,69,.14)"}`,
-                    background: isDark ? "#082033" : "#FFFFFF",
-                    color: t.text,
-                    padding: "13px 14px",
-                    font: "500 13px/1.55 'Inter', sans-serif",
-                    outline: "none",
-                  }}
-                />
-                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "12px" }}>
-                  <button
-                    type="button"
-                    onClick={() => submitFeedbackReply(false)}
-                    disabled={feedbackActionSaving || feedbackReply.trim().length < 4}
-                    style={{
-                      height: "40px",
-                      padding: "0 16px",
-                      borderRadius: "11px",
-                      border: "none",
-                      background: "#C9943A",
-                      color: "#0D0D0D",
-                      font: "700 13px 'DM Sans', sans-serif",
-                      cursor: feedbackActionSaving || feedbackReply.trim().length < 4 ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    {feedbackActionSaving ? "Sending..." : "Send reply"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => submitFeedbackReply(true)}
-                    disabled={feedbackActionSaving || feedbackReply.trim().length < 4}
-                    style={{
-                      height: "40px",
-                      padding: "0 16px",
-                      borderRadius: "11px",
-                      border: `1px solid ${t.rowBorder}`,
-                      background: "transparent",
-                      color: t.text,
-                      font: "700 13px 'DM Sans', sans-serif",
-                      cursor: feedbackActionSaving || feedbackReply.trim().length < 4 ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    Send and mark resolved
-                  </button>
-                </div>
-              </div>
 
-              <div
-                style={{
-                  borderRadius: "14px",
-                  background: t.subtleBg,
-                  border: `1px solid ${t.rowBorder}`,
-                  padding: "14px 16px",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "10px", marginBottom: "10px" }}>
-                  <span style={{ font: "700 10px 'DM Sans', sans-serif", letterSpacing: ".14em", color: "#C9943A" }}>
-                    BUILD TICKET
-                  </span>
-                  <span style={{ font: "700 11px 'JetBrains Mono', monospace", color: t.muted }}>
-                    {feedbackModal.devTicketStatus || "NOT ASSIGNED"}
-                  </span>
+                <div className="shrink-0 border-t border-[#F7F3EE]/10 bg-[#07131E] px-4 py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0 text-[10px] font-mono text-[#F7F3EE]/45 truncate">
+                    {filteredFeedbackRows.length
+                      ? `Showing ${feedbackListStart}-${feedbackListEnd} of ${filteredFeedbackRows.length}`
+                      : "No submissions"}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      disabled={safeFeedbackPage <= 1}
+                      onClick={() => setFeedbackPage((page) => Math.max(1, page - 1))}
+                      className="h-8 px-3 rounded-lg border border-[#F7F3EE]/14 text-xs font-bold text-[#F7F3EE]/70 disabled:opacity-35 disabled:cursor-not-allowed hover:border-[#C9943A]/60"
+                    >
+                      Prev
+                    </button>
+                    <span className="w-12 text-center text-[10px] font-mono text-[#F7F3EE]/45">
+                      {safeFeedbackPage}/{feedbackTotalPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={safeFeedbackPage >= feedbackTotalPages}
+                      onClick={() => setFeedbackPage((page) => Math.min(feedbackTotalPages, page + 1))}
+                      className="h-8 px-3 rounded-lg border border-[#F7F3EE]/14 text-xs font-bold text-[#F7F3EE]/70 disabled:opacity-35 disabled:cursor-not-allowed hover:border-[#C9943A]/60"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
-                <textarea
-                  value={feedbackTicketNote}
-                  onChange={(event) => setFeedbackTicketNote(event.target.value)}
-                  placeholder="Add implementation notes for the dev team..."
-                  rows={3}
-                  style={{
-                    width: "100%",
-                    resize: "vertical",
-                    minHeight: "82px",
-                    boxSizing: "border-box",
-                    borderRadius: "12px",
-                    border: `1px solid ${isDark ? "rgba(247,243,238,.16)" : "rgba(13,43,69,.14)"}`,
-                    background: isDark ? "#082033" : "#FFFFFF",
-                    color: t.text,
-                    padding: "12px 13px",
-                    font: "500 13px/1.55 'Inter', sans-serif",
-                    outline: "none",
-                  }}
-                />
-                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "12px" }}>
-                  <button
-                    type="button"
-                    onClick={() => submitFeedbackTicket("ASSIGNED")}
-                    disabled={feedbackActionSaving}
-                    style={{
-                      height: "38px",
-                      padding: "0 14px",
-                      borderRadius: "10px",
-                      border: `1.5px solid rgba(201,148,58,.65)`,
-                      background: "transparent",
-                      color: "#C9943A",
-                      font: "700 12.5px 'DM Sans', sans-serif",
-                      cursor: feedbackActionSaving ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    Assign to dev
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => submitFeedbackTicket("IN_BUILD")}
-                    disabled={feedbackActionSaving}
-                    style={{
-                      height: "38px",
-                      padding: "0 14px",
-                      borderRadius: "10px",
-                      border: "none",
-                      background: isDark ? "#1A7A4A" : "#1A7A4A",
-                      color: "#FFFFFF",
-                      font: "700 12.5px 'DM Sans', sans-serif",
-                      cursor: feedbackActionSaving ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    Mark in build
-                  </button>
+              </aside>
+
+              <main className="min-h-0 flex flex-col bg-[#0D0D0D]">
+                <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6">
+                  <div className="rounded-2xl bg-[#0D2B45] border border-[#F7F3EE]/10 p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-bold tracking-[0.14em] uppercase text-[#C9943A] mb-1">
+                          Selected feedback
+                        </div>
+                        <h3 className="text-xl font-semibold font-clash text-[#F7F3EE] truncate">
+                          {selectedFeedbackItem?.userName || selectedFeedbackItem?.userEmail || "No member selected"}
+                        </h3>
+                        <div className="mt-1 text-xs font-mono text-[#F7F3EE]/45 truncate">
+                          {[selectedFeedbackItem?.userEmail, selectedFeedbackItem?.country, feedbackPayLabel(selectedFeedbackItem?.wouldPay)].filter(Boolean).join(" · ")}
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-2xl font-bold font-mono text-[#C9943A]">★ {selectedFeedbackItem?.rating || 0}</div>
+                        <div className="mt-1 text-[10px] font-bold tracking-[0.12em] uppercase text-[#F7F3EE]/42">
+                          rating
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 rounded-xl bg-[#07131E]/70 border border-[#F7F3EE]/10 p-4">
+                      <div className="text-[10px] font-bold tracking-[0.14em] uppercase text-[#F7F3EE]/42 mb-2">
+                        Member message
+                      </div>
+                      <p className="m-0 max-h-[220px] overflow-y-auto text-sm leading-relaxed text-[#F7F3EE]/84 whitespace-pre-wrap break-words pr-1">
+                        {selectedFeedbackItem?.message || "Select a feedback row to see the member message."}
+                      </p>
+                    </div>
+
+                    {selectedFeedbackItem?.adminReply ? (
+                      <div className="mt-3 rounded-xl bg-[#1A7A4A]/12 border border-[#5FC48E]/25 p-4">
+                        <div className="text-[10px] font-bold tracking-[0.14em] uppercase text-[#5FC48E] mb-2">
+                          Previous admin reply
+                        </div>
+                        <p className="m-0 max-h-[160px] overflow-y-auto text-sm leading-relaxed text-[#F7F3EE]/78 whitespace-pre-wrap break-words pr-1">
+                          {selectedFeedbackItem.adminReply}
+                        </p>
+                      </div>
+                    ) : null}
+
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <div className="rounded-xl bg-[#07131E]/70 border border-[#F7F3EE]/10 p-3">
+                        <div className="text-[9px] font-bold tracking-[0.14em] uppercase text-[#F7F3EE]/38">Category</div>
+                        <div className="mt-1 text-sm font-bold text-[#F7F3EE]">{feedbackModal.t}</div>
+                      </div>
+                      <div className="rounded-xl bg-[#07131E]/70 border border-[#F7F3EE]/10 p-3">
+                        <div className="text-[9px] font-bold tracking-[0.14em] uppercase text-[#F7F3EE]/38">Payment answer</div>
+                        <div className="mt-1 text-sm font-bold text-[#F7F3EE]">{feedbackPayLabel(selectedFeedbackItem?.wouldPay).replace("Would pay: ", "")}</div>
+                      </div>
+                      <div className="rounded-xl bg-[#07131E]/70 border border-[#F7F3EE]/10 p-3">
+                        <div className="text-[9px] font-bold tracking-[0.14em] uppercase text-[#F7F3EE]/38">Status</div>
+                        <div className="mt-1 text-sm font-bold text-[#F7F3EE]">{selectedFeedbackItem?.adminReply ? "Replied" : "Open"}</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+
+                <div className="border-t border-[#F7F3EE]/10 bg-[#07131E] p-5 sm:p-6">
+                  <div className="flex items-baseline justify-between gap-3 mb-2">
+                    <label className="text-[10px] font-bold tracking-[0.14em] uppercase text-[#C9943A]">
+                      App notification message
+                    </label>
+                    <span className="text-[10px] font-mono text-[#F7F3EE]/38">
+                      {feedbackReply.trim().length}/2000
+                    </span>
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={feedbackReply}
+                    onChange={(event) => setFeedbackReply(event.target.value)}
+                    placeholder="Write the short reply members should see in the app..."
+                    className="w-full min-h-[106px] resize-y rounded-xl border border-[#F7F3EE]/14 bg-[#0D2B45] px-4 py-3 text-sm leading-relaxed text-[#F7F3EE] placeholder:text-[#F7F3EE]/34 outline-none focus:border-[#C9943A]/70"
+                  />
+                  <div className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <button
+                      type="button"
+                      disabled={feedbackActionSaving || feedbackReply.trim().length < 4 || !selectedFeedbackItem?.id}
+                      onClick={() => submitFeedbackReply({ markResolved: false, replyAll: false })}
+                      className="flex-1 h-12 bg-[#C9943A] hover:bg-[#d8a24a] text-[#0D0D0D] font-bold text-sm rounded-xl transition-all shadow-lg active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer font-dmsans disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {feedbackActionSaving ? "Processing..." : `Notify ${selectedFeedbackItem?.userName || "selected"}`}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={feedbackActionSaving || feedbackReply.trim().length < 4 || feedbackRows.length === 0}
+                      onClick={() => submitFeedbackReply({ markResolved: false, replyAll: true })}
+                      className="sm:w-48 h-12 border transition-colors cursor-pointer font-dmsans font-semibold text-sm rounded-xl border-[#F7F3EE]/20 hover:border-[#F7F3EE]/40 text-[#F7F3EE] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Notify category
+                    </button>
+                  </div>
+                  <p className="mt-2 mb-0 text-[11px] leading-relaxed text-[#F7F3EE]/42">
+                    Selected sends to one member. Category sends the same message to all {feedbackRows.length} submissions in {feedbackModal.t}.
+                  </p>
+                </div>
+              </main>
             </div>
           </div>
         </div>
