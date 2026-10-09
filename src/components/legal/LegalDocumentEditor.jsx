@@ -58,6 +58,22 @@ function toDateInputValue(date) {
   }
 }
 
+function readImageDimensions(file) {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new window.Image();
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Unable to read image dimensions."));
+    };
+    image.src = objectUrl;
+  });
+}
+
 function sanitizeFilename(title, version, originalFilename) {
   if (originalFilename && originalFilename !== "Editor content" && originalFilename.includes(".")) {
     const ext = originalFilename.split(".").pop();
@@ -189,7 +205,18 @@ function generateStandaloneHtmlDoc({
       font-style: italic;
     }
     .content-body a { color: var(--gold); text-decoration: underline; }
-    .content-body img { max-width: 100%; height: auto; border-radius: 10px; margin: 18px 0; display: block; }
+    .content-body img {
+      width: 100%;
+      max-width: 100%;
+      max-height: 360px;
+      height: auto;
+      object-fit: contain;
+      background: rgba(247, 243, 238, 0.96);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin: 18px 0;
+      display: block;
+    }
     .content-body hr { border: 0; height: 1px; background: var(--border); margin: 28px 0; }
     .footer-note {
       margin-top: 40px;
@@ -471,6 +498,15 @@ export default function LegalDocumentEditor({
     }
     setIsUploadingImage(true);
     try {
+      try {
+        const dimensions = await readImageDimensions(file);
+        const ratio = dimensions.width / dimensions.height;
+        if (ratio < 1.33 || ratio > 2) {
+          message.warning("Best app fit is 16:9 landscape, for example 1600 x 900. This image will be fitted with padding.");
+        }
+      } catch {
+        message.info("For best app display, use a 16:9 image such as 1600 x 900 or 1200 x 675.");
+      }
       const payload = await toBase64Payload(file, file.name || "legal-image.jpg", {
         base64Key: "file_base64",
         mimeTypeKey: "mime_type",
@@ -700,6 +736,16 @@ export default function LegalDocumentEditor({
         .legal-editor .ql-picker-item:hover {
           color: #C9943A;
         }
+        .legal-editor .ql-editor img {
+          width: 100%;
+          max-width: 100%;
+          max-height: 360px;
+          object-fit: contain;
+          background: rgba(247,243,238,0.96);
+          border: 1px solid rgba(247,243,238,0.12);
+          border-radius: 10px;
+          display: block;
+        }
         .legal-preview-content h1 { font-size: 24px; font-weight: 700; margin: 24px 0 12px; border-bottom: 1px solid rgba(247,243,238,0.1); padding-bottom: 8px; }
         .legal-preview-content h2 { font-size: 19px; font-weight: 700; color: #C9943A; margin: 20px 0 10px; }
         .legal-preview-content h3 { font-size: 16.5px; font-weight: 600; margin: 16px 0 8px; }
@@ -708,7 +754,18 @@ export default function LegalDocumentEditor({
         .legal-preview-content li { margin-bottom: 6px; color: rgba(247,243,238,0.88); }
         .legal-preview-content blockquote { border-left: 3px solid #C9943A; padding-left: 16px; margin: 16px 0; color: rgba(247,243,238,0.7); font-style: italic; background: rgba(201,148,58,0.06); padding: 12px 16px; border-radius: 0 8px 8px 0; }
         .legal-preview-content a { color: #C9943A; text-decoration: underline; }
-        .legal-preview-content img { max-width: 100%; height: auto; border-radius: 10px; margin: 18px 0; display: block; }
+        .legal-preview-content img {
+          width: 100%;
+          max-width: 100%;
+          max-height: 320px;
+          height: auto;
+          object-fit: contain;
+          background: rgba(247,243,238,0.96);
+          border: 1px solid rgba(247,243,238,0.12);
+          border-radius: 10px;
+          margin: 18px 0;
+          display: block;
+        }
       `}</style>
 
       {/* Page Header: Title, Subtitle, and Primary/Secondary Action Buttons */}
@@ -1101,7 +1158,7 @@ export default function LegalDocumentEditor({
                 <div>
                   <div className="text-[11px] font-bold uppercase tracking-wider text-[#C9943A]">Readable Content Images</div>
                   <div className="text-[11px]" style={{ color: themeTokens.subtext }}>
-                    Insert responsive images directly into the document body.
+                    Best app fit: 16:9 landscape, 1600 x 900 or 1200 x 675.
                   </div>
                 </div>
                 <button
