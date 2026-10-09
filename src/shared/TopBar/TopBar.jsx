@@ -80,6 +80,7 @@ export default function TopBar({ toggleSidebar, isSidebarCollapsed, toggleSideba
         .toUpperCase()
         .slice(0, 2)
     : "VA";
+  const profileImage = userData?.profileImage || userData?.profile_image || "";
 
   return (
     <header
@@ -214,11 +215,22 @@ export default function TopBar({ toggleSidebar, isSidebarCollapsed, toggleSideba
               : "border-[rgba(13,43,69,0.12)] bg-[#FAF7F2] text-[#0D2B45] hover:border-[#C9943A]"
           }`}
         >
-          <div className="w-7 h-7 rounded-full bg-[#C9943A] flex items-center justify-center shrink-0">
-            <span className="font-bold text-[11px] text-[#0D0D0D] font-dmsans leading-none">
-              {initials}
-            </span>
-          </div>
+          {profileImage ? (
+            <img
+              src={profileImage}
+              alt="Admin avatar"
+              className="w-7 h-7 rounded-full object-cover shrink-0 border border-[#C9943A]/45"
+              onError={(event) => {
+                event.currentTarget.src = "/userimg.png";
+              }}
+            />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-[#C9943A] flex items-center justify-center shrink-0">
+              <span className="font-bold text-[11px] text-[#0D0D0D] font-dmsans leading-none">
+                {initials}
+              </span>
+            </div>
+          )}
           <span
             className={`hidden md:inline-block text-xs font-semibold font-dmsans pr-0.5 transition-colors duration-150 ${
               isDark ? "text-[#F7F3EE]" : "text-[#0D2B45]"

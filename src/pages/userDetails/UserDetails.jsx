@@ -28,6 +28,7 @@ const mapUserRow = (user) => ({
   c: user.country || user.country_code || "Not set",
   d: user.lastActiveLabel || "Never",
   e: user.isDeleted ? "Deleted" : user.isBlocked ? "Blocked" : user.statusLabel || (user.status === "ACTIVE" ? "Healthy" : user.status || "Pending"),
+  profileImage: user.profileImage || user.profile_image || "",
   tone: user.isDeleted || user.isBlocked ? "bad" : user.tone || (user.neverActive ? "bad" : user.isAtRisk ? "warn" : "good"),
   rawData: user,
   isPaying: Boolean(user.isPaying),

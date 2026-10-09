@@ -2300,27 +2300,47 @@ export default function ClaudeDrawer() {
                 )}
 
                 {field.type === "text" && (
-                  <input
-                    type="text"
-                    value={formValues[field.k] ?? ""}
-                    onChange={(e) => handleTextChange(field.k, e.target.value)}
-                    placeholder={field.placeholder || ""}
-                    className="placeholder:text-[#F7F3EE]/35"
-                    style={{
-                      boxSizing: "border-box",
-                      border: "1.5px solid rgba(247, 243, 238, 0.2)",
-                      borderRadius: "12px",
-                      padding: "12px 14px",
-                      font: "500 14px/1.4 'DM Sans', sans-serif",
-                      color: "#F7F3EE",
-                      backgroundColor: "transparent",
-                      outline: "none",
-                      width: "100%",
-                      display: "block",
-                    }}
-                    onFocus={(e) => (e.currentTarget.style.borderColor = "#C9943A")}
-                    onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(247, 243, 238, 0.2)")}
-                  />
+                  <div style={{ display: "flex", alignItems: "center", gap: field.k === "PROFILE IMAGE" ? "10px" : 0 }}>
+                    {field.k === "PROFILE IMAGE" && formValues[field.k] ? (
+                      <img
+                        src={formValues[field.k]}
+                        alt="Profile preview"
+                        onError={(event) => {
+                          event.currentTarget.src = "/userimg.png";
+                        }}
+                        style={{
+                          width: "42px",
+                          height: "42px",
+                          borderRadius: "999px",
+                          objectFit: "cover",
+                          border: "1px solid rgba(201,148,58,0.45)",
+                          flex: "none",
+                        }}
+                      />
+                    ) : null}
+                    <input
+                      type="text"
+                      value={formValues[field.k] ?? ""}
+                      onChange={(e) => handleTextChange(field.k, e.target.value)}
+                      placeholder={field.placeholder || ""}
+                      className="placeholder:text-[#F7F3EE]/35"
+                      style={{
+                        boxSizing: "border-box",
+                        border: "1.5px solid rgba(247, 243, 238, 0.2)",
+                        borderRadius: "12px",
+                        padding: "12px 14px",
+                        font: "500 14px/1.4 'DM Sans', sans-serif",
+                        color: "#F7F3EE",
+                        backgroundColor: "transparent",
+                        outline: "none",
+                        width: "100%",
+                        display: "block",
+                        minWidth: 0,
+                      }}
+                      onFocus={(e) => (e.currentTarget.style.borderColor = "#C9943A")}
+                      onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(247, 243, 238, 0.2)")}
+                    />
+                  </div>
                 )}
 
                 {field.type === "input" && (

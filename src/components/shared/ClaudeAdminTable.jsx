@@ -777,6 +777,13 @@ export default function ClaudeAdminTable({
               const selected = selectedId === r.id;
               const ink = r.tone === "good" ? "#1A7A4A" : r.tone === "warn" ? "#C9943A" : "#B5651D";
               const rowAudit = r.raw?.audit;
+              const rowProfileImage =
+                r.profileImage ||
+                r.raw?.profileImage ||
+                r.raw?.rawData?.profileImage ||
+                r.raw?.rawData?.profile_image ||
+                r.raw?.rawData?.author_profile_image ||
+                "";
               const rowElement = (
                 <div
                   onClick={() => {
@@ -798,22 +805,41 @@ export default function ClaudeAdminTable({
                   }}
                 >
                   {/* Column 0: r.a & r.b */}
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ font: "600 14.5px/1.3 'DM Sans', sans-serif", color: t.text, overflowWrap: "break-word" }}>
-                      {r.a}
-                    </div>
-                    {r.b && (
-                      <div
-                        style={{
-                          font: "500 11.5px/1.35 'JetBrains Mono', monospace",
-                          color: t.muted,
-                          marginTop: "4px",
-                          overflowWrap: "break-word",
+                  <div style={{ minWidth: 0, display: "flex", alignItems: "center", gap: "10px" }}>
+                    {rowProfileImage ? (
+                      <img
+                        src={rowProfileImage}
+                        alt={r.a || "Profile"}
+                        onError={(event) => {
+                          event.currentTarget.src = "/userimg.png";
                         }}
-                      >
-                        {r.b}
+                        style={{
+                          width: "34px",
+                          height: "34px",
+                          borderRadius: "999px",
+                          objectFit: "cover",
+                          flex: "none",
+                          border: "1px solid rgba(201,148,58,0.35)",
+                        }}
+                      />
+                    ) : null}
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ font: "600 14.5px/1.3 'DM Sans', sans-serif", color: t.text, overflowWrap: "break-word" }}>
+                        {r.a}
                       </div>
-                    )}
+                      {r.b && (
+                        <div
+                          style={{
+                            font: "500 11.5px/1.35 'JetBrains Mono', monospace",
+                            color: t.muted,
+                            marginTop: "4px",
+                            overflowWrap: "break-word",
+                          }}
+                        >
+                          {r.b}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Column 1: r.c */}

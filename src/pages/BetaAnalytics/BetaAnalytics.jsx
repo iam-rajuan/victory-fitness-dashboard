@@ -155,6 +155,7 @@ const normalizeTester = (tester) => {
   return {
     id: tester.id,
     initials: initialsFor(tester.fullName, tester.email),
+    profileImage: tester.profileImage || tester.profile_image || "",
     name: tester.fullName || tester.email || "Unknown tester",
     email: tester.email || "",
     country,
@@ -763,22 +764,40 @@ export default function BetaAnalytics() {
                       borderBottom: idx < visibleTesters.length - 1 ? `1px solid ${t.rowBorder}` : "none",
                     }}
                   >
-                    <div
-                      style={{
-                        width: "32px",
-                        height: "32px",
-                        borderRadius: "99px",
-                        background: isDark ? "rgba(247,243,238,.12)" : "rgba(13,43,69,.08)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flex: "none",
-                      }}
-                    >
-                      <span style={{ font: "700 11.5px 'DM Sans', sans-serif", color: "#C9943A" }}>
-                        {tItem.initials}
-                      </span>
-                    </div>
+                    {tItem.profileImage ? (
+                      <img
+                        src={tItem.profileImage}
+                        alt={tItem.name}
+                        onError={(event) => {
+                          event.currentTarget.src = "/userimg.png";
+                        }}
+                        style={{
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "99px",
+                          objectFit: "cover",
+                          flex: "none",
+                          border: "1px solid rgba(201,148,58,0.35)",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "99px",
+                          background: isDark ? "rgba(247,243,238,.12)" : "rgba(13,43,69,.08)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flex: "none",
+                        }}
+                      >
+                        <span style={{ font: "700 11.5px 'DM Sans', sans-serif", color: "#C9943A" }}>
+                          {tItem.initials}
+                        </span>
+                      </div>
+                    )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div
                         style={{

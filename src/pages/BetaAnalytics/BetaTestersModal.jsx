@@ -702,28 +702,46 @@ export default function BetaTestersModal({ isOpen, onClose, testers = [], countr
                       {/* Tester column */}
                       <td style={{ padding: "13px 24px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                          <div
-                            style={{
-                              width: "36px",
-                              height: "36px",
-                              borderRadius: "50%",
-                              background: isDark ? "rgba(201,148,58,0.16)" : "rgba(201,148,58,0.12)",
-                              border: "1px solid rgba(201,148,58,0.3)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              flexShrink: 0,
-                            }}
-                          >
-                            <span
+                          {tItem.profileImage ? (
+                            <img
+                              src={tItem.profileImage}
+                              alt={tItem.name}
+                              onError={(event) => {
+                                event.currentTarget.src = "/userimg.png";
+                              }}
                               style={{
-                                font: "700 12.5px 'DM Sans', sans-serif",
-                                color: "#C9943A",
+                                width: "36px",
+                                height: "36px",
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                                border: "1px solid rgba(201,148,58,0.3)",
+                                flexShrink: 0,
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: "36px",
+                                height: "36px",
+                                borderRadius: "50%",
+                                background: isDark ? "rgba(201,148,58,0.16)" : "rgba(201,148,58,0.12)",
+                                border: "1px solid rgba(201,148,58,0.3)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
                               }}
                             >
-                              {tItem.initials}
-                            </span>
-                          </div>
+                              <span
+                                style={{
+                                  font: "700 12.5px 'DM Sans', sans-serif",
+                                  color: "#C9943A",
+                                }}
+                              >
+                                {tItem.initials}
+                              </span>
+                            </div>
+                          )}
                           <div style={{ minWidth: 0, flex: 1 }}>
                             <div
                               style={{

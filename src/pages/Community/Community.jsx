@@ -61,6 +61,7 @@ const buildRow = (post) => {
     c: classifyPostType(post),
     d: formatBroadcastTiming(post),
     e: `${cheers} ${cheers === 1 ? "cheer" : "cheers"} · ${comments} comments`,
+    profileImage: post.author_profile_image || post.profileImage || "",
     tone: post.flagged ? "warn" : cheers > 5 ? "good" : "warn",
     rawData: post,
   };

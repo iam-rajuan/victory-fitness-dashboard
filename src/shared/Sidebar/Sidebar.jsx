@@ -215,6 +215,7 @@ const Sidebar = ({
 
   const user = getUserData();
   const displayName = user?.fullName || user?.name || "Victor Akko";
+  const profileImage = user?.profileImage || user?.profile_image || "";
   const initials = displayName
     .split(" ")
     .map((n) => n[0])
@@ -345,10 +346,21 @@ const Sidebar = ({
             <Link
               to="/profile"
               onClick={handleLinkClick}
-              className="w-10 h-10 rounded-full bg-[#C9943A] flex items-center justify-center shrink-0 shadow-sm cursor-pointer hover:ring-2 hover:ring-[#C9943A]/50 transition-all"
+              className="w-10 h-10 rounded-full bg-[#C9943A] flex items-center justify-center shrink-0 shadow-sm cursor-pointer hover:ring-2 hover:ring-[#C9943A]/50 transition-all overflow-hidden"
               title={`${displayName} (Super Admin)`}
             >
-              <span className="font-bold text-xs text-[#0D0D0D] font-dmsans">{initials}</span>
+              {profileImage ? (
+                <img
+                  src={profileImage}
+                  alt={displayName}
+                  className="w-full h-full object-cover"
+                  onError={(event) => {
+                    event.currentTarget.src = "/userimg.png";
+                  }}
+                />
+              ) : (
+                <span className="font-bold text-xs text-[#0D0D0D] font-dmsans">{initials}</span>
+              )}
             </Link>
 
             <button
@@ -394,8 +406,19 @@ const Sidebar = ({
                 onClick={handleLinkClick}
                 className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group"
               >
-                <div className="w-8 h-8 rounded-full bg-[#C9943A] flex items-center justify-center shrink-0 group-hover:ring-2 group-hover:ring-[#C9943A]/40 transition-all">
-                  <span className="font-bold text-xs text-[#0D0D0D] font-dmsans">{initials}</span>
+                <div className="w-8 h-8 rounded-full bg-[#C9943A] flex items-center justify-center shrink-0 group-hover:ring-2 group-hover:ring-[#C9943A]/40 transition-all overflow-hidden">
+                  {profileImage ? (
+                    <img
+                      src={profileImage}
+                      alt={displayName}
+                      className="w-full h-full object-cover"
+                      onError={(event) => {
+                        event.currentTarget.src = "/userimg.png";
+                      }}
+                    />
+                  ) : (
+                    <span className="font-bold text-xs text-[#0D0D0D] font-dmsans">{initials}</span>
+                  )}
                 </div>
                 <div className="min-w-0">
                   <div
