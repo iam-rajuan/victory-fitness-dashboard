@@ -3,6 +3,7 @@ import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { deleteAdminWorkout, listAdminWorkouts } from "../../../services/admin-workouts.service";
 import { DEFAULT_WORKOUT_CATEGORY, WORKOUT_CATEGORY_OPTIONS } from "../../constants/workoutCategories";
+import { readStaleCache, writeStaleCache } from "../../utils/staleCache";
 
 const normalizeWorkoutDurationMinutes = (value) => {
   const minutes = Number(value || 0);
@@ -49,15 +50,16 @@ const formatWorkoutLength = (durationMinutes, durationSeconds) => {
 
 export default function Workouts() {
   const { openDrawer, showToast } = useAdminDrawer();
-  const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState([]);
-  const [stats, setStats] = useState([
+  const cached = readStaleCache("workouts");
+  const [loading, setLoading] = useState(!cached);
+  const [rows, setRows] = useState(() => cached?.rows || []);
+  const [stats, setStats] = useState(() => cached?.stats || [
     { k: "TOTAL", v: "0", note: "0 published, 0 draft" },
     { k: "PUBLISHED", v: "0", note: "Visible in the app" },
     { k: "DRAFT", v: "0", note: "Hidden from members" },
     { k: "UNTAGGED", v: "0", note: "No purpose, equipment or level set" },
   ]);
-  const [summary, setSummary] = useState({ total: 0, published: 0, draft: 0, untagged: 0, under20: 0 });
+  const [summary, setSummary] = useState(() => cached?.summary || { total: 0, published: 0, draft: 0, untagged: 0, under20: 0 });
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -91,14 +93,17 @@ export default function Workouts() {
       }).length;
       const under20Count = list.filter((w) => Number(w.durationMinutes || 0) > 0 && Number(w.durationMinutes || 0) < 20).length;
 
-      setRows(mapped);
-      setSummary({ total: list.length, published: publishedCount, draft: draftCount, untagged: untaggedCount, under20: under20Count });
-      setStats([
+      const nextSummary = { total: list.length, published: publishedCount, draft: draftCount, untagged: untaggedCount, under20: under20Count };
+      const nextStats = [
         { k: "TOTAL", v: String(list.length), note: `${publishedCount} published, ${draftCount} draft` },
         { k: "PUBLISHED", v: String(publishedCount), note: "Visible in the app" },
         { k: "DRAFT", v: String(draftCount), note: "Hidden from members" },
         { k: "UNTAGGED", v: String(untaggedCount), note: "No purpose, equipment or level set" },
-      ]);
+      ];
+      setRows(mapped);
+      setSummary(nextSummary);
+      setStats(nextStats);
+      writeStaleCache("workouts", { rows: mapped, summary: nextSummary, stats: nextStats });
     } catch (err) {
       showToast(`Failed to load workouts: ${err.message}`);
     } finally {

@@ -30,7 +30,7 @@ const MainHeader = ({ toggleSidebar }) => {
       try {
         const [response, notificationsResponse] = await Promise.all([
           adminApiRequest("/admin/me"),
-          listAdminNotifications().catch(() => ({ items: [] })),
+          listAdminNotifications().catch(() => null),
         ]);
         if (!isMounted) {
           return;
@@ -48,11 +48,9 @@ const MainHeader = ({ toggleSidebar }) => {
         };
         storeUserInfo(nextUser);
         setCurrentUser(nextUser);
-        setNotificationCount(
-          Array.isArray(notificationsResponse?.items)
-            ? notificationsResponse.items.filter((item) => !item?.read).length
-            : 0,
-        );
+        if (Array.isArray(notificationsResponse?.items)) {
+          setNotificationCount(notificationsResponse.items.filter((item) => !item?.read).length);
+        }
       } catch {
         if (isMounted) {
           setCurrentUser(getUserData());

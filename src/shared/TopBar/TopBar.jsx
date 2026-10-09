@@ -51,7 +51,7 @@ export default function TopBar({ toggleSidebar, isSidebarCollapsed, toggleSideba
     let isMounted = true;
     const loadUnread = async () => {
       try {
-        const res = await listAdminNotifications().catch(() => ({ items: [] }));
+        const res = await listAdminNotifications().catch(() => null);
         if (isMounted && Array.isArray(res?.items)) {
           setUnreadCount(res.items.filter((item) => !item?.read).length);
         }

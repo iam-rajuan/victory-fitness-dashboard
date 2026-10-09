@@ -7,6 +7,7 @@ import {
   listAdminApplications,
   updateInnerCircleApplicationQuestions,
 } from "../../../services/admin-applications.service";
+import { readStaleCache, writeStaleCache } from "../../utils/staleCache";
 
 const BASE_ROWS = [
   { a: "Ingrid Vogel", b: "Germany", c: "Back to competing at 52", d: "4 days", e: "Waiting", tone: "bad", id: "app1" },
@@ -227,10 +228,11 @@ const mapApplicationRow = (application) => {
 
 export default function Applications() {
   const { openDrawer, showToast } = useAdminDrawer();
-  const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState([]);
+  const cached = readStaleCache("applications");
+  const [loading, setLoading] = useState(!cached);
+  const [rows, setRows] = useState(() => cached?.rows || []);
   const [questionDraft, setQuestionDraft] = useState(() => normalizeQuestionSet(null));
-  const [summary, setSummary] = useState(null);
+  const [summary, setSummary] = useState(() => cached?.summary || null);
   const [isQuestionsModalOpen, setIsQuestionsModalOpen] = useState(false);
   const [savingQuestions, setSavingQuestions] = useState(false);
 
@@ -239,12 +241,14 @@ export default function Applications() {
     return listAdminApplications()
       .then((data) => {
         const list = Array.isArray(data) ? data : data?.applications || data?.items || [];
-        setSummary(data?.summary || null);
-        setRows(list.map(mapApplicationRow));
+        const nextRows = list.map(mapApplicationRow);
+        const nextSummary = data?.summary || null;
+        setSummary(nextSummary);
+        setRows(nextRows);
+        writeStaleCache("applications", { rows: nextRows, summary: nextSummary });
       })
       .catch(() => {
-        setRows([]);
-        setSummary(null);
+        showToast("Failed to load applications.");
       })
       .finally(() => setLoading(false));
   }, []);

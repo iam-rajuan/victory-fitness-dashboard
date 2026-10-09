@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { blockAdminUser, deleteAdminUser, getUserManagementOverview, restoreAdminUser } from "../../../services/admin-users.service";
+import { readStaleCache, writeStaleCache } from "../../utils/staleCache";
 
 const USER_FILTERS = ["All", "Paying", "On trial", "Beta testers", "At risk", "Never active"];
 
@@ -65,10 +66,12 @@ const actionButtonStyle = (variant = "neutral", isDark = true) => {
 
 export default function UserDetails() {
   const { openDrawer, showToast } = useAdminDrawer();
-  const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState([]);
-  const [summary, setSummary] = useState(null);
   const [showBlockedUsers, setShowBlockedUsers] = useState(false);
+  const cacheKey = showBlockedUsers ? "users:blocked" : "users:active";
+  const cached = readStaleCache(cacheKey);
+  const [loading, setLoading] = useState(!cached);
+  const [rows, setRows] = useState(() => cached?.rows || []);
+  const [summary, setSummary] = useState(() => cached?.summary || null);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -76,15 +79,16 @@ export default function UserDetails() {
       const data = await getUserManagementOverview({ limit: 500, statusScope: showBlockedUsers ? "blocked" : "active" });
       const nextSummary = data?.summary || {};
       const users = Array.isArray(data?.table?.users) ? data.table.users : [];
+      const nextRows = users.map(mapUserRow);
       setSummary(nextSummary);
-      setRows(users.map(mapUserRow));
+      setRows(nextRows);
+      writeStaleCache(cacheKey, { rows: nextRows, summary: nextSummary });
     } catch (err) {
       showToast(`Failed: ${err?.message || "Unable to load users."}`);
-      setRows([]);
     } finally {
       setLoading(false);
     }
-  }, [showBlockedUsers, showToast]);
+  }, [cacheKey, showBlockedUsers, showToast]);
 
   useEffect(() => {
     void loadUsers();

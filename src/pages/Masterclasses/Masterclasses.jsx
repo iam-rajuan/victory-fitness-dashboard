@@ -5,6 +5,7 @@ import {
   deleteAdminMasterclass,
   listAdminMasterclasses,
 } from "../../../services/admin-content.service";
+import { readStaleCache, writeStaleCache } from "../../utils/staleCache";
 
 const statusTone = (status) => (String(status).toLowerCase() === "live" ? "good" : "warn");
 
@@ -76,18 +77,20 @@ const buildDrawerPayload = (row, onSaved) => {
 
 export default function Masterclasses() {
   const { openDrawer, showToast } = useAdminDrawer();
-  const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState([]);
+  const cached = readStaleCache("masterclasses");
+  const [loading, setLoading] = useState(!cached);
+  const [rows, setRows] = useState(() => cached?.rows || []);
 
   const loadMasterclasses = useCallback(async () => {
     setLoading(true);
     try {
       const data = await listAdminMasterclasses();
       const items = Array.isArray(data?.items) ? data.items : [];
-      setRows(items.map(buildRow));
+      const nextRows = items.map(buildRow);
+      setRows(nextRows);
+      writeStaleCache("masterclasses", { rows: nextRows });
     } catch (error) {
       showToast(`Failed: ${error?.message || "Could not load masterclasses."}`);
-      setRows([]);
     } finally {
       setLoading(false);
     }

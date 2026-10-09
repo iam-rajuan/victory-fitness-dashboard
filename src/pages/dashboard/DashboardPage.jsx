@@ -9,6 +9,7 @@ import {
   fetchMarketBreakdown,
   fetchViralCoefficient,
 } from "../../../services/analytics.service";
+import { readStaleCache, writeStaleCache } from "../../utils/staleCache";
 import { adminApiRequest } from "../../../services/auth.service";
 
 function renderWithBetaAudit(text) {
@@ -529,8 +530,18 @@ export default function DashboardPage() {
     const ac = new AbortController();
     const preset = PRESET_MAP[scope] || "today";
     const marketParam = MARKET_PARAM_MAP[market] || "all";
+    const cacheKey = `dashboard:metrics:${preset}:${marketParam}`;
+    const cachedMetrics = readStaleCache(cacheKey);
 
-    setLoadingMetrics(true);
+    if (cachedMetrics) {
+      setRevenueData(cachedMetrics.revenueData || null);
+      setUserStatsData(cachedMetrics.userStatsData || null);
+      setViralData(cachedMetrics.viralData || null);
+      setMarketBreakdown(cachedMetrics.marketBreakdown || null);
+      setLoadingMetrics(false);
+    } else {
+      setLoadingMetrics(true);
+    }
 
     Promise.allSettled([
       fetchRevenue({ preset, market: marketParam, signal: ac.signal }),
@@ -552,6 +563,12 @@ export default function DashboardPage() {
         if (mktRes.status === "fulfilled" && mktRes.value) {
           setMarketBreakdown(mktRes.value);
         }
+        writeStaleCache(cacheKey, {
+          revenueData: revRes.status === "fulfilled" && revRes.value ? revRes.value : revenueData,
+          userStatsData: userRes.status === "fulfilled" && userRes.value ? userRes.value : userStatsData,
+          viralData: viralRes.status === "fulfilled" && viralRes.value ? viralRes.value : viralData,
+          marketBreakdown: mktRes.status === "fulfilled" && mktRes.value ? mktRes.value : marketBreakdown,
+        });
         setLoadingMetrics(false);
       })
       .catch(() => {

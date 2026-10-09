@@ -65,7 +65,7 @@ export default function StatCard({
           <p className="text-[11px] font-semibold uppercase tracking-wider text-surface-500">
             {label}
           </p>
-          {loading ? (
+          {loading && (value === undefined || value === null || value === "—") ? (
             <div className="mt-2 h-8 w-24 animate-pulse rounded-md bg-surface-200" />
           ) : (
             <p className="mt-1 text-2xl font-bold tabular-nums text-surface-900 sm:text-3xl">

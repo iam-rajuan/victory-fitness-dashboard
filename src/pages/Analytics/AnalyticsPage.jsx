@@ -32,25 +32,35 @@ import {
   fetchWhatsappTracker,
   fetchWorkoutStats,
 } from "../../../services/analytics.service";
+import { readStaleCache, writeStaleCache } from "../../utils/staleCache";
 
 /**
  * Custom hook that re-fetches whenever the filter changes.
  */
 function useAnalyticsQuery(fetcher, refreshKey = "") {
   const filter = useAnalyticsFilter();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = `analytics:${fetcher.name || "query"}:${refreshKey}:${filter.preset}:${filter.market}:${filter.from || ""}:${filter.to || ""}`;
+  const cached = readStaleCache(cacheKey);
+  const [data, setData] = useState(() => cached || null);
+  const [loading, setLoading] = useState(!cached);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
     const ac = new AbortController();
-    setLoading(true);
+    const cachedForKey = readStaleCache(cacheKey);
+    if (cachedForKey) {
+      setData(cachedForKey);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     fetcher({ ...filter, signal: ac.signal })
       .then((res) => {
         if (!cancelled) {
           setData(res);
+          writeStaleCache(cacheKey, res);
           setLoading(false);
         }
       })
@@ -65,7 +75,7 @@ function useAnalyticsQuery(fetcher, refreshKey = "") {
       ac.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter.preset, filter.market, filter.from, filter.to, refreshKey]);
+  }, [cacheKey, filter.preset, filter.market, filter.from, filter.to, refreshKey]);
 
   return { data, loading, error };
 }
@@ -267,12 +277,19 @@ export default function AnalyticsPage() {
   
   const filter = useAnalyticsFilter();
   const [selectedCountry, setSelectedCountry] = useState(null);
-  const [marketBreakdown, setMarketBreakdown] = useState({ data: null, loading: true, error: null });
+  const marketCacheKey = `analytics:marketBreakdown:${filter.preset}:${filter.from || ""}:${filter.to || ""}:${selectedCountry || "all"}`;
+  const cachedMarketBreakdown = readStaleCache(marketCacheKey);
+  const [marketBreakdown, setMarketBreakdown] = useState({ data: cachedMarketBreakdown || null, loading: !cachedMarketBreakdown, error: null });
 
   useEffect(() => {
     let cancelled = false;
     const ac = new AbortController();
-    setMarketBreakdown((prev) => ({ ...prev, loading: true, error: null }));
+    const cachedForKey = readStaleCache(marketCacheKey);
+    setMarketBreakdown((prev) => ({
+      data: cachedForKey || prev.data,
+      loading: !cachedForKey && !prev.data,
+      error: null,
+    }));
     
     fetchMarketBreakdown({
       preset: filter.preset,
@@ -283,12 +300,13 @@ export default function AnalyticsPage() {
     })
       .then((res) => {
         if (!cancelled) {
+          writeStaleCache(marketCacheKey, res);
           setMarketBreakdown({ data: res, loading: false, error: null });
         }
       })
       .catch((err) => {
         if (!cancelled) {
-          setMarketBreakdown({ data: null, loading: false, error: err.message || "Failed to load" });
+          setMarketBreakdown((prev) => ({ data: prev.data, loading: false, error: err.message || "Failed to load" }));
         }
       });
 
@@ -296,7 +314,7 @@ export default function AnalyticsPage() {
       cancelled = true;
       ac.abort();
     };
-  }, [filter.preset, filter.from, filter.to, selectedCountry]);
+  }, [marketCacheKey, filter.preset, filter.from, filter.to, selectedCountry]);
 
   return (
     <div className="space-y-6" id="intelligence-dashboard">

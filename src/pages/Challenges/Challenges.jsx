@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { adminApiRequest } from "../../../services/auth.service";
+import { readStaleCache, writeStaleCache } from "../../utils/staleCache";
 
 const statusTone = (status) => {
   const normalized = String(status || "").toUpperCase();
@@ -60,9 +61,10 @@ const drawerPayloadFromChallenge = (challenge = {}) => ({
 
 export default function Challenges() {
   const { openDrawer, showToast } = useAdminDrawer();
-  const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState([]);
-  const [total, setTotal] = useState(0);
+  const cached = readStaleCache("challenges");
+  const [loading, setLoading] = useState(!cached);
+  const [rows, setRows] = useState(() => cached?.rows || []);
+  const [total, setTotal] = useState(() => cached?.total || 0);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -78,12 +80,13 @@ export default function Challenges() {
         if (timeA && timeB && timeA !== timeB) return timeB - timeA;
         return String(b.id || b._id || "").localeCompare(String(a.id || a._id || ""));
       });
-      setRows(sorted.map(mapChallengeRow));
-      setTotal(Number(data?.total ?? sorted.length) || 0);
+      const nextRows = sorted.map(mapChallengeRow);
+      const nextTotal = Number(data?.total ?? sorted.length) || 0;
+      setRows(nextRows);
+      setTotal(nextTotal);
+      writeStaleCache("challenges", { rows: nextRows, total: nextTotal });
     } catch (err) {
       showToast(`Failed to load challenges: ${err?.message || "Request failed"}`);
-      setRows([]);
-      setTotal(0);
     } finally {
       setLoading(false);
     }

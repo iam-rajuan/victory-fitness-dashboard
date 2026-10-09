@@ -753,7 +753,7 @@ export default function ClaudeAdminTable({
         </div>
 
         {/* Table Body Rows */}
-        {isLoading ? (
+        {isLoading && filteredRows.length === 0 ? (
           <div style={{ padding: "40px 20px", textAlign: "center" }}>
             <div className="w-7 h-7 border-2 border-[#C9943A] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
             <div style={{ font: "400 12px 'JetBrains Mono', monospace", color: t.muted }}>

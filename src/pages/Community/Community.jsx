@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { adminApiRequest } from "../../../services/auth.service";
+import { readStaleCache, writeStaleCache } from "../../utils/staleCache";
 
 const FEED_LABELS = {
   ALL: "Global",
@@ -92,21 +93,23 @@ const buildBroadcastPayload = (row, onSaved) => {
 
 export default function Community() {
   const { openDrawer, showToast } = useAdminDrawer();
-  const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState([]);
-  const [total, setTotal] = useState(0);
+  const cached = readStaleCache("community");
+  const [loading, setLoading] = useState(!cached);
+  const [rows, setRows] = useState(() => cached?.rows || []);
+  const [total, setTotal] = useState(() => cached?.total || 0);
 
   const loadCommunity = useCallback(async () => {
     setLoading(true);
     try {
       const data = await adminApiRequest("/admin/community/posts?limit=100");
       const posts = Array.isArray(data?.posts) ? data.posts : [];
-      setRows(posts.map(buildRow));
-      setTotal(Number(data?.total || posts.length));
+      const nextRows = posts.map(buildRow);
+      const nextTotal = Number(data?.total || posts.length);
+      setRows(nextRows);
+      setTotal(nextTotal);
+      writeStaleCache("community", { rows: nextRows, total: nextTotal });
     } catch (error) {
       showToast(`Failed: ${error?.message || "Could not load community posts."}`);
-      setRows([]);
-      setTotal(0);
     } finally {
       setLoading(false);
     }
