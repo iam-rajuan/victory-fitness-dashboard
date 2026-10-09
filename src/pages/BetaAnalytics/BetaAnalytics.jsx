@@ -130,7 +130,7 @@ const testerStateFor = (tester) => {
   const status = String(tester.status || "").toUpperCase();
   if (tester.isDeleted) return { label: "DELETED", tone: "bad" };
   if (tester.isBlocked || status === "BLOCKED") return { label: "BLOCKED", tone: "bad" };
-  if (!activity.usedAnyTrackedFeature) return { label: "SILENT", tone: "bad" };
+  if (!activity.usedAnyTrackedFeature && !lastActive) return { label: "SILENT", tone: "bad" };
   if (status !== "ACTIVE") return { label: status || "EXPIRED", tone: "bad" };
   if (inactiveDays >= 3 || Number(tester.daysRemaining || 0) <= 2) return { label: "AT RISK", tone: "warn" };
   return { label: "ACTIVE", tone: "good" };
@@ -165,7 +165,7 @@ const normalizeTester = (tester) => {
     tone: state.tone,
     lastActive: activity.lastActiveAt,
     lastActiveFormatted: formatLastActive(activity.lastActiveAt),
-    meta: `${country} · ${currentDay ? `day ${currentDay}` : "day n/a"} · ${totalActions > 0 ? `${totalActions} actions` : "never opened"}`,
+    meta: `${country} · ${currentDay ? `day ${currentDay}` : "day n/a"} · ${totalActions > 0 ? `${totalActions} actions` : activity.lastActiveAt ? "opened app" : "never opened"}`,
     activity,
     totalActions,
     isBlocked: Boolean(tester.isBlocked),
