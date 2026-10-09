@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -16,13 +16,16 @@ import {
   IoGlobeOutline,
   IoCloudUploadOutline,
   IoDocumentTextOutline,
+  IoImageOutline,
   IoNotificationsOutline,
+  IoTrashOutline,
   IoShieldCheckmarkOutline,
 } from "react-icons/io5";
 import { Spin, message } from "antd";
 import { adminApiRequest } from "../../../services/auth.service";
 import { useTheme } from "../../context/ThemeContext";
 import { LEGAL_DOCUMENT_ACCEPT, readLegalDocumentFile } from "../../utils/legalDocumentImport";
+import { toBase64Payload } from "../../utils/imageUpload";
 
 const MARKET_OPTIONS = [
   { value: "ALL", label: "All Markets", code: "GLOBAL" },
@@ -186,6 +189,7 @@ function generateStandaloneHtmlDoc({
       font-style: italic;
     }
     .content-body a { color: var(--gold); text-decoration: underline; }
+    .content-body img { max-width: 100%; height: auto; border-radius: 10px; margin: 18px 0; display: block; }
     .content-body hr { border: 0; height: 1px; background: var(--border); margin: 28px 0; }
     .footer-note {
       margin-top: 40px;
@@ -279,17 +283,6 @@ function openInNewTabDocument({ title, version, publishedAt, effectiveAt, applie
   }
 }
 
-const QUILL_MODULES = {
-  toolbar: [
-    [{ header: [1, 2, 3, false] }],
-    ["bold", "italic", "underline", "strike"],
-    ["blockquote"],
-    [{ list: "ordered" }, { list: "bullet" }],
-    ["link"],
-    ["clean"],
-  ],
-};
-
 export default function LegalDocumentEditor({
   pageTitle,
   defaultTitle,
@@ -298,14 +291,22 @@ export default function LegalDocumentEditor({
 }) {
   const navigate = useNavigate();
   const { isDark } = useTheme();
+  const quillRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const pdfInputRef = useRef(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+  const [isRemovingPdf, setIsRemovingPdf] = useState(false);
   const [documentState, setDocumentState] = useState(null);
   const [title, setTitle] = useState(defaultTitle);
   const [versionName, setVersionName] = useState("");
   const [content, setContent] = useState("");
   const [filename, setFilename] = useState("");
+  const [pdfUrl, setPdfUrl] = useState("");
+  const [pdfFilename, setPdfFilename] = useState("");
   const [markets, setMarkets] = useState(["ALL"]);
   const [notificationBehavior, setNotificationBehavior] = useState("silent");
   const [effectiveMode, setEffectiveMode] = useState("now");
@@ -346,6 +347,28 @@ export default function LegalDocumentEditor({
     };
   }, [content]);
 
+  const documentKey = useMemo(() => {
+    if (endpoint.includes("privacy-policy")) return "privacy-policy";
+    if (endpoint.includes("terms-condition")) return "terms-condition";
+    return "about-us";
+  }, [endpoint]);
+
+  const quillModules = useMemo(() => ({
+    toolbar: {
+      container: [
+        [{ header: [1, 2, 3, false] }],
+        ["bold", "italic", "underline", "strike"],
+        ["blockquote"],
+        [{ list: "ordered" }, { list: "bullet" }],
+        ["link", "image"],
+        ["clean"],
+      ],
+      handlers: {
+        image: () => imageInputRef.current?.click(),
+      },
+    },
+  }), []);
+
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
@@ -358,6 +381,8 @@ export default function LegalDocumentEditor({
         setVersionName(response.version || "v1");
         setContent(response.html_content || "");
         setFilename(response.filename || "");
+        setPdfUrl(response.pdf_url || "");
+        setPdfFilename(response.pdf_filename || "");
         setMarkets(Array.isArray(response.applies_to) && response.applies_to.length ? response.applies_to : ["ALL"]);
         setNotificationBehavior(response.notification_behavior || "silent");
 
@@ -432,6 +457,95 @@ export default function LegalDocumentEditor({
     }
   };
 
+  const handleImageUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
+      message.error("Upload a JPEG, PNG, WEBP, or GIF image.");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      message.error("Image must be 8MB or smaller.");
+      return;
+    }
+    setIsUploadingImage(true);
+    try {
+      const payload = await toBase64Payload(file, file.name || "legal-image.jpg", {
+        base64Key: "file_base64",
+        mimeTypeKey: "mime_type",
+        fileNameKey: "file_name",
+      });
+      const response = await adminApiRequest("/admin/content/legal-image", {
+        method: "POST",
+        body: payload,
+      });
+      const editor = quillRef.current?.getEditor?.();
+      if (editor && response?.url) {
+        const range = editor.getSelection(true);
+        const insertAt = range?.index ?? editor.getLength();
+        editor.insertEmbed(insertAt, "image", response.url, "user");
+        editor.setSelection(insertAt + 1, 0);
+      }
+      message.success("Image inserted.");
+    } catch (err) {
+      message.error(err?.message || "Failed to upload image.");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handlePdfUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      message.error("Upload a PDF file.");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      message.error("PDF must be 20MB or smaller.");
+      return;
+    }
+    setIsUploadingPdf(true);
+    try {
+      const payload = await toBase64Payload(file, file.name || "legal-document.pdf", {
+        base64Key: "file_base64",
+        mimeTypeKey: "mime_type",
+        fileNameKey: "file_name",
+      });
+      const response = await adminApiRequest(`/admin/content/${documentKey}/pdf`, {
+        method: "POST",
+        body: payload,
+      });
+      setPdfUrl(response.url || "");
+      setPdfFilename(response.filename || file.name || "legal-document.pdf");
+      message.success("PDF attached.");
+    } catch (err) {
+      message.error(err?.message || "Failed to upload PDF.");
+    } finally {
+      setIsUploadingPdf(false);
+    }
+  };
+
+  const handleViewPdf = () => {
+    if (pdfUrl) window.open(pdfUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleRemovePdf = async () => {
+    setIsRemovingPdf(true);
+    try {
+      await adminApiRequest(`/admin/content/${documentKey}/pdf`, { method: "DELETE" });
+      setPdfUrl("");
+      setPdfFilename("");
+      message.success("PDF removed.");
+    } catch (err) {
+      message.error(err?.message || "Failed to remove PDF.");
+    } finally {
+      setIsRemovingPdf(false);
+    }
+  };
+
   const handlePublish = async () => {
     const strippedContent = content.replace(/<[^>]+>/g, "").trim();
     if (!title.trim() || !strippedContent) {
@@ -448,6 +562,8 @@ export default function LegalDocumentEditor({
           version: versionName.trim() || undefined,
           html_content: content,
           filename: filename || "Editor content",
+          pdf_url: pdfUrl,
+          pdf_filename: pdfFilename,
           applies_to: markets,
           notification_behavior: enableNotifications ? notificationBehavior : "silent",
           effective_at: effectiveTimestamp,
@@ -455,6 +571,8 @@ export default function LegalDocumentEditor({
       });
       setDocumentState(response);
       setVersionName(response.version || "");
+      setPdfUrl(response.pdf_url || "");
+      setPdfFilename(response.pdf_filename || "");
       message.success(`${pageTitle} (${response.version || "new version"}) successfully published!`);
     } catch (err) {
       console.error(`Failed to publish ${pageTitle}:`, err);
@@ -590,6 +708,7 @@ export default function LegalDocumentEditor({
         .legal-preview-content li { margin-bottom: 6px; color: rgba(247,243,238,0.88); }
         .legal-preview-content blockquote { border-left: 3px solid #C9943A; padding-left: 16px; margin: 16px 0; color: rgba(247,243,238,0.7); font-style: italic; background: rgba(201,148,58,0.06); padding: 12px 16px; border-radius: 0 8px 8px 0; }
         .legal-preview-content a { color: #C9943A; text-decoration: underline; }
+        .legal-preview-content img { max-width: 100%; height: auto; border-radius: 10px; margin: 18px 0; display: block; }
       `}</style>
 
       {/* Page Header: Title, Subtitle, and Primary/Secondary Action Buttons */}
@@ -962,6 +1081,79 @@ export default function LegalDocumentEditor({
                 />
               </label>
             </div>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
+            <input
+              ref={pdfInputRef}
+              type="file"
+              accept="application/pdf"
+              onChange={handlePdfUpload}
+              className="hidden"
+            />
+
+            <div className="mb-5 grid gap-3 rounded-xl border border-[#F7F3EE]/12 bg-[#081C2E]/70 p-3.5 md:grid-cols-[1fr_1fr]">
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-[#F7F3EE]/10 bg-[#F7F3EE]/4 px-3 py-2.5">
+                <div>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-[#C9943A]">Readable Content Images</div>
+                  <div className="text-[11px]" style={{ color: themeTokens.subtext }}>
+                    Insert responsive images directly into the document body.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={isUploadingImage}
+                  onClick={() => imageInputRef.current?.click()}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[#C9943A]/45 px-3 py-2 text-xs font-bold text-[#C9943A] transition hover:bg-[#C9943A]/10 disabled:opacity-50"
+                >
+                  <IoImageOutline className="h-4 w-4" />
+                  <span>{isUploadingImage ? "Uploading..." : "Insert Image"}</span>
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-[#F7F3EE]/10 bg-[#F7F3EE]/4 px-3 py-2.5">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-[#C9943A]">Optional PDF</div>
+                  <div className="truncate text-[11px]" style={{ color: pdfFilename ? themeTokens.text : themeTokens.subtext }} title={pdfFilename || ""}>
+                    {pdfFilename || "No PDF attached"}
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  {pdfUrl ? (
+                    <button
+                      type="button"
+                      onClick={handleViewPdf}
+                      className="rounded-lg border border-[#F7F3EE]/15 px-3 py-2 text-xs font-bold text-[#F7F3EE] transition hover:border-[#C9943A]/70 hover:text-[#C9943A]"
+                    >
+                      View
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={isUploadingPdf}
+                    onClick={() => pdfInputRef.current?.click()}
+                    className="rounded-lg bg-[#C9943A] px-3 py-2 text-xs font-black text-[#0D0D0D] transition hover:bg-[#D6A64A] disabled:opacity-50"
+                  >
+                    {isUploadingPdf ? "Uploading..." : pdfUrl ? "Replace" : "Choose PDF"}
+                  </button>
+                  {pdfUrl ? (
+                    <button
+                      type="button"
+                      disabled={isRemovingPdf}
+                      onClick={handleRemovePdf}
+                      className="grid h-8 w-8 place-items-center rounded-lg border border-red-400/35 text-red-300 transition hover:bg-red-500/10 disabled:opacity-50"
+                      title="Remove PDF"
+                    >
+                      <IoTrashOutline className="h-4 w-4" />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </div>
 
             {/* Document Title & Version Name Inputs */}
             <div className="mb-5 grid gap-4 sm:grid-cols-[1fr_200px]">
@@ -1004,10 +1196,11 @@ export default function LegalDocumentEditor({
               </div>
               <div className="legal-editor">
                 <ReactQuill
+                  ref={quillRef}
                   theme="snow"
                   value={content}
                   onChange={setContent}
-                  modules={QUILL_MODULES}
+                  modules={quillModules}
                   placeholder={`Draft or edit your ${pageTitle.toLowerCase()} here...`}
                 />
               </div>
