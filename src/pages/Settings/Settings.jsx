@@ -4,6 +4,9 @@ import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { adminApiRequest } from "../../../services/auth.service";
 
+const AUDIT_MARKS_FLAG_KEY = "requirement_audit_admin_marks";
+const AUDIT_MARKS_STORAGE_KEY = "victoryRequirementAuditAdminMarks";
+
 const LEGAL_DOCS = [
   { id: "privacy", label: "Privacy policy", endpoint: "/admin/content/privacy-policy", route: "/privacy-policy" },
   { id: "terms", label: "Terms & conditions", endpoint: "/admin/content/terms-condition", route: "/terms-and-condition" },
@@ -26,6 +29,9 @@ export default function Settings() {
   const navigate = useNavigate();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [auditMarksEnabled, setAuditMarksEnabled] = useState(false);
+  const [auditMarksSaving, setAuditMarksSaving] = useState(false);
+  const [auditFlagDescription, setAuditFlagDescription] = useState("Show red requirement-audit labels and borders inside the admin dashboard.");
 
   useEffect(() => {
     let mounted = true;
@@ -59,6 +65,66 @@ export default function Settings() {
     };
   }, [showToast]);
 
+  useEffect(() => {
+    let mounted = true;
+    const loadAuditFlag = async () => {
+      try {
+        const response = await adminApiRequest("/admin/feature-flags");
+        const flag = (response.items || []).find((item) => item.key === AUDIT_MARKS_FLAG_KEY);
+        if (!mounted) return;
+        setAuditMarksEnabled(Boolean(flag?.enabled));
+        setAuditFlagDescription(flag?.description || "Show red requirement-audit labels and borders inside the admin dashboard.");
+      } catch (error) {
+        showToast(error?.message || "Could not load admin audit marker setting.");
+      }
+    };
+    loadAuditFlag();
+    return () => {
+      mounted = false;
+    };
+  }, [showToast]);
+
+  const persistAuditFlagState = (enabled) => {
+    try {
+      window.localStorage?.setItem(AUDIT_MARKS_STORAGE_KEY, enabled ? "1" : "0");
+      window.dispatchEvent(new CustomEvent("victory-requirement-audit-change", {
+        detail: { adminMarksEnabled: enabled },
+      }));
+    } catch {
+      // The backend flag remains the source of truth.
+    }
+  };
+
+  const toggleAuditMarks = async () => {
+    const nextEnabled = !auditMarksEnabled;
+    setAuditMarksEnabled(nextEnabled);
+    persistAuditFlagState(nextEnabled);
+    setAuditMarksSaving(true);
+    try {
+      const updated = await adminApiRequest("/admin/feature-flags", {
+        method: "POST",
+        body: {
+          key: AUDIT_MARKS_FLAG_KEY,
+          description: auditFlagDescription,
+          enabled: nextEnabled,
+          rolloutPct: 100,
+          allowedCountries: [],
+        },
+      });
+      setAuditMarksEnabled(Boolean(updated.enabled));
+      setAuditFlagDescription(updated.description || auditFlagDescription);
+      persistAuditFlagState(Boolean(updated.enabled));
+      showToast(nextEnabled ? "Admin red audit marks are now visible." : "Admin red audit marks are now hidden.");
+    } catch (error) {
+      const reverted = !nextEnabled;
+      setAuditMarksEnabled(reverted);
+      persistAuditFlagState(reverted);
+      showToast(error?.message || "Could not update admin audit marker setting.");
+    } finally {
+      setAuditMarksSaving(false);
+    }
+  };
+
   const stats = useMemo(() => {
     const published = rows.filter((row) => /published|current/i.test(row.b)).length;
     return [
@@ -78,6 +144,21 @@ export default function Settings() {
       pageSecondary="Update terms"
       onPrimary={() => navigate("/privacy-policy")}
       onSecondary={() => navigate("/terms-and-condition")}
+      extraHeaderActions={
+        <button
+          type="button"
+          onClick={toggleAuditMarks}
+          disabled={auditMarksSaving}
+          className={`h-11 rounded-xl border px-4 text-[13.5px] font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${
+            auditMarksEnabled
+              ? "border-red-500/55 bg-red-500/10 text-red-300 hover:bg-red-500/15"
+              : "border-[#C9943A]/45 bg-[#C9943A]/10 text-[#C9943A] hover:bg-[#C9943A]/15"
+          }`}
+          title="Show or hide the red requirement-audit markers in the admin dashboard"
+        >
+          {auditMarksSaving ? "Saving..." : auditMarksEnabled ? "Hide red markers" : "Show red markers"}
+        </button>
+      }
       pageStats={stats}
       filters={["All", "Legal"]}
       cols={["DOCUMENT", "STATUS", "SCOPE", "PUBLISHED", "VERSION"]}
