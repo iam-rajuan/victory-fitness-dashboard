@@ -1359,6 +1359,10 @@ export default function ClaudeDrawer() {
         return;
       }
 
+      if (typeof payload?.onSaved === "function") {
+        await payload.onSaved(formValues);
+      }
+
       showToast(`✓ ${config.title} saved successfully.`);
       closeDrawer();
     } catch (err) {
