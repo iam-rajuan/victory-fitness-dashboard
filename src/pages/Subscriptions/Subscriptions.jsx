@@ -1,105 +1,26 @@
-import { useState, useEffect } from "react";
-import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
-import { useAdminDrawer } from "../../context/AdminDrawerContext";
-import { fetchRevenue } from "../../../services/analytics.service";
+import { useCallback, useEffect, useState } from "react";
+import { listAdminSubscriptionFeatures, listAdminSubscriptionPlans, updateAdminSubscriptionPlan } from "../../../services/admin-content.service";
 
-const BASE_ROWS = [
-  { a: "Victory Silver", b: "€199", c: "€24", d: "21", e: "18%", tone: "good", id: "s1" },
-  { a: "Victory Gold", b: "€299", c: "€36", d: "34", e: "62%", tone: "good", id: "s2" },
-  { a: "Victory Platinum", b: "€399", c: "€48", d: "9", e: "17%", tone: "good", id: "s3" },
-  { a: "Victory Inner Circle", b: "Application", c: "—", d: "4", e: "3%", tone: "good", id: "s4" },
-  {
-    a: "21-Day Gold Beta",
-    b: "€0",
-    c: "—",
-    d: "15",
-    e: "0%",
-    tone: "warn",
-    id: "s5",
-    audit: {
-      auditId: "ADMIN-MISMATCH-002",
-      status: "mismatch",
-      label: "MISMATCH - DOCUMENT REQUIRES 5-DAY GOLD TRIAL",
-    },
-  },
-  { a: "5-Day trial · Gold", b: "€0", c: "—", d: "12 running", e: "0%", tone: "warn", id: "s6" },
-  {
-    a: "5-Day trial · Silver",
-    b: "€0",
-    c: "—",
-    d: "4 running",
-    e: "0%",
-    tone: "warn",
-    id: "s7",
-    audit: {
-      auditId: "ADMIN-MISMATCH-003",
-      status: "mismatch",
-      label: "MISMATCH - DOCUMENT SPECIFIES GOLD TRIAL ONLY",
-    },
-  },
-  {
-    a: "5-Day trial · Platinum",
-    b: "€0",
-    c: "—",
-    d: "3 running",
-    e: "0%",
-    tone: "warn",
-    id: "s8",
-    audit: {
-      auditId: "ADMIN-MISMATCH-004",
-      status: "mismatch",
-      label: "MISMATCH - DOCUMENT SPECIFIES GOLD TRIAL ONLY",
-    },
-  },
-];
+const blank = { id:"", tier:"", description:"", priceMonthly:"", priceYearly:"", discountPercentage:"", discountStartDate:"", discountEndDate:"", isApplicationOnly:false, isMostPopular:false, iconType:"", features:[], featureAccess:[] };
+const numberOrNull = (value) => value === "" ? null : Number(value);
+const editForm = (plan) => ({ ...blank, ...plan, priceMonthly:plan.priceMonthly ?? "", priceYearly:plan.priceYearly ?? "", discountPercentage:plan.discountPercentage ?? "", discountStartDate:plan.discountStartDate ? String(plan.discountStartDate).slice(0,10) : "", discountEndDate:plan.discountEndDate ? String(plan.discountEndDate).slice(0,10) : "" });
 
 export default function Subscriptions() {
-  const { openDrawer, showToast } = useAdminDrawer();
-  const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState(BASE_ROWS);
-  const [stats, setStats] = useState([
-    { k: "MRR", v: "€4,180", note: "+€318 this week" },
-    { k: "PAYING", v: "68", note: "Gold is 62% of revenue" },
-    { k: "ARPU", v: "€61", note: "Yearly plans lift it" },
-    { k: "FAILED RENEWALS", v: "2", note: "Two cards declined" },
-  ]);
-
-  useEffect(() => {
-    fetchRevenue()
-      .then((data) => {
-        if (data && data.mrr) {
-          setStats((prev) => [
-            { k: "MRR", v: `€${data.mrr || "4,180"}`, note: "+€318 this week" },
-            prev[1],
-            prev[2],
-            prev[3],
-          ]);
-        }
-      })
-      .catch(() => null)
-      .finally(() => setLoading(false));
-  }, []);
-
-  return (
-    <ClaudeAdminTable
-      pageKicker="REVENUE · 4 TIERS · 5 MARKETS"
-      pageTitle="Subscriptions"
-      pageSub="Silver €199, Gold €299, Platinum €399 a year, or monthly at a 31% premium. Inner Circle is application only and never sold here."
-      pagePrimary="+ Add plan"
-      pageSecondary="Edit pricing"
-      onPrimary={() => openDrawer("pricing")}
-      onSecondary={() => openDrawer("pricing")}
-      pageStats={stats}
-      pageAdvice="Ghana has 128 registered users and no completed payment. Until one MoMo transaction clears, every cedi spent on reach there is wasted."
-      pageAdviceDone="Run a test payment"
-      onAdvice={() => openDrawer("pricing")}
-      filters={["All tiers", "Silver", "Gold", "Platinum", "Inner Circle", "Monthly", "Yearly"]}
-      cols={["PLAN", "PRICE / YEAR", "PRICE / MONTH", "SUBSCRIBERS", "SHARE OF MRR"]}
-      rows={rows}
-      isLoading={loading}
-      onEditRow={(row) => openDrawer("pricing", { TARGET: row.a })}
-      onDeleteRow={(row) => showToast(`Cannot delete active catalog tier ${row.a}`)}
-      onRowClick={(row) => openDrawer("pricing", { TARGET: row.a })}
-    />
-  );
+  const [plans, setPlans] = useState([]); const [features, setFeatures] = useState([]);
+  const [form, setForm] = useState(blank); const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false); const [message, setMessage] = useState("");
+  const load = useCallback(async () => { setLoading(true); try { const [p, f] = await Promise.all([listAdminSubscriptionPlans(), listAdminSubscriptionFeatures()]); setPlans(p.items || []); setFeatures(f.items || []); } catch (e) { setMessage(e.message || "Unable to load subscription plans."); } finally { setLoading(false); } }, []);
+  useEffect(() => { void load(); }, [load]);
+  const choose = (plan) => { setSelected(plan.id); setForm(editForm(plan)); setMessage(""); };
+  const set = (key, value) => setForm((old) => ({ ...old, [key]:value }));
+  const toggle = (key) => setForm((old) => ({ ...old, featureAccess:old.featureAccess.includes(key) ? old.featureAccess.filter((item) => item !== key) : [...old.featureAccess, key] }));
+  const save = async (event) => {
+    event.preventDefault(); if (!selected || saving) return; setSaving(true); setMessage("");
+    try {
+      const payload = { tier:form.tier.trim(), description:form.description.trim(), priceMonthly:numberOrNull(form.priceMonthly), priceYearly:numberOrNull(form.priceYearly), discountPercentage:numberOrNull(form.discountPercentage), discountStartDate:form.discountStartDate || null, discountEndDate:form.discountEndDate || null, isApplicationOnly:Boolean(form.isApplicationOnly), isMostPopular:Boolean(form.isMostPopular), iconType:form.iconType.trim(), features:form.features, featureAccess:form.featureAccess };
+      const updated = await updateAdminSubscriptionPlan(selected, payload);
+      setPlans((old) => old.map((plan) => plan.id === updated.id ? updated : plan)); setForm(editForm(updated)); setMessage("Plan saved. New prices and access rules are live.");
+    } catch (e) { setMessage(e.message || "Unable to save this plan."); } finally { setSaving(false); }
+  };
+  return <div className="p-4 md:p-8 text-[#0D2B45] dark:text-[#F7F3EE]"><p className="text-xs font-bold tracking-widest text-[#B5651D]">REVENUE · SUBSCRIPTION CATALOG</p><h1 className="mt-2 text-3xl font-bold">Subscriptions</h1><p className="mt-2 mb-6 opacity-70">Edit production pricing and app access through the authorized subscription API.</p>{message && <p className="mb-4 rounded border border-[#C9943A] bg-[#C9943A]/10 p-3 text-sm">{message}</p>}{loading ? <p>Loading subscription plans…</p> : <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]"><div className="overflow-hidden rounded-xl border border-current/15 bg-white dark:bg-[#0D2B45]"><table className="w-full text-left text-sm"><thead className="bg-black/5 dark:bg-white/5"><tr><th className="p-3">Plan</th><th className="p-3">Monthly</th><th className="p-3">Yearly</th><th className="p-3"></th></tr></thead><tbody>{plans.map((plan) => <tr key={plan.id} className="border-t border-current/10"><td className="p-3 font-semibold">{plan.tier}</td><td className="p-3">{plan.isApplicationOnly ? "Application" : `€${plan.priceMonthly ?? "—"}`}</td><td className="p-3">{plan.isApplicationOnly ? "Only" : `€${plan.priceYearly ?? "—"}`}</td><td className="p-3"><button type="button" className="rounded bg-[#C9943A] px-3 py-1 font-semibold text-[#0D0D0D]" onClick={() => choose(plan)}>Edit</button></td></tr>)}</tbody></table></div><form onSubmit={save} className="rounded-xl border border-current/15 bg-white p-5 dark:bg-[#0D2B45]"><h2 className="text-xl font-bold">{selected ? "Edit plan" : "Select a plan to edit"}</h2>{selected && <div className="mt-4 space-y-3"><label className="block text-sm font-semibold">Name<input required className="mt-1 w-full rounded border p-2 text-[#0D2B45]" value={form.tier} onChange={(e) => set("tier",e.target.value)}/></label><label className="block text-sm font-semibold">Description<textarea required className="mt-1 w-full rounded border p-2 text-[#0D2B45]" value={form.description} onChange={(e) => set("description",e.target.value)}/></label><div className="grid grid-cols-2 gap-3"><label className="text-sm">Monthly (€)<input type="number" min="0" disabled={form.isApplicationOnly} className="mt-1 w-full rounded border p-2 text-[#0D2B45]" value={form.priceMonthly} onChange={(e) => set("priceMonthly",e.target.value)}/></label><label className="text-sm">Yearly (€)<input type="number" min="0" disabled={form.isApplicationOnly} className="mt-1 w-full rounded border p-2 text-[#0D2B45]" value={form.priceYearly} onChange={(e) => set("priceYearly",e.target.value)}/></label></div><label className="block text-sm">Discount (%)<input type="number" min="0" max="100" className="mt-1 w-full rounded border p-2 text-[#0D2B45]" value={form.discountPercentage} onChange={(e) => set("discountPercentage",e.target.value)}/></label><div className="grid grid-cols-2 gap-3"><label className="text-sm">Starts<input type="date" className="mt-1 w-full rounded border p-2 text-[#0D2B45]" value={form.discountStartDate} onChange={(e) => set("discountStartDate",e.target.value)}/></label><label className="text-sm">Ends<input type="date" className="mt-1 w-full rounded border p-2 text-[#0D2B45]" value={form.discountEndDate} onChange={(e) => set("discountEndDate",e.target.value)}/></label></div><label className="flex gap-2 text-sm"><input type="checkbox" checked={form.isApplicationOnly} onChange={(e) => set("isApplicationOnly",e.target.checked)}/> Application only</label><label className="flex gap-2 text-sm"><input type="checkbox" checked={form.isMostPopular} onChange={(e) => set("isMostPopular",e.target.checked)}/> Mark as most popular</label><fieldset><legend className="text-sm font-semibold">App access</legend><div className="mt-2 grid grid-cols-2 gap-2">{features.map((feature) => <label key={feature.key} className="flex gap-2 text-xs"><input type="checkbox" checked={form.featureAccess.includes(feature.key)} onChange={() => toggle(feature.key)}/>{feature.label}</label>)}</div></fieldset><button disabled={saving} className="w-full rounded bg-[#C9943A] p-3 font-bold text-[#0D0D0D] disabled:opacity-60">{saving ? "Saving…" : "Save plan"}</button></div>}</form></div>}</div>;
 }
