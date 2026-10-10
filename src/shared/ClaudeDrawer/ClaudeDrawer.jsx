@@ -3,6 +3,7 @@ import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import { useTheme } from "../../context/ThemeContext";
 import { adminApiRequest } from "../../../services/auth.service";
 import { previewAdminWorkoutSync, syncAdminWorkouts, uploadAdminCommunityVideo, uploadAdminWorkoutVideo } from "../../../services/admin-workouts.service";
+import { createAdminSubscriptionPlan, updateAdminSubscriptionPlan } from "../../../services/admin-content.service";
 import { toBase64Payload } from "../../utils/imageUpload";
 import { DEFAULT_WORKOUT_CATEGORY, WORKOUT_CATEGORY_OPTIONS } from "../../constants/workoutCategories";
 import ClaudeApplicationDrawer from "./ClaudeApplicationDrawer";
@@ -634,6 +635,23 @@ const DRAWER_CONFIGS = {
       },
     ],
   },
+  plan: {
+    kicker: "SUBSCRIPTION PLAN",
+    title: "Edit plan pricing",
+    sub: "Update production yearly and monthly pricing for this tier. New prices apply immediately to new signups.",
+    cta: "Save plan",
+    alt: "Cancel",
+    note: "Existing subscribers retain their original billing amount until renewal. Changes take effect on the live catalog immediately.",
+    fields: [
+      { k: "TIER NAME", type: "text", initial: "Victory Gold", hint: "production tier identifier" },
+      { k: "DESCRIPTION", type: "input", initial: "Structure and accountability.", hint: "shown in plan selector and onboarding" },
+      { k: "YEARLY PRICE (€)", type: "text", initial: "299", hint: "number in EUR, leave 0 for free beta, — for application-only" },
+      { k: "MONTHLY PRICE (€)", type: "text", initial: "36", hint: "number in EUR, leave — for free or application-only" },
+      { k: "DISCOUNT (%)", type: "chips", initial: "None", options: ["None", "10%", "15%", "20%", "25%", "33%"] },
+      { k: "TIER TYPE", type: "chips", initial: "Standard paid", options: ["Standard paid", "Free beta access", "Application only"] },
+      { k: "MOST POPULAR", type: "chips", initial: "No", options: ["Yes", "No"] },
+    ],
+  },
   broadcast: {
     kicker: "VERIFIED BROADCAST",
     title: "New broadcast",
@@ -809,7 +827,8 @@ export default function ClaudeDrawer() {
     const pct = parseInt(discountRaw, 10) || 20;
     const cycle = formValues["BILLING CYCLE"] || "Yearly only";
 
-    return PRICE_TABLE.map(([name, year, month, tier]) => {
+    const tableToUse = payload?.priceTable && payload.priceTable.length > 0 ? payload.priceTable : PRICE_TABLE;
+    return tableToUse.map(([name, year, month, tier]) => {
       const inScope = year > 0 && (scope === "All paid tiers" || scope === tier);
       const off = (val) => "€" + Math.round(val * (1 - pct / 100));
       let sale;
@@ -827,7 +846,7 @@ export default function ClaudeDrawer() {
         inScope,
       };
     });
-  }, [config, formValues]);
+  }, [config, formValues, payload]);
 
   if (!isOpen) return null;
 
@@ -1310,6 +1329,64 @@ export default function ClaudeDrawer() {
     closeDrawer();
   };
 
+  const savePlanPricing = async () => {
+    const raw = payload?.rawData || {};
+    const planId = payload?.id || raw.id;
+    const tierName = String(formValues["TIER NAME"] || payload?.["TIER NAME"] || raw.tier || "Subscription Plan").trim();
+    const tierType = String(formValues["TIER TYPE"] || payload?.["TIER TYPE"] || "Standard paid").toLowerCase();
+    const isBeta = tierType.includes("beta") || tierName.toLowerCase().includes("beta");
+    const isAppOnly = tierType.includes("application") || tierName.toLowerCase().includes("inner circle");
+
+    let priceYearly = null;
+    let priceMonthly = null;
+
+    if (isBeta) {
+      priceYearly = 0;
+      priceMonthly = 0;
+    } else if (isAppOnly) {
+      priceYearly = null;
+      priceMonthly = null;
+    } else {
+      const yearlyClean = String(formValues["YEARLY PRICE (€)"] ?? "").replace(/[^0-9.]/g, "");
+      const monthlyClean = String(formValues["MONTHLY PRICE (€)"] ?? "").replace(/[^0-9.]/g, "");
+      priceYearly = yearlyClean !== "" ? Math.round(Number(yearlyClean)) : null;
+      priceMonthly = monthlyClean !== "" ? Math.round(Number(monthlyClean)) : null;
+    }
+
+    const discountRaw = String(formValues["DISCOUNT (%)"] || "None").replace(/[^0-9]/g, "");
+    const discountPercentage = discountRaw ? Number(discountRaw) : null;
+    const isMostPopular = formValues["MOST POPULAR"] === "Yes";
+
+    const requestPayload = {
+      tier: tierName,
+      description: String(formValues.DESCRIPTION || payload?.DESCRIPTION || raw.description || "Victory Fitness subscription").trim(),
+      priceYearly,
+      priceMonthly,
+      discountPercentage,
+      discountStartDate: raw.discountStartDate || null,
+      discountEndDate: raw.discountEndDate || null,
+      isApplicationOnly: Boolean(isAppOnly),
+      isMostPopular,
+      iconType: raw.iconType || (isBeta ? "gold_medal" : tierName.toLowerCase().includes("silver") ? "silver_medal" : tierName.toLowerCase().includes("platinum") ? "diamond" : "gold_medal"),
+      features: Array.isArray(raw.features) && raw.features.length ? raw.features : ["Full Workout Library", "Structure and accountability"],
+      featureAccess: Array.isArray(raw.featureAccess) && raw.featureAccess.length ? raw.featureAccess : ["home", "workout", "challenge", "community", "profile"],
+    };
+
+    let saved;
+    if (planId && planId !== "new") {
+      saved = await updateAdminSubscriptionPlan(planId, requestPayload);
+    } else {
+      saved = await createAdminSubscriptionPlan(requestPayload);
+    }
+
+    if (typeof payload?.onSaved === "function") {
+      await payload.onSaved(saved);
+    }
+
+    showToast(`✓ Plan "${requestPayload.tier}" saved with updated pricing.`);
+    closeDrawer();
+  };
+
   const handleSave = async () => {
     setIsSubmitting(true);
     try {
@@ -1332,6 +1409,9 @@ export default function ClaudeDrawer() {
         return;
       } else if (type === "user") {
         await saveUser();
+        return;
+      } else if (type === "plan") {
+        await savePlanPricing();
         return;
       } else if (type === "vimeo") {
         const result = await syncAdminWorkouts(buildVimeoImportPayload());

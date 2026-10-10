@@ -195,7 +195,7 @@ export default function ClaudeAdminTable({
       return normalizedRows.filter((r) => r.c && r.c !== "—");
     }
     if (activeLabel === "Yearly") {
-      return normalizedRows.filter((r) => r.b && String(r.b).startsWith("€"));
+      return normalizedRows.filter((r) => r.b && (String(r.b).startsWith("€") || r.b === "Free"));
     }
     const needles = (ALIAS[activeLabel] || [activeLabel.toLowerCase()]).map((x) => x.toLowerCase());
     if (!needles.length) return normalizedRows;

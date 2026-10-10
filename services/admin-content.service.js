@@ -119,6 +119,14 @@ export const listAdminSubscriptionPlans = async ({ signal } = {}) => {
   }
 };
 
+export const getAdminSubscriptionPlanOverview = async ({ signal } = {}) => {
+  try {
+    return await adminApiRequest("/admin/subscription-plans/overview", { signal });
+  } catch (error) {
+    throw new Error(wrapContentError(error, "Failed to load subscription overview"));
+  }
+};
+
 export const listAdminSubscriptionFeatures = async ({ signal } = {}) => {
   try {
     return await adminApiRequest("/admin/subscription-features", { signal });

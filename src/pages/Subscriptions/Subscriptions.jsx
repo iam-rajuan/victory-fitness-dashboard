@@ -2,46 +2,17 @@ import { useCallback, useEffect, useState } from "react";
 import ClaudeAdminTable from "../../components/shared/ClaudeAdminTable";
 import { useAdminDrawer } from "../../context/AdminDrawerContext";
 import {
-  listAdminSubscriptionPlans,
+  getAdminSubscriptionPlanOverview,
   deleteAdminSubscriptionPlan,
 } from "../../../services/admin-content.service";
 import { readStaleCache, writeStaleCache } from "../../utils/staleCache";
 
-const BASE_ROWS = [
-  { a: "Victory Silver", b: "€199", c: "€24", d: "21", e: "18%", tone: "good", id: "plan-silver" },
-  { a: "Victory Gold", b: "€299", c: "€36", d: "34", e: "62%", tone: "good", id: "plan-gold" },
-  { a: "Victory Platinum", b: "€399", c: "€48", d: "9", e: "17%", tone: "good", id: "plan-platinum" },
-  { a: "Victory Inner Circle", b: "Application", c: "—", d: "4", e: "3%", tone: "good", id: "plan-inner-circle" },
-  { a: "21-Day Gold Beta", b: "€0", c: "—", d: "15", e: "0%", tone: "warn", id: "plan-gold-beta-21-day" },
-  { a: "5-Day trial · Gold", b: "€0", c: "—", d: "12 running", e: "0%", tone: "warn", id: "trial-gold" },
-  { a: "5-Day trial · Silver", b: "€0", c: "—", d: "4 running", e: "0%", tone: "warn", id: "trial-silver" },
-  { a: "5-Day trial · Platinum", b: "€0", c: "—", d: "3 running", e: "0%", tone: "warn", id: "trial-platinum" },
-];
-
-const DEFAULT_STATS = [
-  { k: "MRR", v: "€4,180", note: "+€318 this week" },
-  { k: "PAYING", v: "68", note: "Gold is 62% of revenue" },
-  { k: "ARPU", v: "€61", note: "Yearly plans lift it" },
-  { k: "FAILED RENEWALS", v: "2", note: "Two cards declined" },
-];
+const SUBSCRIPTION_CACHE_KEY = "subscriptions:overview:v1";
 
 const formatTierTitle = (tier) => {
   if (!tier) return "Subscription Plan";
   const str = String(tier).trim();
   return str.replace(/\b\w+/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
-};
-
-const formatPriceYearly = (plan) => {
-  if (plan.isApplicationOnly) return "Application";
-  if (plan.priceYearly === 0) return "€0";
-  if (plan.priceYearly != null && plan.priceYearly !== "") return `€${plan.priceYearly}`;
-  return "Application";
-};
-
-const formatPriceMonthly = (plan) => {
-  if (plan.isApplicationOnly) return "—";
-  if (plan.priceMonthly === 0 || plan.priceMonthly == null || plan.priceMonthly === "") return "—";
-  return `€${plan.priceMonthly}`;
 };
 
 const matchesTier = (baseRow, apiPlan) => {
@@ -59,78 +30,146 @@ const matchesTier = (baseRow, apiPlan) => {
   return false;
 };
 
+const buildLivePriceTable = (planList = []) => {
+  const findPlan = (keyword) => planList.find((p) => String(p.tier || "").toLowerCase().includes(keyword));
+  const silver = findPlan("silver");
+  const gold = findPlan("gold");
+  const platinum = findPlan("platinum");
+  return [
+    silver ? ["Victory Silver", silver.priceYearly ?? 0, silver.priceMonthly ?? 0, "Silver"] : null,
+    gold ? ["Victory Gold", gold.priceYearly ?? 0, gold.priceMonthly ?? 0, "Gold"] : null,
+    platinum ? ["Victory Platinum", platinum.priceYearly ?? 0, platinum.priceMonthly ?? 0, "Platinum"] : null,
+  ].filter(Boolean);
+};
+
+const mapOverviewRows = (items = []) =>
+  items.map((item) => ({
+    id: item.id,
+    a: item.label,
+    b: item.priceYearly,
+    c: item.priceMonthly,
+    d: item.subscriberLabel ?? String(item.subscribers ?? 0),
+    e: item.shareOfMrrLabel ?? `${item.shareOfMrr ?? 0}%`,
+    tone: item.tone || "warn",
+    rawData: item.rawPlan || null,
+    overview: item,
+  }));
+
+const mapOverviewStats = (items = []) =>
+  items.map((item) => ({
+    k: item.key,
+    v: item.value,
+    note: item.note || "",
+  }));
+
 export default function Subscriptions() {
   const { openDrawer, showToast } = useAdminDrawer();
-  const cached = readStaleCache("subscriptions");
+  const cached = readStaleCache(SUBSCRIPTION_CACHE_KEY);
   const [loading, setLoading] = useState(!cached);
-  const [rows, setRows] = useState(() => cached?.rows || BASE_ROWS);
-  const [stats, setStats] = useState(() => cached?.stats || DEFAULT_STATS);
+  const [plans, setPlans] = useState(() => cached?.plans || []);
+  const [rows, setRows] = useState(() => cached?.rows || []);
+  const [stats, setStats] = useState(() => cached?.stats || []);
+  const [summary, setSummary] = useState(() => cached?.summary || "Live subscription catalog and active subscriber reporting.");
+  const [warning, setWarning] = useState(() => cached?.warning || null);
 
   const loadPlans = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
     try {
-      const data = await listAdminSubscriptionPlans();
-      const planList = Array.isArray(data) ? data : data?.items || data?.plans || [];
-
-      if (planList.length > 0) {
-        // Map backend plans onto the canonical prototype base rows
-        const matchedPlanIds = new Set();
-        const updatedRows = BASE_ROWS.map((base) => {
-          const matchingPlan = planList.find((p) => matchesTier(base, p));
-          if (matchingPlan) {
-            matchedPlanIds.add(matchingPlan.id);
-            return {
-              ...base,
-              b: formatPriceYearly(matchingPlan),
-              c: formatPriceMonthly(matchingPlan),
-              tone: matchingPlan.priceYearly > 0 ? "good" : base.tone,
-              rawData: matchingPlan,
-            };
-          }
-          return base;
-        });
-
-        // Any new custom plans created that are not in base rows
-        const extraPlans = planList
-          .filter((p) => !matchedPlanIds.has(p.id))
-          .map((p) => ({
-            id: p.id,
-            a: formatTierTitle(p.tier),
-            b: formatPriceYearly(p),
-            c: formatPriceMonthly(p),
-            d: String(p.subscriberCount || 0),
-            e: p.shareOfMrr ? `${p.shareOfMrr}%` : "0%",
-            tone: p.priceYearly > 0 ? "good" : "warn",
-            rawData: p,
-          }));
-
-        const finalRows = [...updatedRows, ...extraPlans];
-        setRows(finalRows);
-        writeStaleCache("subscriptions", { rows: finalRows, stats });
-      }
+      const data = await getAdminSubscriptionPlanOverview();
+      const planList = Array.isArray(data?.plans) ? data.plans : [];
+      const nextRows = mapOverviewRows(data?.rows || []);
+      const nextStats = mapOverviewStats(data?.stats || []);
+      setPlans(planList);
+      setRows(nextRows);
+      setStats(nextStats);
+      setSummary(data?.summary || "Live subscription catalog and active subscriber reporting.");
+      setWarning(data?.warning || null);
+      writeStaleCache(SUBSCRIPTION_CACHE_KEY, {
+        rows: nextRows,
+        stats: nextStats,
+        plans: planList,
+        summary: data?.summary || "",
+        warning: data?.warning || null,
+      });
     } catch (err) {
-      showToast(`Failed to load subscription plans: ${err.message || "Request failed"}`);
+      showToast(`Failed to load subscription overview: ${err.message || "Request failed"}`);
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [showToast, stats]);
+  }, [showToast]);
 
   useEffect(() => {
     void loadPlans();
   }, [loadPlans]);
 
   const handleEditRow = (row) => {
-    const raw = row.rawData || row;
-    const tierName = row.a ? row.a.replace(/^Victory\s+/i, "") : "Gold";
-    openDrawer("pricing", {
-      TITLE: row.a,
-      "APPLIES TO": ["Silver", "Gold", "Platinum"].includes(tierName) ? tierName : "Gold",
+    const raw = row.rawData || plans.find((p) => matchesTier(row, p)) || {};
+    const isBeta = row.id === "plan-gold-beta-21-day" || String(row.a).toLowerCase().includes("beta");
+    const isAppOnly = Boolean(raw.isApplicationOnly) || String(row.a).toLowerCase().includes("inner circle");
+
+    if (row.id?.startsWith("trial-")) {
+      showToast(`${row.a} is an automated 5-day trial period.`);
+      return;
+    }
+
+    const tierTitle = formatTierTitle(raw.tier || row.a);
+
+    openDrawer("plan", {
+      id: raw.id || row.id,
+      kicker: `PLAN PRICING · ${String(raw.tier || row.a).toUpperCase()}`,
+      title: `Edit ${tierTitle} pricing`,
+      sub: isBeta
+        ? "21-Day Gold Beta is free for all approved testers. Follows the app's zero-cost onboarding structure."
+        : isAppOnly
+        ? "Victory Inner Circle is application only and not sold with standard recurring prices in the app."
+        : "Update production yearly and monthly pricing for this tier. New prices apply immediately to new signups.",
+      "TIER NAME": tierTitle,
+      DESCRIPTION: raw.description || (isBeta ? "Free 21-day Gold beta access for approved testers during Phase 1." : ""),
+      "YEARLY PRICE (€)": isBeta ? "0" : isAppOnly ? "—" : raw.priceYearly != null ? String(raw.priceYearly) : row.b.replace(/[^0-9]/g, ""),
+      "MONTHLY PRICE (€)": isBeta || isAppOnly ? "—" : raw.priceMonthly != null ? String(raw.priceMonthly) : row.c.replace(/[^0-9]/g, ""),
+      "DISCOUNT (%)": raw.discountPercentage ? `${raw.discountPercentage}%` : "None",
+      "TIER TYPE": isBeta ? "Free beta access" : isAppOnly ? "Application only" : "Standard paid",
+      "MOST POPULAR": raw.isMostPopular ? "Yes" : "No",
       rawData: raw,
-      onSaved: () => loadPlans({ silent: true }),
+      onSaved: async () => {
+        await loadPlans({ silent: true });
+      },
+    });
+  };
+
+  const handlePrimary = () => {
+    openDrawer("plan", {
+      id: "new",
+      kicker: "NEW SUBSCRIPTION PLAN",
+      title: "Add subscription plan",
+      sub: "Create a new production subscription tier with custom yearly and monthly pricing.",
+      "TIER NAME": "Victory Custom",
+      DESCRIPTION: "Access to coaching and workouts.",
+      "YEARLY PRICE (€)": "249",
+      "MONTHLY PRICE (€)": "29",
+      "DISCOUNT (%)": "None",
+      "TIER TYPE": "Standard paid",
+      "MOST POPULAR": "No",
+      onSaved: async () => {
+        await loadPlans({ silent: true });
+      },
+    });
+  };
+
+  const handleSecondary = () => {
+    openDrawer("pricing", {
+      priceTable: buildLivePriceTable(plans),
+      onSaved: async () => {
+        await loadPlans({ silent: true });
+      },
     });
   };
 
   const handleDeleteRow = async (row) => {
+    if (row.id?.startsWith("trial-")) {
+      showToast(`${row.a} is generated from active trial users and cannot be deleted here.`);
+      return;
+    }
     if (row.rawData?.id && !row.id?.startsWith("trial-")) {
       try {
         await deleteAdminSubscriptionPlan(row.rawData.id);
@@ -140,34 +179,29 @@ export default function Subscriptions() {
         showToast(`Failed: ${err.message}`);
       }
     } else {
-      setRows((prev) => prev.filter((r) => r.id !== row.id));
-      showToast(`Removed ${row.a}`);
+      showToast("This row is backend-generated and cannot be removed locally.");
     }
   };
 
   return (
     <ClaudeAdminTable
-      pageKicker="REVENUE · 4 TIERS · 5 MARKETS"
+      pageKicker="REVENUE · LIVE SUBSCRIPTION DATA"
       pageTitle="Subscriptions"
-      pageSub="Silver €199, Gold €299, Platinum €399 a year, or monthly at a 31% premium. Inner Circle is application only and never sold here."
+      pageSub={summary}
       pagePrimary="+ Add plan"
       pageSecondary="Edit pricing"
-      onPrimary={() =>
-        openDrawer("pricing", {
-          onSaved: () => loadPlans({ silent: true }),
-        })
-      }
-      onSecondary={() =>
-        openDrawer("pricing", {
-          onSaved: () => loadPlans({ silent: true }),
-        })
-      }
+      onPrimary={handlePrimary}
+      onSecondary={handleSecondary}
       pageStats={stats}
-      pageAdvice="Ghana has 128 registered users and no completed payment. Until one MoMo transaction clears, every cedi spent on reach there is wasted."
-      pageAdviceDone="Run a test payment"
-      onAdvice={() => openDrawer("flag", { MARKETS: "Ghana" })}
+      pageAdvice={warning?.message}
+      pageAdviceDone={warning?.actionLabel || "Review payments"}
+      onAdvice={() => {
+        const users = Number(warning?.registeredUsers || 0);
+        const payments = Number(warning?.completedPayments || 0);
+        showToast(`Backend payment check: Ghana users ${users}, completed payments ${payments}.`);
+      }}
       filters={["All tiers", "Silver", "Gold", "Platinum", "Inner Circle", "Monthly", "Yearly"]}
-      cols={["PLAN", "PRICE / YEAR", "PRICE / MONTH", "SUBSCRIBERS", "SHARE OF MRR"]}
+      cols={["PLAN", "PRICE / YEAR", "PRICE / MONTH", "ENROLLED", "SHARE OF MRR"]}
       rows={rows}
       isLoading={loading}
       onEditRow={handleEditRow}
