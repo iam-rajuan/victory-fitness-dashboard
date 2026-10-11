@@ -645,10 +645,10 @@ const DRAWER_CONFIGS = {
     fields: [
       { k: "TIER NAME", type: "text", initial: "Victory Gold", hint: "production tier identifier" },
       { k: "DESCRIPTION", type: "input", initial: "Structure and accountability.", hint: "shown in plan selector and onboarding" },
-      { k: "YEARLY PRICE (€)", type: "text", initial: "299", hint: "number in EUR, leave 0 for free beta, — for application-only" },
-      { k: "MONTHLY PRICE (€)", type: "text", initial: "36", hint: "number in EUR, leave — for free or application-only" },
+      { k: "YEARLY PRICE (€)", type: "text", initial: "299", hint: "number in EUR, leave 0 for free beta, — for application-only or coming soon" },
+      { k: "MONTHLY PRICE (€)", type: "text", initial: "36", hint: "number in EUR, leave — for free, application-only, or coming soon" },
       { k: "DISCOUNT (%)", type: "chips", initial: "None", options: ["None", "10%", "15%", "20%", "25%", "33%"] },
-      { k: "TIER TYPE", type: "chips", initial: "Standard paid", options: ["Standard paid", "Free beta access", "Application only"] },
+      { k: "TIER TYPE", type: "chips", initial: "Standard paid", options: ["Standard paid", "Free beta access", "Application only", "Coming soon"] },
       { k: "MOST POPULAR", type: "chips", initial: "No", options: ["Yes", "No"] },
     ],
   },
@@ -1336,6 +1336,7 @@ export default function ClaudeDrawer() {
     const tierType = String(formValues["TIER TYPE"] || payload?.["TIER TYPE"] || "Standard paid").toLowerCase();
     const isBeta = tierType.includes("beta") || tierName.toLowerCase().includes("beta");
     const isAppOnly = tierType.includes("application") || tierName.toLowerCase().includes("inner circle");
+    const isComingSoon = tierType.includes("coming") || tierType.includes("soon");
 
     let priceYearly = null;
     let priceMonthly = null;
@@ -1343,7 +1344,7 @@ export default function ClaudeDrawer() {
     if (isBeta) {
       priceYearly = 0;
       priceMonthly = 0;
-    } else if (isAppOnly) {
+    } else if (isAppOnly || isComingSoon) {
       priceYearly = null;
       priceMonthly = null;
     } else {
@@ -1366,6 +1367,7 @@ export default function ClaudeDrawer() {
       discountStartDate: raw.discountStartDate || null,
       discountEndDate: raw.discountEndDate || null,
       isApplicationOnly: Boolean(isAppOnly),
+      isComingSoon: Boolean(isComingSoon),
       isMostPopular,
       iconType: raw.iconType || (isBeta ? "gold_medal" : tierName.toLowerCase().includes("silver") ? "silver_medal" : tierName.toLowerCase().includes("platinum") ? "diamond" : "gold_medal"),
       features: Array.isArray(raw.features) && raw.features.length ? raw.features : ["Full Workout Library", "Structure and accountability"],
