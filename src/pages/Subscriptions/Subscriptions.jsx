@@ -31,7 +31,8 @@ const matchesTier = (baseRow, apiPlan) => {
 };
 
 const buildLivePriceTable = (planList = []) => {
-  const findPlan = (keyword) => planList.find((p) => String(p.tier || "").toLowerCase().includes(keyword));
+  const visiblePlans = planList.filter((p) => !p.isComingSoon);
+  const findPlan = (keyword) => visiblePlans.find((p) => String(p.tier || "").toLowerCase().includes(keyword));
   const silver = findPlan("silver");
   const gold = findPlan("gold");
   const platinum = findPlan("platinum");
@@ -106,6 +107,7 @@ export default function Subscriptions() {
     const raw = row.rawData || plans.find((p) => matchesTier(row, p)) || {};
     const isBeta = row.id === "plan-gold-beta-21-day" || String(row.a).toLowerCase().includes("beta");
     const isAppOnly = Boolean(raw.isApplicationOnly) || String(row.a).toLowerCase().includes("inner circle");
+    const isComingSoon = Boolean(raw.isComingSoon) || String(row.b).toLowerCase().includes("coming soon") || String(row.c).toLowerCase().includes("coming soon");
 
     if (row.id?.startsWith("trial-")) {
       showToast(`${row.a} is an automated 5-day trial period.`);
@@ -120,15 +122,17 @@ export default function Subscriptions() {
       title: `Edit ${tierTitle} pricing`,
       sub: isBeta
         ? "21-Day Gold Beta is free for all approved testers. Follows the app's zero-cost onboarding structure."
+        : isComingSoon
+        ? "This tier is visible as Coming soon and will not show a price or checkout action in the app."
         : isAppOnly
         ? "Victory Inner Circle is application only and not sold with standard recurring prices in the app."
         : "Update production yearly and monthly pricing for this tier. New prices apply immediately to new signups.",
       "TIER NAME": tierTitle,
       DESCRIPTION: raw.description || (isBeta ? "Free 21-day Gold beta access for approved testers during Phase 1." : ""),
-      "YEARLY PRICE (€)": isBeta ? "0" : isAppOnly ? "—" : raw.priceYearly != null ? String(raw.priceYearly) : row.b.replace(/[^0-9]/g, ""),
-      "MONTHLY PRICE (€)": isBeta || isAppOnly ? "—" : raw.priceMonthly != null ? String(raw.priceMonthly) : row.c.replace(/[^0-9]/g, ""),
+      "YEARLY PRICE (€)": isBeta ? "0" : isAppOnly || isComingSoon ? "—" : raw.priceYearly != null ? String(raw.priceYearly) : row.b.replace(/[^0-9]/g, ""),
+      "MONTHLY PRICE (€)": isBeta || isAppOnly || isComingSoon ? "—" : raw.priceMonthly != null ? String(raw.priceMonthly) : row.c.replace(/[^0-9]/g, ""),
       "DISCOUNT (%)": raw.discountPercentage ? `${raw.discountPercentage}%` : "None",
-      "TIER TYPE": isBeta ? "Free beta access" : isAppOnly ? "Application only" : "Standard paid",
+      "TIER TYPE": isBeta ? "Free beta access" : isComingSoon ? "Coming soon" : isAppOnly ? "Application only" : "Standard paid",
       "MOST POPULAR": raw.isMostPopular ? "Yes" : "No",
       rawData: raw,
       onSaved: async () => {
