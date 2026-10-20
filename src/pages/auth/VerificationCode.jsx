@@ -29,7 +29,7 @@ function VerificationCode() {
   const [info, setInfo] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
+  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_SECONDS);
   const resetEmail = getResetEmail();
 
   useEffect(() => {

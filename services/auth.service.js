@@ -228,6 +228,7 @@ export const refreshAdminSession = async () => {
   }
 
   const response = await fetch(`${API_URL}/auth/refresh`, {
+    signal: AbortSignal.timeout(8000),
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -372,7 +373,8 @@ export const loginAdmin = async ({ email, password }) => {
 };
 
 export const requestPasswordReset = async ({ email }) => {
-  const response = await fetch(`${API_URL}/auth/forgot-password`, {
+  storeResetToken({ resetToken: "" });
+  const response = await fetch(`${API_URL}/admin/auth/forgot-password`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -391,7 +393,7 @@ export const requestPasswordReset = async ({ email }) => {
 };
 
 export const verifyPasswordResetCode = async ({ email, code }) => {
-  const response = await fetch(`${API_URL}/auth/verify-reset-code`, {
+  const response = await fetch(`${API_URL}/admin/auth/verify-reset-code`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -414,7 +416,7 @@ export const verifyPasswordResetCode = async ({ email, code }) => {
 };
 
 export const resetPasswordWithToken = async ({ resetToken, newPassword }) => {
-  const response = await fetch(`${API_URL}/auth/reset-password`, {
+  const response = await fetch(`${API_URL}/admin/auth/reset-password`, {
     method: "POST",
     headers: {
       Accept: "application/json",

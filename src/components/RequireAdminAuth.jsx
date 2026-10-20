@@ -28,8 +28,10 @@ function RequireAdminAuth({ children }) {
     let isMounted = true;
 
     if (
-      import.meta.env.VITE_REQUIREMENT_AUDIT === "true" ||
-      new URLSearchParams(window.location.search).get("requirementAudit") === "1"
+      import.meta.env.DEV && (
+        import.meta.env.VITE_REQUIREMENT_AUDIT === "true" ||
+        new URLSearchParams(window.location.search).get("requirementAudit") === "1"
+      )
     ) {
       setIsAuthorized(true);
       return () => {

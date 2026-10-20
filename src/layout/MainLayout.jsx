@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "../shared/Sidebar/Sidebar";
 import TopBar from "../shared/TopBar/TopBar";
-import RequireAdminAuth from "../components/RequireAdminAuth";
 import { AnalyticsFilterProvider } from "../context/AnalyticsFilterContext";
 import { AdminDrawerProvider } from "../context/AdminDrawerContext";
 import { ThemeProvider, useTheme } from "../context/ThemeContext";
@@ -108,7 +107,6 @@ function MainLayoutContent() {
 
 export default function MainLayout() {
   return (
-    <RequireAdminAuth>
       <ThemeProvider>
         <AdminDrawerProvider>
           <AnalyticsFilterProvider>
@@ -116,6 +114,5 @@ export default function MainLayout() {
           </AnalyticsFilterProvider>
         </AdminDrawerProvider>
       </ThemeProvider>
-    </RequireAdminAuth>
   );
 }

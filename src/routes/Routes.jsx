@@ -1,4 +1,5 @@
 import { Suspense, lazy } from "react";
+import RequireAdminAuth from "../components/RequireAdminAuth";
 import { createBrowserRouter, Navigate, useRouteError } from "react-router-dom";
 
 const SignInPage = lazy(() => import("../pages/auth/SignInPage"));
@@ -99,7 +100,7 @@ const router = createBrowserRouter([
 
   {
     path: "/",
-    element: withSuspense(MainLayout),
+    element: <RequireAdminAuth>{withSuspense(MainLayout)}</RequireAdminAuth>,
     errorElement: <RouteError />,
     children: [
       {

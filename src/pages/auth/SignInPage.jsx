@@ -11,7 +11,9 @@ function SignInPage() {
     password: "",
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [isCheckingSession, setIsCheckingSession] = useState(
+    () => Boolean(localStorage.getItem("sessionToken")),
+  );
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,7 +30,10 @@ function SignInPage() {
 
   useEffect(() => {
     let isMounted = true;
-    ensureAdminSession()
+    if (isReauth) {
+      clearUserInfo();
+      setIsCheckingSession(false);
+    } else ensureAdminSession()
       .then((allowed) => {
         if (!isMounted) return;
         if (allowed) {
@@ -49,7 +54,7 @@ function SignInPage() {
     return () => {
       isMounted = false;
     };
-  }, [navigate, redirectPath]);
+  }, [navigate, redirectPath, isReauth]);
 
   const handleCheckboxChange = (event) => {
     setIsChecked(event.target.checked);
@@ -133,7 +138,8 @@ function SignInPage() {
                 <input
                   type="email"
                   name="email"
-                  placeholder="admin@victoryfitness.de"
+                  autoComplete="username"
+                  placeholder="office@victoryfitness.de"
                   className="w-full px-4 py-3.5 bg-[#0A0A0A] border border-[#F7F3EE]/15 rounded-xl text-[#F7F3EE] placeholder-[#F7F3EE]/30 outline-none focus:border-[#C9943A] focus:ring-1 focus:ring-[#C9943A] transition-all text-sm font-dmsans"
                   value={formData.email}
                   onChange={handleInputChange}
@@ -157,23 +163,26 @@ function SignInPage() {
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
+                    autoComplete="current-password"
                     placeholder="••••••••••••"
-                    className="w-full px-4 py-3.5 bg-[#0A0A0A] border border-[#F7F3EE]/15 rounded-xl text-[#F7F3EE] placeholder-[#F7F3EE]/30 outline-none focus:border-[#C9943A] focus:ring-1 focus:ring-[#C9943A] transition-all text-sm font-jetbrains"
+                    className="w-full pl-4 pr-24 py-3.5 bg-[#0A0A0A] border border-[#F7F3EE]/15 rounded-xl text-[#F7F3EE] placeholder-[#F7F3EE]/30 outline-none focus:border-[#C9943A] focus:ring-1 focus:ring-[#C9943A] transition-all text-sm font-jetbrains"
                     value={formData.password}
                     onChange={handleInputChange}
                     required
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#F7F3EE]/40 hover:text-[#F7F3EE]/80 transition-colors p-1"
-                    aria-label="Toggle password visibility"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    className="absolute right-1 top-1/2 z-10 -translate-y-1/2 flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-[#C9943A] hover:text-[#F7F3EE] focus-visible:outline-2 focus-visible:outline-[#C9943A] transition-colors cursor-pointer"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
                   >
                     {showPassword ? (
-                      <IoEyeOffOutline className="w-5 h-5" />
+                      <IoEyeOffOutline className="w-5 h-5 shrink-0" aria-hidden="true" />
                     ) : (
-                      <IoEyeOutline className="w-5 h-5" />
+                      <IoEyeOutline className="w-5 h-5 shrink-0" aria-hidden="true" />
                     )}
+                    <span className="text-xs font-semibold">{showPassword ? "Hide" : "Show"}</span>
                   </button>
                 </div>
               </div>
