@@ -115,11 +115,19 @@ export default function UserDetails() {
     const user = row?.rawData || {};
     openDrawer("user", {
       id: user.id,
-      title: user.id ? "Edit user" : "Invite user",
+      title: user.id ? `Edit ${user.fullName || "user"}` : "Invite user",
       "FULL NAME": user.fullName || "",
       EMAIL: user.email || "",
       ROLE: user.role || "user",
       STATUS: user.status || "PENDING",
+      AGE: user.age || "",
+      HEIGHT: user.height || "",
+      WEIGHT: user.weight || "",
+      GENDER: user.gender || "Prefer not to say",
+      "PRIMARY GOAL": user.primaryGoal || "",
+      "TRAINING DAYS": user.daysPerWeek || "4",
+      "SESSION DURATION": user.timePerSession || "45",
+      EQUIPMENT: user.equipmentAccess || "Gym equipment",
       "CONTACT NUMBER": user.contactNumber || "",
       COUNTRY: user.country || "",
       "PROFILE IMAGE": user.profileImage || "",
@@ -188,9 +196,9 @@ export default function UserDetails() {
       cols={["NAME", "TIER", "MARKET", "LAST ACTIVE", "STATUS"]}
       rows={rows}
       isLoading={loading}
-      onEditRow={(row) => openDrawer("message", { WHO: row.a })}
+      onEditRow={(row) => openUserEditor(row)}
       onDeleteRow={handleDelete}
-      onRowClick={(row) => openDrawer("message", { WHO: row.a })}
+      onRowClick={(row) => openUserEditor(row)}
       renderRowActions={(row, { isDark }) => {
         const isBlocked = Boolean(row.isBlocked || row.rawData?.isBlocked || row.isDeleted || row.rawData?.isDeleted);
         if (isBlocked) {
@@ -202,6 +210,9 @@ export default function UserDetails() {
         }
         return (
           <>
+            <div onClick={() => openUserEditor(row)} style={actionButtonStyle("neutral", isDark)}>
+              Edit / Details
+            </div>
             <div onClick={() => openDrawer("message", { WHO: row.a })} style={actionButtonStyle("neutral", isDark)}>
               Message
             </div>
