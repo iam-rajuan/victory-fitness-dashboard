@@ -93,7 +93,7 @@ function ForgetPassword() {
                 type="email"
                 name="email"
                 autoComplete="email"
-                placeholder="office@victoryfitness.de"
+                placeholder="Enter your email"
                 className="w-full px-4 py-3.5 bg-[#0A0A0A] border border-[#F7F3EE]/15 rounded-xl text-[#F7F3EE] placeholder-[#F7F3EE]/30 outline-none focus:border-[#C9943A] focus:ring-1 focus:ring-[#C9943A] transition-all text-sm font-dmsans"
                 value={email}
                 onChange={(event) => {

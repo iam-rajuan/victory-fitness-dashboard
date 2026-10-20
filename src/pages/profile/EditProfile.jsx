@@ -144,7 +144,7 @@ function EditProfile({ profileData, onProfileUpdated }) {
                 ? "bg-[#0A0A0A]/50 border border-[#F7F3EE]/10 text-[#F7F3EE]/60"
                 : "bg-[rgba(13,43,69,0.05)] border border-[rgba(13,43,69,0.1)] text-[#0D2B45]/60"
             }`}
-            placeholder="office@victoryfitness.de"
+            placeholder="Enter your email"
             disabled
             readOnly
           />
