@@ -32,16 +32,66 @@ export const redirectToAdminSignIn = () => {
   window.location.replace(buildSignInUrl());
 };
 
-const expireAdminSession = () => {
+export const expireAdminSession = () => {
   clearUserInfo();
+  if (typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(new CustomEvent("admin:session-expired"));
+    } catch {
+      /* ignore */
+    }
+  }
   redirectToAdminSignIn();
 };
 
-const hasStoredAdminSession = () => {
+export const hasStoredAdminSession = () => {
   if (typeof window === "undefined") {
     return false;
   }
   return Boolean(localStorage.getItem("sessionToken"));
+};
+
+export const isStoredSessionExpired = () => {
+  if (typeof window === "undefined") return false;
+  const sessionToken = localStorage.getItem("sessionToken");
+  const accessToken = localStorage.getItem("accessToken");
+  const userData = getUserData();
+
+  // If there are no credentials at all
+  if (!sessionToken && !accessToken) {
+    return true;
+  }
+
+  // If user data exists but is not an admin
+  if (userData && !userData.is_admin) {
+    return true;
+  }
+
+  // Check if session token is a JWT and has expired
+  if (sessionToken) {
+    try {
+      const decodedSession = decodeAuthToken(sessionToken);
+      if (decodedSession?.exp && decodedSession.exp * 1000 <= Date.now()) {
+        return true;
+      }
+    } catch {
+      return true;
+    }
+  }
+
+  // If no session token, check access token expiration
+  if (!sessionToken && accessToken) {
+    try {
+      const decodedAccess = decodeAuthToken(accessToken);
+      if (decodedAccess?.exp && decodedAccess.exp * 1000 <= Date.now()) {
+        return true;
+      }
+    } catch {
+      return true;
+    }
+  }
+
+  return false;
 };
 
 // Store user info in localStorage

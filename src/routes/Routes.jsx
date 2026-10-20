@@ -1,6 +1,7 @@
 import { Suspense, lazy } from "react";
 import RequireAdminAuth from "../components/RequireAdminAuth";
 import { createBrowserRouter, Navigate, useRouteError } from "react-router-dom";
+import { clearUserInfo, redirectToAdminSignIn } from "../../services/auth.service";
 
 const SignInPage = lazy(() => import("../pages/auth/SignInPage"));
 const ForgetPassword = lazy(() => import("../pages/auth/ForgetPassword"));
@@ -53,9 +54,21 @@ function RouteFallback() {
 function RouteError() {
   const error = useRouteError();
   console.error("RouteError caught:", error);
-  const message = error?.status === 401
-    ? "Your session has expired. Please sign in again."
-    : error?.message || "This page could not be loaded right now.";
+
+  const isAuthError =
+    error?.status === 401 ||
+    error?.status === 403 ||
+    /session|admin session|unauthorized|expired|token/i.test(error?.message || "");
+
+  if (isAuthError) {
+    clearUserInfo();
+    if (typeof window !== "undefined") {
+      redirectToAdminSignIn();
+    }
+    return <Navigate to="/sign-in?reauth=1" replace />;
+  }
+
+  const message = error?.message || "This page could not be loaded right now.";
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center p-6">
@@ -215,6 +228,10 @@ const router = createBrowserRouter([
         element: withSuspense(ProfilePage),
       },
     ],
+  },
+  {
+    path: "*",
+    element: <Navigate to="/" replace />,
   },
 ]);
 
