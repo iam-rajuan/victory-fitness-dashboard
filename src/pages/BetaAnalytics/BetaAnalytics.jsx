@@ -6,18 +6,11 @@ import RequirementAuditBoundary from "../../components/audit/RequirementAuditBou
 import { adminApiRequest } from "../../../services/auth.service";
 import BetaTestersModal from "./BetaTestersModal";
 
-const BETA_HERO = [
-  { k: "CAPACITY", v: "300", tone: "default" },
-  { k: "ENROLLED", v: "15", tone: "gold" },
-  { k: "STILL ACTIVE", v: "11", tone: "good" },
-  { k: "AVG DAYS LEFT", v: "12.4", tone: "default" },
-];
-
 const BETA_STAGES = [
-  { k: "ENROLLED", v: "15", pct: "of 300", note: "Approved testers who accepted the invite.", c: "#C9943A", border: "#C9943A" },
-  { k: "ACTIVATED", v: "6", pct: "40%", note: "Opened at least one Gold feature. This is the real number.", c: "#5FC48E", border: "#1A7A4A" },
-  { k: "GAVE FEEDBACK", v: "12", pct: "80%", note: "Wrote something back. Higher than activation — people will talk even when they do not train.", c: "#5FC48E", border: "#1A7A4A" },
-  { k: "WOULD PAY", v: "4", pct: "27%", note: "Said yes to “would you pay for this”. Ask again after the fixes ship.", c: "#D98A3E", border: "#B5651D" },
+  { k: "ENROLLED", note: "Approved testers who accepted the invite.", c: "#C9943A", border: "#C9943A" },
+  { k: "ACTIVATED", note: "Opened at least one Gold feature. This is the real number.", c: "#5FC48E", border: "#1A7A4A" },
+  { k: "GAVE FEEDBACK", note: "Wrote something back. Higher than activation — people will talk even when they do not train.", c: "#5FC48E", border: "#1A7A4A" },
+  { k: "WOULD PAY", note: "Said yes to “would you pay for this”. Ask again after the fixes ship.", c: "#D98A3E", border: "#B5651D" },
 ];
 
 const CHECKPOINT_DISPLAY_DAYS = [1, 3, 5, 7, 10, 14, 18, 21];
@@ -234,12 +227,37 @@ export default function BetaAnalytics() {
   const feedbackItems = feedbackData?.themes || [];
   const feedbackTotal = Number(feedbackData?.totalResponses || 0);
   const feedbackThemeCount = Number(feedbackData?.themeCount || feedbackItems.length || 0);
+  const betaHero = useMemo(() => {
+    if (!betaSummary) {
+      return [
+        { k: "CAPACITY", v: "—", tone: "default" },
+        { k: "ENROLLED", v: "—", tone: "gold" },
+        { k: "STILL ACTIVE", v: "—", tone: "good" },
+        { k: "AVG DAYS LEFT", v: "—", tone: "default" },
+      ];
+    }
+    return [
+      { k: "CAPACITY", v: String(Number(betaSummary.limit || 0)), tone: "default" },
+      { k: "ENROLLED", v: String(Number(betaSummary.totalBetaUsers || 0)), tone: "gold" },
+      { k: "STILL ACTIVE", v: String(Number(betaSummary.activeBetaUsers || 0)), tone: "good" },
+      { k: "AVG DAYS LEFT", v: Number(betaSummary.averageDaysRemaining || 0).toFixed(1), tone: "default" },
+    ];
+  }, [betaSummary]);
   const betaStages = useMemo(() => {
     const totalUsers = Number(betaSummary?.totalBetaUsers || 0);
+    const capacity = Number(betaSummary?.limit || 0);
+    const neverActiveUsers = Number(betaSummary?.participation?.neverActiveUsers || 0);
+    const activatedUsers = Math.max(totalUsers - neverActiveUsers, 0);
+    const percentOfTotal = (value) => totalUsers > 0 ? `${Math.round((value / totalUsers) * 100)}%` : "0%";
     return BETA_STAGES.map((stage) => {
+      if (stage.k === "ENROLLED") {
+        return { ...stage, v: String(totalUsers), pct: `of ${capacity}` };
+      }
+      if (stage.k === "ACTIVATED") {
+        return { ...stage, v: String(activatedUsers), pct: percentOfTotal(activatedUsers) };
+      }
       if (stage.k === "GAVE FEEDBACK") {
-        const pct = totalUsers > 0 ? `${Math.round((feedbackTotal / totalUsers) * 100)}%` : stage.pct;
-        return { ...stage, v: String(feedbackTotal), pct };
+        return { ...stage, v: String(feedbackTotal), pct: percentOfTotal(feedbackTotal) };
       }
       if (stage.k === "WOULD PAY") {
         const pctNumber = Number(feedbackData?.wouldPayPct || 0);
@@ -398,7 +416,7 @@ export default function BetaAnalytics() {
           </div>
 
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            {BETA_HERO.map((h) => (
+            {betaHero.map((h) => (
               <div key={h.k} style={{ width: "126px", background: t.heroMetricBg, border: isDark ? "none" : `1px solid ${t.cardBorder}`, borderRadius: "14px", padding: "14px 15px", boxSizing: "border-box" }}>
                 <div style={{ font: "500 9.5px 'DM Sans', sans-serif", letterSpacing: ".12em", color: t.muted, marginBottom: "6px" }}>
                   {h.k}
