@@ -14,6 +14,9 @@ export default function BetaTestersModal({ isOpen, onClose, testers = [], countr
   const [sendingTesterId, setSendingTesterId] = useState("");
   const [managingTesterId, setManagingTesterId] = useState("");
   const [notice, setNotice] = useState("");
+  const [notificationComposer, setNotificationComposer] = useState(null);
+  const [notificationTitle, setNotificationTitle] = useState("");
+  const [notificationMessage, setNotificationMessage] = useState("");
 
   // Close on Escape & Lock body scroll
   useEffect(() => {
@@ -160,7 +163,7 @@ export default function BetaTestersModal({ isOpen, onClose, testers = [], countr
     window.location.href = `mailto:${encodeURIComponent(tester.email)}?subject=${encodeURIComponent(copy.subject)}&body=${encodeURIComponent(copy.body)}`;
   };
 
-  const handleNotifyTester = async (tester) => {
+  const openNotificationComposer = (tester) => {
     if (tester?.isBlocked || tester?.isDeleted) {
       setNotice("Restore this tester before sending app notifications.");
       return;
@@ -171,17 +174,37 @@ export default function BetaTestersModal({ isOpen, onClose, testers = [], countr
       return;
     }
     const copy = buildOutreachCopy(tester);
-    setSendingTesterId(testerId);
+    setNotificationComposer(tester);
+    setNotificationTitle(copy.notificationTitle);
+    setNotificationMessage(copy.notificationMessage);
     setNotice("");
+  };
+
+  const handleNotifyTester = async () => {
+    const tester = notificationComposer;
+    const testerId = tester?.id || tester?.email;
+    const title = notificationTitle.trim();
+    const message = notificationMessage.trim();
+    if (!tester || !testerId) {
+      setNotice("This tester cannot be notified because no account id was found.");
+      setNotificationComposer(null);
+      return;
+    }
+    if (!title || !message) {
+      setNotice("Add both a notification title and message.");
+      return;
+    }
+    setSendingTesterId(testerId);
     try {
-      const response = await adminApiRequest(`/admin/trials/phase-one-beta/testers/${encodeURIComponent(testerId)}/notify`, {
+      await adminApiRequest(`/admin/trials/phase-one-beta/testers/${encodeURIComponent(testerId)}/notify`, {
         method: "POST",
         body: {
-          title: copy.notificationTitle,
-          message: copy.notificationMessage,
+          title,
+          message,
         },
       });
-      setNotice(`Notification queued for ${tester.name}. Status: ${response.status || "queued"}.`);
+      setNotificationComposer(null);
+      setNotice(`In-app notification sent to ${tester.name}.`);
     } catch (error) {
       setNotice(error?.message || "Could not send notification.");
     } finally {
@@ -958,9 +981,9 @@ export default function BetaTestersModal({ isOpen, onClose, testers = [], countr
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleNotifyTester(tItem)}
+                            onClick={() => openNotificationComposer(tItem)}
                             disabled={sendingTesterId === (tItem.id || tItem.email) || tItem.isBlocked || tItem.isDeleted}
-                            title="Send in-app notification and push/email when enabled"
+                            title="Compose an in-app notification"
                             style={{
                               height: "28px",
                               padding: "0 9px",
@@ -1102,6 +1125,60 @@ export default function BetaTestersModal({ isOpen, onClose, testers = [], countr
             </button>
           </div>
         </div>
+
+        {notificationComposer ? (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center p-4"
+            style={{ background: "rgba(3, 14, 24, 0.72)" }}
+            onClick={() => setNotificationComposer(null)}
+          >
+            <div
+              className="w-full max-w-[520px] rounded-[18px] p-5 sm:p-6 shadow-2xl"
+              style={{ background: t.modalBg, border: `1px solid ${t.cardBorder}` }}
+              onClick={(event) => event.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="notification-composer-title"
+            >
+              <div className="flex items-start justify-between gap-4 mb-5">
+                <div>
+                  <p style={{ margin: 0, font: "700 10px 'JetBrains Mono', monospace", letterSpacing: ".12em", color: "#C9943A" }}>IN-APP NOTIFICATION</p>
+                  <h3 id="notification-composer-title" style={{ margin: "5px 0 0", font: "600 20px 'Clash Display', 'DM Sans', sans-serif", color: t.text }}>
+                    Notify {notificationComposer.name || "tester"}
+                  </h3>
+                  <p style={{ margin: "5px 0 0", font: "400 12.5px 'Inter', sans-serif", color: t.subtext }}>
+                    A template is prefilled. Edit it if you want to send a custom note to the member’s app inbox.
+                  </p>
+                </div>
+                <button type="button" onClick={() => setNotificationComposer(null)} aria-label="Close notification composer" style={{ border: "none", background: "transparent", color: t.muted, cursor: "pointer", fontSize: "22px", lineHeight: 1, padding: "2px" }}>×</button>
+              </div>
+
+              <label style={{ display: "block", font: "700 11px 'DM Sans', sans-serif", color: t.subtext, marginBottom: "6px" }} htmlFor="beta-notification-title">TITLE</label>
+              <input
+                id="beta-notification-title"
+                value={notificationTitle}
+                onChange={(event) => setNotificationTitle(event.target.value)}
+                maxLength={160}
+                style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: "9px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.text, font: "500 13px 'DM Sans', sans-serif", outline: "none" }}
+              />
+              <label style={{ display: "block", font: "700 11px 'DM Sans', sans-serif", color: t.subtext, margin: "16px 0 6px" }} htmlFor="beta-notification-message">MESSAGE</label>
+              <textarea
+                id="beta-notification-message"
+                value={notificationMessage}
+                onChange={(event) => setNotificationMessage(event.target.value)}
+                maxLength={500}
+                rows={5}
+                style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: "9px", border: `1px solid ${t.inputBorder}`, background: t.inputBg, color: t.text, font: "400 13px/1.5 'Inter', sans-serif", outline: "none", resize: "vertical" }}
+              />
+              <div className="flex justify-end gap-2 mt-5">
+                <button type="button" onClick={() => setNotificationComposer(null)} disabled={Boolean(sendingTesterId)} style={{ padding: "9px 13px", borderRadius: "8px", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.subtext, font: "700 12px 'DM Sans', sans-serif", cursor: "pointer" }}>Cancel</button>
+                <button type="button" onClick={handleNotifyTester} disabled={Boolean(sendingTesterId)} style={{ padding: "9px 13px", borderRadius: "8px", border: "1px solid rgba(201,148,58,0.55)", background: "#C9943A", color: "#0D0D0D", font: "700 12px 'DM Sans', sans-serif", cursor: sendingTesterId ? "wait" : "pointer", opacity: sendingTesterId ? 0.65 : 1 }}>
+                  {sendingTesterId ? "Sending..." : "Send in-app notification"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
