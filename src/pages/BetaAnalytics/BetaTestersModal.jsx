@@ -180,12 +180,25 @@ export default function BetaTestersModal({ isOpen, onClose, testers = [], countr
     setNotice("");
   };
 
+  const openNotifyAllComposer = () => {
+    const recipientCount = testers.filter((tester) => !tester.isBlocked && !tester.isDeleted).length;
+    if (!recipientCount) {
+      setNotice("There are no available beta testers to notify.");
+      return;
+    }
+    setNotificationComposer({ isBulk: true, recipientCount, name: `${recipientCount} beta testers` });
+    setNotificationTitle("Your Victory Fitness beta progress");
+    setNotificationMessage("Keep going today and send us any feedback you notice.");
+    setNotice("");
+  };
+
   const handleNotifyTester = async () => {
     const tester = notificationComposer;
+    const isBulk = Boolean(tester?.isBulk);
     const testerId = tester?.id || tester?.email;
     const title = notificationTitle.trim();
     const message = notificationMessage.trim();
-    if (!tester || !testerId) {
+    if (!tester || (!isBulk && !testerId)) {
       setNotice("This tester cannot be notified because no account id was found.");
       setNotificationComposer(null);
       return;
@@ -194,17 +207,24 @@ export default function BetaTestersModal({ isOpen, onClose, testers = [], countr
       setNotice("Add both a notification title and message.");
       return;
     }
-    setSendingTesterId(testerId);
+    setSendingTesterId(isBulk ? "all" : testerId);
     try {
-      await adminApiRequest(`/admin/trials/phase-one-beta/testers/${encodeURIComponent(testerId)}/notify`, {
+      const response = await adminApiRequest(
+        isBulk
+          ? "/admin/trials/phase-one-beta/testers/notify-all"
+          : `/admin/trials/phase-one-beta/testers/${encodeURIComponent(testerId)}/notify`,
+        {
         method: "POST",
         body: {
           title,
           message,
         },
-      });
+        },
+      );
       setNotificationComposer(null);
-      setNotice(`In-app notification sent to ${tester.name}.`);
+      setNotice(isBulk
+        ? `In-app notification sent to ${response.deliveredCount ?? tester.recipientCount} beta testers.`
+        : `In-app notification sent to ${tester.name}.`);
     } catch (error) {
       setNotice(error?.message || "Could not send notification.");
     } finally {
@@ -373,27 +393,49 @@ export default function BetaTestersModal({ isOpen, onClose, testers = [], countr
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close modal"
-            className="w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0"
-            style={{
-              background: isDark ? "rgba(247,243,238,0.08)" : "rgba(13,43,69,0.07)",
-              color: t.subtext,
-              border: `1px solid ${t.cardBorder}`,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = t.text;
-              e.currentTarget.style.borderColor = "#C9943A";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = t.subtext;
-              e.currentTarget.style.borderColor = t.cardBorder;
-            }}
-          >
-            <span style={{ fontSize: "20px", lineHeight: "1", fontWeight: 300 }}>×</span>
-          </button>
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={openNotifyAllComposer}
+              disabled={!testers.some((tester) => !tester.isBlocked && !tester.isDeleted)}
+              style={{
+                height: "36px",
+                padding: "0 14px",
+                borderRadius: "9px",
+                border: "1px solid rgba(201,148,58,0.55)",
+                background: "#C9943A",
+                color: "#0D0D0D",
+                font: "700 12px 'DM Sans', sans-serif",
+                cursor: testers.some((tester) => !tester.isBlocked && !tester.isDeleted) ? "pointer" : "not-allowed",
+                opacity: testers.some((tester) => !tester.isBlocked && !tester.isDeleted) ? 1 : 0.5,
+                whiteSpace: "nowrap",
+              }}
+              title="Compose one in-app notification for every available beta tester"
+            >
+              Notify all
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close modal"
+              className="w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer"
+              style={{
+                background: isDark ? "rgba(247,243,238,0.08)" : "rgba(13,43,69,0.07)",
+                color: t.subtext,
+                border: `1px solid ${t.cardBorder}`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = t.text;
+                e.currentTarget.style.borderColor = "#C9943A";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = t.subtext;
+                e.currentTarget.style.borderColor = t.cardBorder;
+              }}
+            >
+              <span style={{ fontSize: "20px", lineHeight: "1", fontWeight: 300 }}>×</span>
+            </button>
+          </div>
         </div>
 
         {/* Filter & Metric Summary Bar */}
@@ -1147,7 +1189,7 @@ export default function BetaTestersModal({ isOpen, onClose, testers = [], countr
                     Notify {notificationComposer.name || "tester"}
                   </h3>
                   <p style={{ margin: "5px 0 0", font: "400 12.5px 'Inter', sans-serif", color: t.subtext }}>
-                    A template is prefilled. Edit it if you want to send a custom note to the member’s app inbox.
+                    A template is prefilled. Edit it if you want to send a custom note to the {notificationComposer.isBulk ? "selected testers’" : "member’s"} app inbox.
                   </p>
                 </div>
                 <button type="button" onClick={() => setNotificationComposer(null)} aria-label="Close notification composer" style={{ border: "none", background: "transparent", color: t.muted, cursor: "pointer", fontSize: "22px", lineHeight: 1, padding: "2px" }}>×</button>
@@ -1173,7 +1215,7 @@ export default function BetaTestersModal({ isOpen, onClose, testers = [], countr
               <div className="flex justify-end gap-2 mt-5">
                 <button type="button" onClick={() => setNotificationComposer(null)} disabled={Boolean(sendingTesterId)} style={{ padding: "9px 13px", borderRadius: "8px", border: `1px solid ${t.cardBorder}`, background: "transparent", color: t.subtext, font: "700 12px 'DM Sans', sans-serif", cursor: "pointer" }}>Cancel</button>
                 <button type="button" onClick={handleNotifyTester} disabled={Boolean(sendingTesterId)} style={{ padding: "9px 13px", borderRadius: "8px", border: "1px solid rgba(201,148,58,0.55)", background: "#C9943A", color: "#0D0D0D", font: "700 12px 'DM Sans', sans-serif", cursor: sendingTesterId ? "wait" : "pointer", opacity: sendingTesterId ? 0.65 : 1 }}>
-                  {sendingTesterId ? "Sending..." : "Send in-app notification"}
+                  {sendingTesterId ? "Sending..." : `Send in-app notification${notificationComposer.isBulk ? " to all" : ""}`}
                 </button>
               </div>
             </div>
